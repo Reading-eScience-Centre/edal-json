@@ -1,4 +1,4 @@
-package uk.ac.rdg.resc.json;
+package uk.ac.rdg.resc.edal.json;
 
 import org.restlet.Application;
 import org.restlet.Component;

@@ -1,4 +1,4 @@
-package uk.ac.rdg.resc.json;
+package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
 import java.net.URL;
