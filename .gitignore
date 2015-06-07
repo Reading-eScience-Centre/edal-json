@@ -19,3 +19,6 @@ hs_err_pid*
 
 # data files
 /src/main/resources/*
+
+# geotools cache files
+/.h2

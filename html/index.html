@@ -1,0 +1,354 @@
+<!doctype html>
+<html>
+<head>
+	<title></title>
+	<meta charset="utf-8">
+	
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
+	<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+	<script src="ndarray.js"></script>
+	<script src="palettes.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet-src.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.0.29/leaflet-providers.min.js"></script>
+	
+	<style>
+		#map { height: 600px; }
+		
+		.info {
+			padding: 6px 8px;
+			font: 14px/16px Arial, Helvetica, sans-serif;
+			background: white;
+			background: rgba(255,255,255,0.8);
+			box-shadow: 0 0 15px rgba(0,0,0,0.2);
+			border-radius: 5px;
+		}
+		.legend {
+			text-align: left;
+			line-height: 18px;
+			color: #555;
+		}
+		.legend i {
+			width: 18px;
+			height: 18px;
+			float: left;
+			margin-right: 8px;
+			opacity: 0.7;
+		}
+		.palette-active {
+			font-weight: bold;
+		}
+	</style>
+</head>
+<body>
+	<div id="map"></div>
+	
+	<template id="template-legend">
+		<div class="info legend">
+			<div style="margin-bottom:3px">
+				<strong class="legend-title"></strong> (<span class="legend-uom"></span>)
+			</div>
+			<div style="display: inline-block; height: 144px; float:left">
+				<span style="height: 136px; width: 18px; display: block; margin-top: 9px;" class="legend-palette"></span>
+			</div>
+			<div style="display: inline-block; float:left; height:153px">
+				<table style="height: 100%;">
+					<tr><td style="vertical-align:top" class="legend-max"></td></tr>
+					<tr><td style="vertical-align:bottom" class="legend-min"></td></tr>
+				</table>
+			</div>
+		</div>
+	</template>
+	
+	<template id="template-palettes">
+		<div class="info palettes">
+			<button class="palette-button" data-palette="dem">DEM</button>
+			<button class="palette-button" data-palette="gray">Grayscale</button>
+			<button class="palette-button" data-palette="rainbow">Rainbow</button>
+			<button class="palette-button" data-palette="linearL">LinearL</button>
+		</div>
+	</template>
+
+	<script>
+	var ndarray = require("ndarray");
+	
+	var map = L.map('map').setView([51.505, -0.09], 2);
+	var baseLayers = {
+		'Esri.WorldImagery': 'Esri Satellite',		
+		'Esri.WorldShadedRelief': 'Esri Shaded Relief',
+		'Esri.OceanBasemap': 'Esri Ocean',
+		'Esri.WorldGrayCanvas': 'Esri Gray',
+		'OpenStreetMap': 'OpenStreetMap',
+		'Stamen.Watercolor': 'Stamen Watercolor',
+		'NASAGIBS.ViirsEarthAtNight2012': 'VIIRS City Lights 2012'
+	};
+	var layerControl = {};
+	Object.keys(baseLayers).forEach(function (id) {
+		var layer = L.tileLayer.provider(id);
+		layerControl[baseLayers[id]] = layer;
+	});
+	layerControl[baseLayers['Esri.WorldImagery']].addTo(map);
+	var lc = L.control.layers(layerControl).addTo(map);
+	
+	// default palette, note that map.palette is our own attribute
+	var defaultPalette = 'linearL';
+	map.palette = palettes[defaultPalette];
+	
+	var paletteSwitcher = L.control({position: 'bottomleft'});
+	paletteSwitcher.onAdd = function (map) {
+		var div = document.importNode($('#template-palettes')[0].content, true);
+		div = $('.palettes', div)[0];
+		$(".palette-button[data-palette='" + defaultPalette + "']",div).addClass('palette-active');
+		$('.palette-button', div).click(function() {
+			map.palette = palettes[$(this).data('palette')];
+			$('.palette-button').removeClass('palette-active');
+			$(this).addClass('palette-active');
+			// TODO redraw layer
+		});
+		return div;
+	};
+	paletteSwitcher.addTo(map);
+	
+	
+	function createLegend(palette, title, low, high, uom) {
+		var legend = L.control({position: 'bottomright'});
+		
+		legend.onAdd = function (map) {
+			var div = document.importNode($('#template-legend')[0].content, true);
+			div = $('.legend', div)[0];
+			$('.legend-title', div).html(title);
+			$('.legend-uom', div).html(uom);
+			$('.legend-min', div).html(low);
+			$('.legend-max', div).html(high);
+			
+			var colors = palette.allowedValues;
+			var gradient = "";
+			for (var i=0; i<colors.ncolors; i++) {
+				if (i>0) gradient+= ",";
+				gradient+= "rgb(" + colors.red[i] + "," + colors.green[i] + "," + colors.blue[i] + ")";
+			}
+			$('.legend-palette', div).css('background', 
+			                              'transparent linear-gradient(to top, ' + gradient + ') repeat scroll 0% 0%');
+			return div;
+		};
+		return legend;
+	}
+	
+	function getParam(obj, paramName) {
+		return obj.filter(function(r) { return r.name == paramName })[0];
+	}
+	
+	map.on('overlayadd', function (e) {
+		// As we lazy-load range data within drawTile, the range extent may not have been
+		// calculated yet. As a quick work-around, we introduce a delay here.
+		// A better solution would be to have an initialization function when a adding
+		// a layer and an event that would need to be fired once done. After that, the
+		// tile drawing could start. However, leaflet doesn't support that yet.
+		setTimeout(function() {
+			var layer = e.layer;
+			// TODO create a map to avoid the search each time..., or create a function
+			var rangeType = getParam(layer.featureResult.rangeType.fields, layer.fieldName);
+			var range = getParam(layer.featureResult.range, layer.fieldName);
+			var legend = createLegend(map.palette, rangeType.title, range.min.toFixed(2), range.max.toFixed(2), rangeType.uom);
+			legend.addTo(map);
+			layer.legend = legend;
+		}, 3000);
+	});
+	
+	map.on('overlayremove', function (e) {
+		var layer = e.layer;
+		this.removeControl(layer.legend);
+	});
+	
+	// the following assumes a rectilinear grid
+	// TODO we could implement a shortcut for regular grids
+	
+	// each tile scans the whole range of a parameter
+	// TODO this could be made faster by getting range subsets such that each tile only
+	//      has to scan within it's bounding box
+	
+	function drawTileFn(layer, paramId) {
+		function drawTile(canvas, tilePoint, zoom) {
+			var ctx = canvas.getContext('2d');
+			var tileSize = this.options.tileSize;
+			var result = this.featureResult; // our own little cache
+			
+			var param = result.range.filter(function(r) { return r.name == paramId })[0];
+			
+			// calculate and cache range extent if not provided
+			if (!('min' in param)) {
+				var extent = arrayMinMax(param.values);
+				param.min = extent.min;
+				param.max = extent.max;
+			}
+
+			// projection coordinates of top left tile pixel
+			var start = tilePoint.multiplyBy(tileSize);
+			var startX = start.x;
+			var startY = start.y;
+			
+			// array shape
+			// TODO will x and y ever be something else then lon and lat in that order?
+			var nLon = result.domain.x.length;
+			var nLat = result.domain.y.length;
+			var nVertical = 'vertical' in result.domain ? result.domain.vertical.length : 1;
+			var nTime = 'time' in result.domain ? result.domain.time.length : 1;
+			
+			var paramArr = ndarray(param.values, [nTime,nVertical,nLat,nLon]);
+			
+			// store for faster access
+			var domainLon = result.domain.x;
+			var domainLat = result.domain.y;
+			var domainBbox = result.domain.bbox;
+			var lonRange = [result.domain.lonDiscontinuity, result.domain.lonDiscontinuity+360];
+			var paletteRed = map.palette.allowedValues.red;
+			var paletteGreen = map.palette.allowedValues.green;
+			var paletteBlue = map.palette.allowedValues.blue;
+			
+			var imgData = ctx.getImageData(0, 0, tileSize, tileSize);
+			// Uint8ClampedArray, 1-dimensional, in order R,G,B,A,R,G,B,A,... row-major
+			var rgba = ndarray(imgData.data, [tileSize,tileSize,4]);
+			
+			for (var tileX=0; tileX<tileSize; tileX++) {
+				for (var tileY=0; tileY<tileSize; tileY++) {
+					// get geographic coordinates of tile pixel
+					var posGeo = map.unproject(L.point(startX+tileX, startY+tileY));
+					var lat = posGeo.lat,
+					    lon = posGeo.lng;
+					
+					// we first check whether the tile pixel is outside the domain bounding box
+					// in that case we skip it as we do not want to extrapolate
+					if (lat < domainBbox[1] || lat > domainBbox[3]) {
+						continue;
+					}
+						
+					lon = wrapLongitude(lon, lonRange);
+					if (lon < domainBbox[0] || lon > domainBbox[2]) {
+						continue;
+					}
+					
+					// now we find the closest grid cell using simple binary search
+					// for finding the closest latitude we use a simple binary search
+					// (as the array is always ascending and there is no discontinuity)
+					var iLat = indexOfNearest(domainLat, lat);
+					var iLon = indexOfNearest(domainLon, lon);
+					
+					// now we fetch the range value at the given grid cell
+					// TODO allow access to time and vertical dimension
+					var val = paramArr.get(0,0,iLat,iLon);
+					if (val == null) {
+						// TODO we may have to differentiate between nodata and other cases
+						continue;
+					}
+					
+					// map value to color using a palette
+					// scale val to [0,255] using the range extent
+					// (IDL bytscl formula: http://www.exelisvis.com/docs/BYTSCL.html)
+					valScaled = Math.trunc((255 + 0.9999) * (val - param.min)/(param.max - param.min));
+					
+					rgba.set(tileY,tileX,0,paletteRed[valScaled]);
+					rgba.set(tileY,tileX,1,paletteGreen[valScaled]);
+					rgba.set(tileY,tileX,2,paletteBlue[valScaled]);
+					rgba.set(tileY,tileX,3,255);
+				}
+			}
+			ctx.putImageData(imgData, 0, 0);
+		}
+		// the following lazy-loads range values
+		return function(canvas, tilePoint, zoom) {
+			var self = this;
+			var paramRange = layer.featureResult.range.filter(function(r) { return r.name == paramId })[0];
+			if ('values' in paramRange) {
+				drawTile.call(self, canvas, tilePoint, zoom);
+			} else {
+				$.getJSON(paramRange.id, function( paramRangeWithValues ) {
+					layer.featureResult.range = layer.featureResult.range.map(function(r) {
+						return 'values' in r ? r : paramRangeWithValues;
+					});
+					drawTile.call(self, canvas, tilePoint, zoom);
+				});
+			}
+		};
+	}
+	
+	function arrayMinMax(arr) {
+		var len = arr.length, min = Infinity, max = -Infinity;
+		while (len--) {
+			var el = arr[len];
+			if (el == null) {
+				// do nothing
+			} else if (el < min) {
+				min = el;
+			} else if (el > max) {
+				max = el;
+			}
+		}
+		return {min: min, max: max};
+	};
+	
+	function indexOfNearest(a, x) {
+		// adapted from https://stackoverflow.com/a/4431347
+		var lo = -1, hi = a.length;
+		while (hi - lo > 1) {
+			var mid = Math.round((lo + hi)/2);
+			if (a[mid] <= x) {
+				lo = mid;
+			} else {
+				hi = mid;
+			}
+		}
+		if (a[lo] == x) hi = lo;
+		if (Math.abs(x-a[lo]) < Math.abs(x-a[hi])) {
+			return lo;
+		} else {
+			return hi;
+		}
+	}
+	
+	function wrapLongitude(lon, range) {
+		return wrapNum(lon, range, true);
+	}
+	
+	// stolen from https://github.com/Leaflet/Leaflet/blob/master/src/core/Util.js
+	// doesn't exist in current release (0.7.3)
+	function wrapNum(x, range, includeMax) {
+		var max = range[1],
+		    min = range[0],
+		    d = max - min;
+		return x === max && includeMax ? x : ((x - min) % d + d) % d + min;
+	}
+	
+	function wrapLongitudes(domain) {
+		// we assume WGS84 with lon-lat order (CRS84)
+		var containsDiscontinuity = domain.bbox[0] > domain.bbox[2];
+		if (containsDiscontinuity) {
+			// TODO wrap longitudes to new range without discontinuity
+			alert("discontinuity detected, not implemented yet");
+		}
+		
+		domain.lonDiscontinuity = domain.bbox[0];
+	}
+	
+	function addFeature(url) {
+		$.getJSON(url, function( featureData ) {
+			var result = featureData.result;
+			result.domain.x = new Int16Array(result.domain.x);
+			result.domain.y = new Int8Array(result.domain.y);
+			wrapLongitudes(result.domain);
+			// create a canvas layer for each parameter
+			result.rangeType.fields.map(function (field) {
+				var canvasTiles = L.tileLayer.canvas();
+				canvasTiles.drawTile = drawTileFn(canvasTiles, field.name);
+				canvasTiles.featureResult = result;
+				canvasTiles.fieldName = field.name;
+				lc.addOverlay(canvasTiles, field.name);
+			});
+		});
+	}
+	
+	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/ICEC");
+	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/TMP");
+	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/SALTY");
+	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/M");
+	</script>
+</body>
+</html>

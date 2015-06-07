@@ -15,6 +15,7 @@ import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.exceptions.DataReadingException;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
+import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
 import uk.ac.rdg.resc.edal.feature.Feature;
 
 import com.google.common.collect.ImmutableMap;
@@ -27,7 +28,7 @@ public class DatasetResource extends ServerResource {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		Dataset dataset = Utils.getDataset(datasetId);
 		
-		String baseUrl = "http://foo/datasets/";
+		String datasetUrl = getReference().toString();
 		
 		List jsonFeatures = new LinkedList();
 		
@@ -39,14 +40,18 @@ public class DatasetResource extends ServerResource {
 				e.printStackTrace();
 				continue;
 			}
+			if (!(feature instanceof DiscreteFeature)) {
+				continue;
+			}
+			
 			jsonFeatures.add(ImmutableMap.of(
-				"id", baseUrl + dataset.getId() + "/features/" + feature.getId(),
+				"id", datasetUrl + "/features/" + feature.getId(),
 				"title", feature.getName()
 				));
 		}
 		
 		Map j = ImmutableMap.of(
-				"id", baseUrl + dataset.getId(),
+				"id", datasetUrl,
 				"title", "...",
 				"features", jsonFeatures
 				);
