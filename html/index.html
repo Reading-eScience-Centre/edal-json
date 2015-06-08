@@ -203,15 +203,24 @@
 			var paletteRed = map.palette.allowedValues.red;
 			var paletteGreen = map.palette.allowedValues.green;
 			var paletteBlue = map.palette.allowedValues.blue;
-			
+					
 			var imgData = ctx.getImageData(0, 0, tileSize, tileSize);
 			// Uint8ClampedArray, 1-dimensional, in order R,G,B,A,R,G,B,A,... row-major
 			var rgba = ndarray(imgData.data, [tileSize,tileSize,4]);
 			
+			var tLoop = Date.now();
+			var tNear = 0;
+			var tUnproject = 0;
+			
+			// FIXME there are two hotspots in the loop: map.unproject and indexOfNearest
+			
 			for (var tileX=0; tileX<tileSize; tileX++) {
 				for (var tileY=0; tileY<tileSize; tileY++) {
 					// get geographic coordinates of tile pixel
+					var t0 = Date.now();
 					var posGeo = map.unproject(L.point(startX+tileX, startY+tileY));
+					tUnproject += Date.now()-t0;
+					
 					var lat = posGeo.lat,
 					    lon = posGeo.lng;
 					
@@ -229,9 +238,11 @@
 					// now we find the closest grid cell using simple binary search
 					// for finding the closest latitude we use a simple binary search
 					// (as the array is always ascending and there is no discontinuity)
+					var t0 = Date.now();
 					var iLat = indexOfNearest(domainLat, lat);
 					var iLon = indexOfNearest(domainLon, lon);
-					
+					tNear += Date.now()-t0;
+										
 					// now we fetch the range value at the given grid cell
 					// TODO allow access to time and vertical dimension
 					var val = paramArr.get(0,0,iLat,iLon);
@@ -251,6 +262,11 @@
 					rgba.set(tileY,tileX,3,255);
 				}
 			}
+			
+			console.log("tile loop, unproject", tUnproject);
+			console.log("tile loop, indexofnearest", tNear);
+			console.log("tile loop", Date.now()-tLoop);
+			
 			ctx.putImageData(imgData, 0, 0);
 		}
 		// the following lazy-loads range values
