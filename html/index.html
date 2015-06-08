@@ -137,11 +137,7 @@
 		};
 		return legend;
 	}
-	
-	function getParam(obj, paramName) {
-		return obj.filter(function(r) { return r.name == paramName })[0];
-	}
-	
+		
 	map.on('overlayadd', function (e) {
 		// As we lazy-load range data within drawTile, the range extent may not have been
 		// calculated yet. As a quick work-around, we introduce a delay here.
@@ -150,8 +146,8 @@
 		// tile drawing could start. However, leaflet doesn't support that yet.
 		setTimeout(function() {
 			var layer = e.layer;
-			var rangeType = getParam(layer.featureResult.rangeType.fields, layer.fieldName);
-			var range = getParam(layer.featureResult.range, layer.fieldName);
+			var rangeType = layer.featureResult.rangeType[layer.paramId];
+			var range = layer.featureResult.range[layer.paramId];
 			var legend = createLegend(map.palette, rangeType.title, range.min.toFixed(2), range.max.toFixed(2), rangeType.uom);
 			legend.addTo(map);
 			layer.legend = legend;
@@ -168,6 +164,10 @@
 	// each tile scans the whole range of a parameter
 	// TODO this could be made faster by getting range subsets such that each tile only
 	//      has to scan within it's bounding box
+	
+	var supportedCrs = {
+		"http://www.opengis.net/def/crs/OGC/1.3/CRS84": {}
+	};	
 	
 	function drawTileFn(layer, paramId) {
 		function drawTile(canvas, tilePoint, zoom) {
@@ -262,8 +262,7 @@
 						// now we fetch the range value at the given grid cell
 						// TODO allow access to time and vertical dimension
 						var val = paramArr.get(0,0,iLat,iLon);
-						if (val == null) {
-							// TODO we may have to differentiate between nodata and other cases
+						if (val === null) {
 							continue;
 						}
 						
@@ -277,8 +276,12 @@
 				// this can be used when lat and long can be computed independently for a given pixel
 				
 				var latCache = new Int8Array(tileSize);
+				var iLatCache = new Array(tileSize);
 				for (var tileY=0; tileY<tileSize; tileY++) {
-					latCache[tileY] = map.unproject(L.point(startX, startY+tileY)).lat;
+					var lat = map.unproject(L.point(startX, startY+tileY)).lat;
+					latCache[tileY] = lat;
+					// find the index of the closest latitude in the grid using simple binary search
+					iLatCache[tileY] = indexOfNearest(domainLat, lat);
 				}
 				
 				for (var tileX=0; tileX<tileSize; tileX++) {
@@ -300,21 +303,19 @@
 						if (lat < domainBbox[1] || lat > domainBbox[3]) {
 							continue;
 						}
-							
-						// find the index of the closest latitude in the grid using simple binary search
-						var iLat = indexOfNearest(domainLat, lat);
-											
+						
+						var iLat = iLatCache[tileY];
+						
 						// now we fetch the range value at the given grid cell
 						// TODO allow access to time and vertical dimension
 						var val = paramArr.get(0,0,iLat,iLon);
-						if (val == null) {
-							// TODO we may have to differentiate between nodata and other cases
+						if (val === null) {
 							continue;
 						}
 						
 						setPixel(tileY, tileX, val);
 					}
-				}				
+				}
 			}
 			
 			// TODO check which projection is active and switch to drawGeneral() if needed
@@ -401,8 +402,12 @@
 	}
 	
 	function addFeature(url) {
-		$.getJSON(url, function( featureData ) {
+		$.getJSON(url, function(featureData) {
 			var result = featureData.result;
+			if (!(result.domain.crs in supportedCrs)) {
+				alert("Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: " + result.domain.crs);
+				return;
+			}
 			result.domain.x = new Int16Array(result.domain.x);
 			result.domain.y = new Int8Array(result.domain.y);
 			wrapLongitudes(result.domain);
