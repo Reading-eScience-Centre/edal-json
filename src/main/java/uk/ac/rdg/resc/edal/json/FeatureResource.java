@@ -45,7 +45,7 @@ public class FeatureResource extends ServerResource {
 		try {
 			feature = (DiscreteFeature) dataset.readFeature(featureId);
 		} catch (ClassCastException e) {
-			throw new IllegalArgumentException("Only disrete features are supported");
+			throw new IllegalArgumentException("Only discrete features are supported");
 		}
 		
 		String featureUrl = getReference().toString();
@@ -53,9 +53,9 @@ public class FeatureResource extends ServerResource {
 		Object range;
 		if (feature.getDomain() instanceof GridDomain) {
 			// grids are big, so we don't supply the parameter values with the feature itself
-			range = getParameterValuesJson(feature, false, featureUrl);
+			range = getParameterValuesJson(feature, dataset, false, featureUrl);
 		} else {
-			range = getParameterValuesJson(feature, true, featureUrl);
+			range = getParameterValuesJson(feature, dataset, true, featureUrl);
 		}
 		
 		Map j = ImmutableMap.of(
@@ -64,9 +64,7 @@ public class FeatureResource extends ServerResource {
 				"phenomenonTime", "?",
 				"result", ImmutableMap.of(
 						"domain", getDomainJson(feature),
-						"rangeType", ImmutableMap.of(
-								"fields", getParameterTypesJson(feature)
-								),
+						"rangeType", getParameterTypesJson(feature, dataset),
 						"range", range
 						)
 				);
@@ -141,49 +139,49 @@ public class FeatureResource extends ServerResource {
 				);
 	}
 		
-	private List getParameterTypesJson(DiscreteFeature<?,?> feature) {
-		List types = new LinkedList();
+	private Map getParameterTypesJson(DiscreteFeature<?,?> feature, Dataset dataset) {
+		String root = getRootRef().toString() + "/datasets/" + dataset.getId() + "/params/";
+		
+		Builder types = ImmutableMap.builder();
 		for (String paramId : feature.getParameterIds()) {
 			Parameter param = feature.getParameter(paramId);
 			
 			// TODO how do we get the range extents from EDAL?
 			
-			
-			types.add(ImmutableMap.of(
-					"name", param.getId(),
+			types.put(root + paramId, ImmutableMap.of(
 					"title", param.getTitle(),
 					"description", param.getDescription(),
 					"observedProperty", param.getStandardName() == null ? "UNKNOWN" : param.getStandardName(),
 					"uom", param.getUnits()
 					));
 		}
-		return types;
+		return types.build();
 	}
 		
-	private List getParameterValuesJson(DiscreteFeature<?,?> feature, boolean includeValues, String featureUrl) {
-		List values = new LinkedList();
+	private Map getParameterValuesJson(DiscreteFeature<?,?> feature, Dataset dataset, boolean includeValues, String featureUrl) {
+		String root = getRootRef().toString() + "/datasets/" + dataset.getId() + "/params/";
+		Builder values = ImmutableMap.builder();
 
 		for (String paramId : feature.getParameterIds()) {
 			
-
 			Map rangeParam = ImmutableMap.of(
-					"id", featureUrl + "/range/" + paramId, 
-					"name", paramId);
+					"id", featureUrl + "/range/" + paramId
+					);
 			
 			if (includeValues) {
 				// TODO how do we know which axis order the array has?!
 				Array<Number> valsArr = feature.getValues(paramId);
 				
-				Builder rangeParamWithValues = ImmutableMap.builder();
-				rangeParamWithValues.putAll(rangeParam);
-				rangeParamWithValues.put("values", getValues(valsArr));
-				rangeParam = rangeParamWithValues.build();
+				rangeParam = ImmutableMap.builder()
+						.putAll(rangeParam)
+						.put("values", getValues(valsArr))
+						.build();
 			}
 			
-			values.add(rangeParam);
+			values.put(root + paramId, rangeParam);
 		}
 		
-		return values;
+		return values.build();
 	}
 	
 	public static List<Number> getValues(Array<Number> valsArr) {

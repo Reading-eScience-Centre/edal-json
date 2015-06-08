@@ -17,6 +17,8 @@ import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
 import uk.ac.rdg.resc.edal.feature.Feature;
+import uk.ac.rdg.resc.edal.metadata.Parameter;
+import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -50,10 +52,32 @@ public class DatasetResource extends ServerResource {
 				));
 		}
 		
+		List jsonParams = new LinkedList();
+		// TODO check what the relation between variable and parameter is
+		for (String paramId : dataset.getVariableIds()) {
+			Parameter param = dataset.getVariableMetadata(paramId).getParameter();
+			Map m = ImmutableMap.of(
+					"id", datasetUrl + "/params/" + param.getId(),
+					"title", param.getTitle(),
+					"description", param.getDescription(),
+					"uom", param.getUnits()
+					);
+			
+			if (param.getStandardName() != null) {
+				// TODO translate into URI
+				m = ImmutableMap.builder()
+						.putAll(m)
+					    .put("observedProperty", param.getStandardName())
+					    .build(); 
+			}
+			jsonParams.add(m);
+		}
+		
 		Map j = ImmutableMap.of(
 				"id", datasetUrl,
 				"title", "...",
-				"features", jsonFeatures
+				"features", jsonFeatures,
+				"parameters", jsonParams
 				);
 		
 		JsonRepresentation r = new JsonRepresentation(j);

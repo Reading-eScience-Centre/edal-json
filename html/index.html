@@ -8,9 +8,13 @@
 	<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
 	<script src="ndarray.js"></script>
 	<script src="palettes.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet-src.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.0.29/leaflet-providers.min.js"></script>
-	
+	<!--
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.6/proj4.js"></script>
+	<script src="https://cdn.rawgit.com/kartena/Proj4Leaflet/0.7.1/src/proj4leaflet.js"></script>
+	<script src="polarmap-src.js"></script>
+	-->
 	<style>
 		#map { height: 600px; }
 		
@@ -71,7 +75,8 @@
 	<script>
 	var ndarray = require("ndarray");
 	
-	var map = L.map('map').setView([51.505, -0.09], 2);
+	var map = L.map('map').setView([51.505, -0.09], 2);	
+	
 	var baseLayers = {
 		'Esri.WorldImagery': 'Esri Satellite',		
 		'Esri.WorldShadedRelief': 'Esri Shaded Relief',
@@ -102,7 +107,7 @@
 			map.palette = palettes[$(this).data('palette')];
 			$('.palette-button').removeClass('palette-active');
 			$(this).addClass('palette-active');
-			// TODO redraw layer
+			// TODO redraw layers
 		});
 		return div;
 	};
@@ -145,7 +150,6 @@
 		// tile drawing could start. However, leaflet doesn't support that yet.
 		setTimeout(function() {
 			var layer = e.layer;
-			// TODO create a map to avoid the search each time..., or create a function
 			var rangeType = getParam(layer.featureResult.rangeType.fields, layer.fieldName);
 			var range = getParam(layer.featureResult.range, layer.fieldName);
 			var legend = createLegend(map.palette, rangeType.title, range.min.toFixed(2), range.max.toFixed(2), rangeType.uom);
@@ -159,8 +163,7 @@
 		this.removeControl(layer.legend);
 	});
 	
-	// the following assumes a rectilinear grid
-	// TODO we could implement a shortcut for regular grids
+	// the following assumes a rectilinear data grid
 	
 	// each tile scans the whole range of a parameter
 	// TODO this could be made faster by getting range subsets such that each tile only
@@ -172,7 +175,7 @@
 			var tileSize = this.options.tileSize;
 			var result = this.featureResult; // our own little cache
 			
-			var param = result.range.filter(function(r) { return r.name == paramId })[0];
+			var param = result.range[paramId];
 			
 			// calculate and cache range extent if not provided
 			if (!('min' in param)) {
@@ -211,75 +214,128 @@
 			var tLoop = Date.now();
 			var tNear = 0;
 			var tUnproject = 0;
-			
-			// FIXME there are two hotspots in the loop: map.unproject and indexOfNearest
-			
-			for (var tileX=0; tileX<tileSize; tileX++) {
-				for (var tileY=0; tileY<tileSize; tileY++) {
-					// get geographic coordinates of tile pixel
-					var t0 = Date.now();
-					var posGeo = map.unproject(L.point(startX+tileX, startY+tileY));
-					tUnproject += Date.now()-t0;
-					
-					var lat = posGeo.lat,
-					    lon = posGeo.lng;
-					
-					// we first check whether the tile pixel is outside the domain bounding box
-					// in that case we skip it as we do not want to extrapolate
-					if (lat < domainBbox[1] || lat > domainBbox[3]) {
-						continue;
-					}
 						
+			function setPixel(tileY, tileX, val) {
+				// map value to color using a palette
+				// scale val to [0,255] using the range extent
+				// (IDL bytscl formula: http://www.exelisvis.com/docs/BYTSCL.html)
+				valScaled = Math.trunc((255 + 0.9999) * (val - param.min)/(param.max - param.min));
+				
+				rgba.set(tileY,tileX,0,paletteRed[valScaled]);
+				rgba.set(tileY,tileX,1,paletteGreen[valScaled]);
+				rgba.set(tileY,tileX,2,paletteBlue[valScaled]);
+				rgba.set(tileY,tileX,3,255);
+			}
+			
+			function drawAnyProjection() {
+				// usable for any map projection, but computationally more intensive
+				
+				// TODO there are two hotspots in the loop: map.unproject and indexOfNearest
+				
+				for (var tileX=0; tileX<tileSize; tileX++) {				
+					for (var tileY=0; tileY<tileSize; tileY++) {
+						// get geographic coordinates of tile pixel
+						var posGeo = map.unproject(L.point(startX+tileX, startY+tileY));
+						
+						var lat = posGeo.lat,
+						    lon = posGeo.lng;
+						
+						// we first check whether the tile pixel is outside the domain bounding box
+						// in that case we skip it as we do not want to extrapolate
+						if (lat < domainBbox[1] || lat > domainBbox[3]) {
+							continue;
+						}
+							
+						lon = wrapLongitude(lon, lonRange);
+						if (lon < domainBbox[0] || lon > domainBbox[2]) {
+							continue;
+						}
+						
+						// now we find the closest grid cell using simple binary search
+						// for finding the closest latitude/longitude we use a simple binary search
+						// (as the array is always ascending and there is no discontinuity)
+						//var t0 = Date.now();
+						var iLat = indexOfNearest(domainLat, lat);
+						var iLon = indexOfNearest(domainLon, lon);
+						//tNear += Date.now()-t0;
+											
+						// now we fetch the range value at the given grid cell
+						// TODO allow access to time and vertical dimension
+						var val = paramArr.get(0,0,iLat,iLon);
+						if (val == null) {
+							// TODO we may have to differentiate between nodata and other cases
+							continue;
+						}
+						
+						setPixel(tileY, tileX, val);
+					}
+				}
+			}
+			
+			function drawMercator() {
+				// optimized version for mercator-like projections
+				// this can be used when lat and long can be computed independently for a given pixel
+				
+				var latCache = new Int8Array(tileSize);
+				for (var tileY=0; tileY<tileSize; tileY++) {
+					latCache[tileY] = map.unproject(L.point(startX, startY+tileY)).lat;
+				}
+				
+				for (var tileX=0; tileX<tileSize; tileX++) {
+					var lon = map.unproject(L.point(startX+tileX, startY)).lng;
 					lon = wrapLongitude(lon, lonRange);
 					if (lon < domainBbox[0] || lon > domainBbox[2]) {
 						continue;
 					}
-					
-					// now we find the closest grid cell using simple binary search
-					// for finding the closest latitude we use a simple binary search
+					// find the index of the closest longitude in the grid using simple binary search
 					// (as the array is always ascending and there is no discontinuity)
-					var t0 = Date.now();
-					var iLat = indexOfNearest(domainLat, lat);
 					var iLon = indexOfNearest(domainLon, lon);
-					tNear += Date.now()-t0;
-										
-					// now we fetch the range value at the given grid cell
-					// TODO allow access to time and vertical dimension
-					var val = paramArr.get(0,0,iLat,iLon);
-					if (val == null) {
-						// TODO we may have to differentiate between nodata and other cases
-						continue;
+					
+					for (var tileY=0; tileY<tileSize; tileY++) {
+						// get geographic coordinates of tile pixel
+						var lat = latCache[tileY];
+						
+						// we first check whether the tile pixel is outside the domain bounding box
+						// in that case we skip it as we do not want to extrapolate
+						if (lat < domainBbox[1] || lat > domainBbox[3]) {
+							continue;
+						}
+							
+						// find the index of the closest latitude in the grid using simple binary search
+						var iLat = indexOfNearest(domainLat, lat);
+											
+						// now we fetch the range value at the given grid cell
+						// TODO allow access to time and vertical dimension
+						var val = paramArr.get(0,0,iLat,iLon);
+						if (val == null) {
+							// TODO we may have to differentiate between nodata and other cases
+							continue;
+						}
+						
+						setPixel(tileY, tileX, val);
 					}
-					
-					// map value to color using a palette
-					// scale val to [0,255] using the range extent
-					// (IDL bytscl formula: http://www.exelisvis.com/docs/BYTSCL.html)
-					valScaled = Math.trunc((255 + 0.9999) * (val - param.min)/(param.max - param.min));
-					
-					rgba.set(tileY,tileX,0,paletteRed[valScaled]);
-					rgba.set(tileY,tileX,1,paletteGreen[valScaled]);
-					rgba.set(tileY,tileX,2,paletteBlue[valScaled]);
-					rgba.set(tileY,tileX,3,255);
-				}
+				}				
 			}
 			
-			console.log("tile loop, unproject", tUnproject);
-			console.log("tile loop, indexofnearest", tNear);
-			console.log("tile loop", Date.now()-tLoop);
+			// TODO check which projection is active and switch to drawGeneral() if needed
+			drawMercator();
+			//drawAnyProjection();
+			
+			//console.log("tile loop, unproject", tUnproject);
+			//console.log("tile loop, indexofnearest", tNear);
+			//console.log("tile loop", Date.now()-tLoop);
 			
 			ctx.putImageData(imgData, 0, 0);
 		}
 		// the following lazy-loads range values
 		return function(canvas, tilePoint, zoom) {
 			var self = this;
-			var paramRange = layer.featureResult.range.filter(function(r) { return r.name == paramId })[0];
+			var paramRange = layer.featureResult.range[paramId];
 			if ('values' in paramRange) {
 				drawTile.call(self, canvas, tilePoint, zoom);
 			} else {
 				$.getJSON(paramRange.id, function( paramRangeWithValues ) {
-					layer.featureResult.range = layer.featureResult.range.map(function(r) {
-						return 'values' in r ? r : paramRangeWithValues;
-					});
+					layer.featureResult.range[paramId] = paramRangeWithValues;
 					drawTile.call(self, canvas, tilePoint, zoom);
 				});
 			}
@@ -351,13 +407,13 @@
 			result.domain.y = new Int8Array(result.domain.y);
 			wrapLongitudes(result.domain);
 			// create a canvas layer for each parameter
-			result.rangeType.fields.map(function (field) {
+			for (paramId in result.rangeType) {
 				var canvasTiles = L.tileLayer.canvas();
-				canvasTiles.drawTile = drawTileFn(canvasTiles, field.name);
+				canvasTiles.drawTile = drawTileFn(canvasTiles, paramId);
 				canvasTiles.featureResult = result;
-				canvasTiles.fieldName = field.name;
-				lc.addOverlay(canvasTiles, field.name);
-			});
+				canvasTiles.paramId = paramId;
+				lc.addOverlay(canvasTiles, result.rangeType[paramId].title);
+			}
 		});
 	}
 	
