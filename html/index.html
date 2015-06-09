@@ -190,7 +190,7 @@
 			var startY = start.y;
 			
 			// array shape
-			// TODO will x and y ever be something else then lon and lat in that order?
+			// we only support CRS84 here for now (lon-lat order)
 			var nLon = result.domain.x.length;
 			var nLat = result.domain.y.length;
 			var nVertical = 'vertical' in result.domain ? result.domain.vertical.length : 1;
@@ -206,12 +206,38 @@
 			var paletteRed = map.palette.allowedValues.red;
 			var paletteGreen = map.palette.allowedValues.green;
 			var paletteBlue = map.palette.allowedValues.blue;
-					
+			
+			var tLoop = Date.now();
+			
+			
+			var bigDomain = false;
+			if (bigDomain) {
+				// use subset of domain/values based on bounding box
+				// will speed up indexOfNearest
+				// TODO check if this is really the case for bigger datasets
+				var tileTopLeftGeo = map.unproject(start);
+				var tileBottomRightGeo = map.unproject(L.point(startX+tileSize, startY+tileSize));
+				
+				tileTopLeftGeo.lng = wrapLongitude(tileTopLeftGeo.lng, lonRange);
+				tileBottomRightGeo.lng = wrapLongitude(tileBottomRightGeo.lng, lonRange);
+				if (tileBottomRightGeo.lng < tileTopLeftGeo.lng) {
+					// unwrap lng after wrapping, so that both are in right order again
+					tileBottomRightGeo.lng+= 360;
+				}
+				var iLonStart = indexOfNearest(domainLon, tileTopLeftGeo.lng);
+				var iLonEnd = indexOfNearest(domainLon, tileBottomRightGeo.lng);
+				var iLatStart = indexOfNearest(domainLat, tileBottomRightGeo.lat);
+				var iLatEnd = indexOfNearest(domainLat, tileTopLeftGeo.lat);
+				domainLon = domainLon.slice(iLonStart, iLonEnd+1); // could use ndarray here as well
+				domainLat = domainLat.slice(iLatStart, iLatEnd+1);
+				paramArr = paramArr.hi(nTime,nVertical,iLatEnd+1,iLonEnd+1).lo(0,0,iLatStart,iLonStart);
+			}
+			
 			var imgData = ctx.getImageData(0, 0, tileSize, tileSize);
 			// Uint8ClampedArray, 1-dimensional, in order R,G,B,A,R,G,B,A,... row-major
 			var rgba = ndarray(imgData.data, [tileSize,tileSize,4]);
 			
-			var tLoop = Date.now();
+			
 			var tNear = 0;
 			var tUnproject = 0;
 						
@@ -274,7 +300,7 @@
 			function drawMercator() {
 				// optimized version for mercator-like projections
 				// this can be used when lat and long can be computed independently for a given pixel
-				
+							
 				var latCache = new Int8Array(tileSize);
 				var iLatCache = new Array(tileSize);
 				for (var tileY=0; tileY<tileSize; tileY++) {
@@ -324,7 +350,7 @@
 			
 			//console.log("tile loop, unproject", tUnproject);
 			//console.log("tile loop, indexofnearest", tNear);
-			//console.log("tile loop", Date.now()-tLoop);
+			console.log("tile loop", Date.now()-tLoop);
 			
 			ctx.putImageData(imgData, 0, 0);
 		}
