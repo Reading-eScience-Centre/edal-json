@@ -68,7 +68,7 @@ public class DatasetResource extends ServerResource {
 				m = ImmutableMap.builder()
 						.putAll(m)
 					    .put("observedProperty", param.getStandardName())
-					    .build(); 
+					    .build();
 			}
 			jsonParams.add(m);
 		}

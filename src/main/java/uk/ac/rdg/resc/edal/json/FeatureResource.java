@@ -145,9 +145,6 @@ public class FeatureResource extends ServerResource {
 		Builder types = ImmutableMap.builder();
 		for (String paramId : feature.getParameterIds()) {
 			Parameter param = feature.getParameter(paramId);
-			
-			// TODO how do we get the range extents from EDAL?
-			
 			types.put(root + paramId, ImmutableMap.of(
 					"title", param.getTitle(),
 					"description", param.getDescription(),

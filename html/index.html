@@ -8,7 +8,8 @@
 	<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
 	<script src="ndarray.js"></script>
 	<script src="palettes.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
+	<script src="interpolation.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet-src.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.0.29/leaflet-providers.min.js"></script>
 	<!--
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.6/proj4.js"></script>
@@ -16,7 +17,8 @@
 	<script src="polarmap-src.js"></script>
 	-->
 	<style>
-		#map { height: 600px; }
+		html, body { height: 98%; }
+		#map { height: 100%; }
 		
 		.info {
 			padding: 6px 8px;
@@ -38,7 +40,7 @@
 			margin-right: 8px;
 			opacity: 0.7;
 		}
-		.palette-active {
+		.button-active {
 			font-weight: bold;
 		}
 	</style>
@@ -65,17 +67,35 @@
 	
 	<template id="template-palettes">
 		<div class="info palettes">
+			Palette:
 			<button class="palette-button" data-palette="dem">DEM</button>
 			<button class="palette-button" data-palette="gray">Grayscale</button>
 			<button class="palette-button" data-palette="rainbow">Rainbow</button>
 			<button class="palette-button" data-palette="linearL">LinearL</button>
 		</div>
 	</template>
+	
+	<template id="template-interpolation">
+		<div class="info interpolation">
+			Interpolation:
+			<button class="interpolation-button" data-interpolation="nearestNeighbor">None</button>
+			<button class="interpolation-button" data-interpolation="idw">IDW</button>
+		</div>
+	</template>
+	
+	<template id="template-palette-range">
+		<div class="info palette-range">
+			Palette Range:
+			<button class="palette-range-button" data-palette-range="global">Global</button>
+			<button class="palette-range-button" data-palette-range="fov">Field of view</button>
+			<button class="palette-range-button" data-palette-range="custom">Custom</button>
+		</div>
+	</template>
 
 	<script>
 	var ndarray = require("ndarray");
 	
-	var map = L.map('map').setView([51.505, -0.09], 2);	
+	var map = L.map('map').setView([10, 0], 2);	
 	
 	var baseLayers = {
 		'Esri.WorldImagery': 'Esri Satellite',		
@@ -94,25 +114,75 @@
 	layerControl[baseLayers['Esri.WorldImagery']].addTo(map);
 	var lc = L.control.layers(layerControl).addTo(map);
 	
+	function redrawLayers(map) {
+		map.eachLayer(function (layer) {
+			if ('drawTile' in layer) {
+				map.removeLayer(layer);
+				map.addLayer(layer);
+			}
+		});
+	}
+	
 	// default palette, note that map.palette is our own attribute
-	var defaultPalette = 'linearL';
+	var defaultPalette = 'rainbow';
+	var defaultInterpolation = 'nearestNeighbor';
 	map.palette = palettes[defaultPalette];
+	map.interpolation = interpolationMethods[defaultInterpolation];
 	
 	var paletteSwitcher = L.control({position: 'bottomleft'});
 	paletteSwitcher.onAdd = function (map) {
 		var div = document.importNode($('#template-palettes')[0].content, true);
 		div = $('.palettes', div)[0];
-		$(".palette-button[data-palette='" + defaultPalette + "']",div).addClass('palette-active');
+		$(".palette-button[data-palette='" + defaultPalette + "']",div).addClass('button-active');
 		$('.palette-button', div).click(function() {
 			map.palette = palettes[$(this).data('palette')];
-			$('.palette-button').removeClass('palette-active');
-			$(this).addClass('palette-active');
-			// TODO redraw layers
+			$('.palette-button').removeClass('button-active');
+			$(this).addClass('button-active');
+			redrawLayers(map);
+		});
+		return div;
+	};
+		
+	var paletteRangeControl = L.control({position: 'bottomleft'});
+	paletteRangeControl.onAdd = function (map) {
+		var div = document.importNode($('#template-palette-range')[0].content, true);
+		div = $('.palette-range', div)[0];
+		$('.palette-range-button', div).click(function() {
+			var action = $(this).data('palette-range');
+			map.eachLayer(function (layer) {
+				if (!('drawTile' in layer)) return;
+				var range = layer.featureResult.range[layer.paramId];
+				if (action == "global") {
+					delete range.min;
+					delete range.min;
+				} else if (action == "fov") {
+					// TODO recalculate range for current field-of-view
+					// first, get current bounding box
+				} else if (action == "custom") {
+					// TODO display popup to set range extent for each layer
+				}
+			});			
+			redrawLayers(map);
+		});
+		return div;
+	};
+	
+	var interpolationSwitcher = L.control({position: 'bottomleft'});
+	interpolationSwitcher.onAdd = function (map) {
+		var div = document.importNode($('#template-interpolation')[0].content, true);
+		div = $('.interpolation', div)[0];
+		$(".interpolation-button[data-interpolation='" + defaultInterpolation + "']",div).addClass('button-active');
+		$('.interpolation-button', div).click(function() {
+			map.interpolation = interpolationMethods[$(this).data('interpolation')];
+			$('.interpolation-button').removeClass('button-active');
+			$(this).addClass('button-active');
+			redrawLayers(map);
 		});
 		return div;
 	};
 	paletteSwitcher.addTo(map);
-	
+	paletteRangeControl.addTo(map);
+	interpolationSwitcher.addTo(map);
 	
 	function createLegend(palette, title, low, high, uom) {
 		var legend = L.control({position: 'bottomright'});
@@ -144,6 +214,7 @@
 		// A better solution would be to have an initialization function when a adding
 		// a layer and an event that would need to be fired once done. After that, the
 		// tile drawing could start. However, leaflet doesn't support that yet.
+		
 		setTimeout(function() {
 			var layer = e.layer;
 			var rangeType = layer.featureResult.rangeType[layer.paramId];
@@ -160,11 +231,7 @@
 	});
 	
 	// the following assumes a rectilinear data grid
-	
-	// each tile scans the whole range of a parameter
-	// TODO this could be made faster by getting range subsets such that each tile only
-	//      has to scan within it's bounding box
-	
+		
 	var supportedCrs = {
 		"http://www.opengis.net/def/crs/OGC/1.3/CRS84": {}
 	};	
@@ -197,6 +264,8 @@
 			var nTime = 'time' in result.domain ? result.domain.time.length : 1;
 			
 			var paramArr = ndarray(param.values, [nTime,nVertical,nLat,nLon]);
+			// TODO expose time/height choice via UI
+			paramArr = paramArr.pick(0,0,null,null);
 			
 			// store for faster access
 			var domainLon = result.domain.x;
@@ -206,6 +275,7 @@
 			var paletteRed = map.palette.allowedValues.red;
 			var paletteGreen = map.palette.allowedValues.green;
 			var paletteBlue = map.palette.allowedValues.blue;
+			var interp = map.interpolation.fn;
 			
 			var tLoop = Date.now();
 			
@@ -230,7 +300,7 @@
 				var iLatEnd = indexOfNearest(domainLat, tileTopLeftGeo.lat);
 				domainLon = domainLon.slice(iLonStart, iLonEnd+1); // could use ndarray here as well
 				domainLat = domainLat.slice(iLatStart, iLatEnd+1);
-				paramArr = paramArr.hi(nTime,nVertical,iLatEnd+1,iLonEnd+1).lo(0,0,iLatStart,iLonStart);
+				paramArr = paramArr.hi(iLatEnd+1,iLonEnd+1).lo(iLatStart,iLonStart);
 			}
 			
 			var imgData = ctx.getImageData(0, 0, tileSize, tileSize);
@@ -254,6 +324,7 @@
 			}
 			
 			function drawAnyProjection() {
+				// TODO rewrite with interpolation support like drawMercator
 				// usable for any map projection, but computationally more intensive
 				
 				// TODO there are two hotspots in the loop: map.unproject and indexOfNearest
@@ -281,13 +352,12 @@
 						// for finding the closest latitude/longitude we use a simple binary search
 						// (as the array is always ascending and there is no discontinuity)
 						//var t0 = Date.now();
-						var iLat = indexOfNearest(domainLat, lat);
-						var iLon = indexOfNearest(domainLon, lon);
+						var iLatNeighbors = indicesOfNearest(domainLat, lat);
+						var iLonNeighbors = indicesOfNearest(domainLon, lon);
 						//tNear += Date.now()-t0;
 											
 						// now we fetch the range value at the given grid cell
-						// TODO allow access to time and vertical dimension
-						var val = paramArr.get(0,0,iLat,iLon);
+						var val = interp(paramArr, lon, lat, domainLon, domainLat, iLonNeighbors, iLatNeighbors);
 						if (val === null) {
 							continue;
 						}
@@ -301,13 +371,13 @@
 				// optimized version for mercator-like projections
 				// this can be used when lat and long can be computed independently for a given pixel
 							
-				var latCache = new Int8Array(tileSize);
-				var iLatCache = new Array(tileSize);
+				var latCache = new Array(tileSize);
+				var iLatNeighborsCache = new Array(tileSize);
 				for (var tileY=0; tileY<tileSize; tileY++) {
 					var lat = map.unproject(L.point(startX, startY+tileY)).lat;
 					latCache[tileY] = lat;
 					// find the index of the closest latitude in the grid using simple binary search
-					iLatCache[tileY] = indexOfNearest(domainLat, lat);
+					iLatNeighborsCache[tileY] = indicesOfNearest(domainLat, lat);
 				}
 				
 				for (var tileX=0; tileX<tileSize; tileX++) {
@@ -318,7 +388,7 @@
 					}
 					// find the index of the closest longitude in the grid using simple binary search
 					// (as the array is always ascending and there is no discontinuity)
-					var iLon = indexOfNearest(domainLon, lon);
+					var iLonNeighbors = indicesOfNearest(domainLon, lon);
 					
 					for (var tileY=0; tileY<tileSize; tileY++) {
 						// get geographic coordinates of tile pixel
@@ -330,11 +400,10 @@
 							continue;
 						}
 						
-						var iLat = iLatCache[tileY];
+						var iLatNeighbors = iLatNeighborsCache[tileY];
 						
-						// now we fetch the range value at the given grid cell
-						// TODO allow access to time and vertical dimension
-						var val = paramArr.get(0,0,iLat,iLon);
+						// now we fetch the range value at the given grid cell						
+						var val = interp(paramArr, lon, lat, domainLon, domainLat, iLonNeighbors, iLatNeighbors);
 						if (val === null) {
 							continue;
 						}
@@ -344,13 +413,13 @@
 				}
 			}
 			
-			// TODO check which projection is active and switch to drawGeneral() if needed
+			// TODO check which projection is active and switch if needed
 			drawMercator();
 			//drawAnyProjection();
 			
 			//console.log("tile loop, unproject", tUnproject);
 			//console.log("tile loop, indexofnearest", tNear);
-			console.log("tile loop", Date.now()-tLoop);
+			//console.log("tile loop", Date.now()-tLoop);
 			
 			ctx.putImageData(imgData, 0, 0);
 		}
@@ -384,7 +453,9 @@
 		return {min: min, max: max};
 	};
 	
-	function indexOfNearest(a, x) {
+	function indicesOfNearest(a, x) {
+		// return the indices of the two neighbors closest to x 
+		// if x exists in the array, both neighbors point to x
 		// adapted from https://stackoverflow.com/a/4431347
 		var lo = -1, hi = a.length;
 		while (hi - lo > 1) {
@@ -396,6 +467,12 @@
 			}
 		}
 		if (a[lo] == x) hi = lo;
+		return [lo,hi];
+	}
+	
+	function indexOfNearest(a, x) {
+		var i = indicesOfNearest(a, x);
+		var lo = i[0], hi = i[1];
 		if (Math.abs(x-a[lo]) < Math.abs(x-a[hi])) {
 			return lo;
 		} else {
@@ -452,6 +529,7 @@
 	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/TMP");
 	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/SALTY");
 	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/M");
+	addFeature("http://localhost:8182/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst")
 	</script>
 </body>
 </html>
