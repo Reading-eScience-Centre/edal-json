@@ -1,5 +1,6 @@
 package uk.ac.rdg.resc.edal.json;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.text.DateFormat;
@@ -19,11 +20,14 @@ import org.geotoolkit.metadata.iso.citation.Citations;
 import org.geotoolkit.referencing.IdentifiedObjects;
 import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
 import org.joda.time.DateTime;
+import org.msgpack.MessagePack;
 import org.opengis.util.FactoryException;
 import org.restlet.Server;
+import org.restlet.data.MediaType;
 import org.restlet.data.Protocol;
 import org.restlet.data.Reference;
 import org.restlet.ext.json.JsonRepresentation;
+import org.restlet.representation.InputRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
@@ -62,6 +66,13 @@ import uk.ac.rdg.resc.edal.util.CollectionUtils;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeatureParameterRangeResource extends ServerResource {
+	
+	public static final MediaType APPLICATION_MSGPACK;
+	
+	static {
+	     APPLICATION_MSGPACK = MediaType.register(
+	            "application/x-msgpack", "MessagePack binary");
+	}
 
 	@Get("json")
 	public Representation json() throws IOException, EdalException {
@@ -86,7 +97,13 @@ public class FeatureParameterRangeResource extends ServerResource {
 				"values", FeatureResource.getValues(feature.getValues(param.getId()))
 				);
 		
-		Representation r = new JsonRepresentation(j);
+		// TODO do content-negotiation
+		MessagePack msgpack = new MessagePack();
+		byte[] raw = msgpack.write(j);
+		Representation r = new InputRepresentation(new ByteArrayInputStream(raw), 
+				APPLICATION_MSGPACK);
+		
+//		Representation r = new JsonRepresentation(j);
 		
 		// TODO think about caching strategy
 		Date exp = Date.from(LocalDate.of(2050, 1, 1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
