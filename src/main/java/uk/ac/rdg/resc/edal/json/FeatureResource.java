@@ -186,9 +186,6 @@ public class FeatureResource extends ServerResource {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
 		
-		// TODO this function should not be needed...
-		// the values should be delivered in a defined order by the Array<Number> iterator
-		// but on the other side we may need to manually fetch values anyway for subsetting
 		List<Number> vals = new ArrayList<Number>((int) valsArr.size());
 		
 		if (valsArr instanceof Array4D) {
@@ -196,6 +193,34 @@ public class FeatureResource extends ServerResource {
 			iterator((Array4D<Number>) valsArr).forEachRemaining(vals::add);
 		} else {
 			valsArr.forEach(vals::add);
+		}
+		return vals;
+	}
+	
+	public static int[] getValues_(Array<Number> valsArr) {
+		if (valsArr.size() > Integer.MAX_VALUE) {
+			throw new RuntimeException("Array too big, consider subsetting!");
+		}
+		
+		// TODO make this more clever, depending on input data
+		int[] vals = new int[(int) valsArr.size()];
+		
+		Iterator<Number> it;
+		if (valsArr instanceof Array4D) {
+			// workaround because CdmGridDataSource->WrappedArray broken...
+			it = iterator((Array4D<Number>) valsArr);
+		} else {
+			it = valsArr.iterator();
+		}
+		int i = 0;
+		while (it.hasNext()) {
+			Number v = it.next();
+			if (v == null) {
+				vals[i] = Integer.MIN_VALUE;
+			} else {
+				vals[i] = v.intValue();
+			}
+			i++;
 		}
 		return vals;
 	}

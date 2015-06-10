@@ -5,10 +5,10 @@
 	<meta charset="utf-8">
 	
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
+	
 	<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
-	<script src="ndarray.js"></script>
-	<script src="palettes.js"></script>
-	<script src="interpolation.js"></script>
+	<script src="https://cdn.rawgit.com/acigna/jquery-ajax-native/1.0.1/src/jquery-ajax-native.js"></script>
+	
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet-src.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.0.29/leaflet-providers.min.js"></script>
 	<!--
@@ -16,6 +16,12 @@
 	<script src="https://cdn.rawgit.com/kartena/Proj4Leaflet/0.7.1/src/proj4leaflet.js"></script>
 	<script src="polarmap-src.js"></script>
 	-->
+	
+	<script src="js/ndarray.js"></script>
+	<script src="js/palettes.js"></script>
+	<script src="js/interpolation.js"></script>
+	<script src="js/msgpack.js"></script>
+	
 	<style>
 		html, body { height: 98%; }
 		#map { height: 100%; }
@@ -430,10 +436,26 @@
 			if ('values' in paramRange) {
 				drawTile.call(self, canvas, tilePoint, zoom);
 			} else {
+				$.ajax({
+					dataType: 'native',
+					accepts: {
+						'native': 'application/x-msgpack'
+					},
+					url: paramRange.id,
+					xhrFields: {
+					  responseType: 'arraybuffer'
+					},
+					success: function( raw ) {
+						var paramRangeWithValues = msgpack.unpack(new Uint8Array(raw));
+						layer.featureResult.range[paramId] = paramRangeWithValues;
+						drawTile.call(self, canvas, tilePoint, zoom);
+					}
+				});
+				/*
 				$.getJSON(paramRange.id, function( paramRangeWithValues ) {
 					layer.featureResult.range[paramId] = paramRangeWithValues;
 					drawTile.call(self, canvas, tilePoint, zoom);
-				});
+				});*/
 			}
 		};
 	}
