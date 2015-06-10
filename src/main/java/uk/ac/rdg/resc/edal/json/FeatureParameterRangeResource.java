@@ -2,6 +2,7 @@ package uk.ac.rdg.resc.edal.json;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.text.DateFormat;
 import java.time.LocalDate;
@@ -66,16 +67,8 @@ import uk.ac.rdg.resc.edal.util.CollectionUtils;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeatureParameterRangeResource extends ServerResource {
-	
-	public static final MediaType APPLICATION_MSGPACK;
-	
-	static {
-	     APPLICATION_MSGPACK = MediaType.register(
-	            "application/x-msgpack", "MessagePack binary");
-	}
-
-	@Get("json")
-	public Representation json() throws IOException, EdalException {
+		
+	private Map rangeData() throws IOException, EdalException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("featureId"));
 		String parameterId = Reference.decode(getAttribute("parameterId"));
@@ -96,19 +89,30 @@ public class FeatureParameterRangeResource extends ServerResource {
 				"name", param.getId(),
 				"values", FeatureResource.getValues(feature.getValues(param.getId()))
 				);
+		return j;
+	}
+
+	@Get("json")
+	public Representation json() throws IOException, EdalException {
+		Map j = rangeData();
 		
-		// TODO do content-negotiation
-		MessagePack msgpack = new MessagePack();
-		byte[] raw = msgpack.write(j);
-		Representation r = new InputRepresentation(new ByteArrayInputStream(raw), 
-				APPLICATION_MSGPACK);
-		
-//		Representation r = new JsonRepresentation(j);
+		Representation r = new JsonRepresentation(j);
 		
 		// TODO think about caching strategy
-		Date exp = Date.from(LocalDate.of(2050, 1, 1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
-		r.setExpirationDate(exp);
+//		Date exp = Date.from(LocalDate.of(2050, 1, 1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
+//		r.setExpirationDate(exp);
 		return r;
 	}
 	
+	@Get("msgpack")
+	public Representation msgpack() throws IOException, EdalException {
+		Map j = rangeData();
+		Representation r = new MessagePackRepresentation(j);
+		
+		// TODO think about caching strategy
+//		Date exp = Date.from(LocalDate.of(2050, 1, 1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
+//		r.setExpirationDate(exp);
+		return r;
+	}
+		
 }
