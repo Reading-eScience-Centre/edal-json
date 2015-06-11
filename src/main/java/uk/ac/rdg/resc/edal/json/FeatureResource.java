@@ -38,6 +38,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
+import static uk.ac.rdg.resc.edal.json.Utils.mapList;
+
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeatureResource extends ServerResource {
 
@@ -62,21 +64,35 @@ public class FeatureResource extends ServerResource {
 		} else {
 			range = getParameterValuesJson(feature, dataset, true, featureUrl);
 		}
-		
-		Map j = ImmutableMap.of(
+		Map domainJson = getDomainJson(feature);
+		Map j = new HashMap(ImmutableMap.of(
 				"id", featureUrl,
 				"title", feature.getName(),
-				"phenomenonTime", "?",
 				"result", ImmutableMap.of(
-						"domain", getDomainJson(feature),
+						"domain", domainJson,
 						"rangeType", getParameterTypesJson(feature, dataset),
 						"range", range
 						)
-				);
+				));
+		addPhenomenonTime(domainJson, j);
 		
 		JsonRepresentation r = new JsonRepresentation(j);
 		r.setIndenting(true);
 		return r;
+	}
+	
+	private void addPhenomenonTime(Map domainJson, Map featureJson) {
+		// a time range or a single point in time
+		List time = (List) domainJson.get("time");
+		if (time == null) return;
+		if (time.size() == 1) {
+			featureJson.put("phenomenonTime", time.get(0)); 
+		} else {
+			featureJson.put("phenomenonTime", ImmutableMap.of(
+					"start", time.get(0),
+					"end", time.get(time.size()-1)
+					));
+		}
 	}
 	
 	private Map getDomainJson(Feature<?> feature) {
@@ -128,8 +144,8 @@ public class FeatureResource extends ServerResource {
 					"type", "Profile",
 				    "crs", Utils.getCrsUri(pos.getCoordinateReferenceSystem()),
 				    "bbox", ImmutableList.of(pos.getX(), pos.getY(), pos.getX(), pos.getY()),
-				    "x", pos.getX(),
-				    "y", pos.getY()
+				    "x", ImmutableList.of(pos.getX()),
+				    "y", ImmutableList.of(pos.getY())
 					));
 			
 			addVerticalAxis(z, domainJson);
@@ -159,21 +175,17 @@ public class FeatureResource extends ServerResource {
 		
 	private void addTimeAxis(TimeAxis t, Map domainJson) {
 		if (t == null) {
+			return;
 			// TODO why is time null? shouldn't there be always a time?
-		} else if (t.size() > 1) {
-			domainJson.putAll(ImmutableMap.of(
-					"time", t.getCoordinateValues()
-					));
-		} else {
-			domainJson.put("time", t.getCoordinateValues().get(0));
-		}
+		} 
+		domainJson.put("time", mapList(t.getCoordinateValues(), time -> time.toString()));
 	}
 	
 	private void addTime(DateTime t, Map domainJson) {
 		// TODO profile should have a timeaxis with a single element
 		// this would avoid special handling here
 		if (t != null) {
-			domainJson.put("time", t.toString());
+			domainJson.put("time", ImmutableList.of(t.toString()));
 		}
 	}
 	

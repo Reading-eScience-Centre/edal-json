@@ -233,7 +233,7 @@
 	
 	map.on('overlayremove', function (e) {
 		var layer = e.layer;
-		this.removeControl(layer.legend);
+		map.removeControl(layer.legend);
 	});
 	
 	// the following assumes a rectilinear data grid
@@ -552,6 +552,7 @@
 	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/SALTY");
 	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/M");
 	addFeature("http://localhost:8182/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst")
+	addFeature("http://localhost:8182/datasets/en3_test_data.nc/features/7880:C:%5CUsers%5Cnx910562%5Cgit%5Cedal-json%5Ctarget%5Cclasses%5Cen3_test_data.nc");
 	</script>
 </body>
 </html>
