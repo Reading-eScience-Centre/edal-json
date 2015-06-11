@@ -85,14 +85,12 @@ public class FeatureResource extends ServerResource {
 		// a time range or a single point in time
 		List time = (List) domainJson.get("time");
 		if (time == null) return;
-		if (time.size() == 1) {
-			featureJson.put("phenomenonTime", time.get(0)); 
-		} else {
-			featureJson.put("phenomenonTime", ImmutableMap.of(
+
+		featureJson.put("phenomenonTime", time.size() == 1 ? time.get(0) :
+			ImmutableMap.of(
 					"start", time.get(0),
 					"end", time.get(time.size()-1)
-					));
-		}
+					)); 
 	}
 	
 	private Map getDomainJson(Feature<?> feature) {
