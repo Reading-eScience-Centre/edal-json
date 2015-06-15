@@ -1,7 +1,10 @@
 package uk.ac.rdg.resc.edal.json;
 
+import static uk.ac.rdg.resc.edal.json.Utils.mapList;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -9,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.joda.time.DateTime;
-import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.restlet.data.Reference;
 import org.restlet.ext.json.JsonRepresentation;
 import org.restlet.representation.Representation;
@@ -38,50 +40,80 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
-import static uk.ac.rdg.resc.edal.json.Utils.mapList;
-
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeatureResource extends ServerResource {
-
-	@Get("json")
-	public Representation json() throws IOException, EdalException {
-		String datasetId = Reference.decode(getAttribute("datasetId"));
-		String featureId = Reference.decode(getAttribute("featureId"));
-		Dataset dataset = Utils.getDataset(datasetId);
+	
+	static class Details {
+		final boolean domain, rangeMetadata, range;
+		static Details from(String details) {
+			if (details == null) return new Details(false, false, false);
+			List<String> parts = Arrays.asList(details.split(","));
+			return new Details(parts.contains("domain"), parts.contains("rangeMetadata"), 
+					parts.contains("range"));
+		}
+		public Details(boolean domain, boolean rangeMetadata, boolean range) {
+			this.domain = domain;
+			this.rangeMetadata = rangeMetadata;
+			this.range = range;
+		}
+	}
+	
+	public static Map getFeatureJson(Dataset dataset, String featureId, String rootUri, Details details) throws EdalException {
 		DiscreteFeature feature;
 		try {
 			feature = (DiscreteFeature) dataset.readFeature(featureId);
 		} catch (ClassCastException e) {
 			throw new IllegalArgumentException("Only discrete features are supported");
 		}
-		
-		String featureUrl = getReference().toString();
-		
-		Object range;
-		if (feature.getDomain() instanceof GridDomain) {
-			// grids are big, so we don't supply the parameter values with the feature itself
-			range = getParameterValuesJson(feature, dataset, false, featureUrl);
-		} else {
-			range = getParameterValuesJson(feature, dataset, true, featureUrl);
-		}
-		Map domainJson = getDomainJson(feature);
+		return getFeatureJson(dataset, feature, rootUri, details);
+	}
+	
+	public static Map getFeatureJson(Dataset dataset, DiscreteFeature feature, String rootUri, Details details) throws EdalException {
+		String featureUrl = rootUri + "/datasets/" + dataset.getId() + "/features/" + feature.getId();
+				
 		Map j = new HashMap(ImmutableMap.of(
 				"id", featureUrl,
-				"title", feature.getName(),
-				"result", ImmutableMap.of(
-						"domain", domainJson,
-						"rangeType", getParameterTypesJson(feature, dataset),
-						"range", range
-						)
+				"title", feature.getName()
 				));
+		Map domainJson = getDomainJson(feature);
+		if (details.domain || details.range || details.rangeMetadata) {
+			Map result = new HashMap();
+			if (details.domain) {
+				result.put("domain", domainJson);
+			}
+			if (details.rangeMetadata) {
+				result.put("rangeType", getParameterTypesJson(feature, dataset, rootUri));
+			}
+			if (details.range) {
+				Object range;
+				if (feature.getDomain() instanceof GridDomain) {
+					// grids are big, so we don't supply the parameter values with the feature itself
+					range = getParameterValuesJson(feature, dataset, false, rootUri);
+				} else {
+					range = getParameterValuesJson(feature, dataset, true, rootUri);
+				}
+				result.put("range", range);
+			}
+			j.put("result", result);
+		}
 		addPhenomenonTime(domainJson, j);
 		
-		JsonRepresentation r = new JsonRepresentation(j);
+		return j;
+	}
+	
+	@Get("json")
+	public Representation json() throws IOException, EdalException {
+		String datasetId = Reference.decode(getAttribute("datasetId"));
+		String featureId = Reference.decode(getAttribute("featureId"));
+		Details details = Details.from(getQueryValue("details"));
+		Dataset dataset = Utils.getDataset(datasetId);
+		Map featureJson = getFeatureJson(dataset, featureId, getRootRef().toString(), details);
+		JsonRepresentation r = new JsonRepresentation(featureJson);
 		r.setIndenting(true);
 		return r;
 	}
 	
-	private void addPhenomenonTime(Map domainJson, Map featureJson) {
+	private static void addPhenomenonTime(Map domainJson, Map featureJson) {
 		// a time range or a single point in time
 		List time = (List) domainJson.get("time");
 		if (time == null) return;
@@ -93,7 +125,7 @@ public class FeatureResource extends ServerResource {
 					)); 
 	}
 	
-	private Map getDomainJson(Feature<?> feature) {
+	private static Map getDomainJson(Feature<?> feature) {
 		Map domainJson;
 		
 		// FIXME feature types should be interfaces
@@ -158,7 +190,7 @@ public class FeatureResource extends ServerResource {
 		return domainJson;
 	}
 	
-	private void addVerticalAxis(VerticalAxis z, Map domainJson) {
+	private static void addVerticalAxis(VerticalAxis z, Map domainJson) {
 		if (z != null) {
 			domainJson.put("vertical", z.getCoordinateValues());
 			// TODO are there no standards for vertical CRS, with codes etc.?
@@ -171,7 +203,7 @@ public class FeatureResource extends ServerResource {
 		}		
 	}
 		
-	private void addTimeAxis(TimeAxis t, Map domainJson) {
+	private static void addTimeAxis(TimeAxis t, Map domainJson) {
 		if (t == null) {
 			return;
 			// TODO why is time null? shouldn't there be always a time?
@@ -179,7 +211,7 @@ public class FeatureResource extends ServerResource {
 		domainJson.put("time", mapList(t.getCoordinateValues(), time -> time.toString()));
 	}
 	
-	private void addTime(DateTime t, Map domainJson) {
+	private static void addTime(DateTime t, Map domainJson) {
 		// TODO profile should have a timeaxis with a single element
 		// this would avoid special handling here
 		if (t != null) {
@@ -199,8 +231,8 @@ public class FeatureResource extends ServerResource {
 				);
 	}
 		
-	private Map getParameterTypesJson(DiscreteFeature<?,?> feature, Dataset dataset) {
-		String root = getRootRef().toString() + "/datasets/" + dataset.getId() + "/params/";
+	private static Map getParameterTypesJson(DiscreteFeature<?,?> feature, Dataset dataset, String rootUri) {
+		String root = rootUri + "/datasets/" + dataset.getId() + "/params/";
 		
 		Builder types = ImmutableMap.builder();
 		for (String paramId : feature.getParameterIds()) {
@@ -215,14 +247,14 @@ public class FeatureResource extends ServerResource {
 		return types.build();
 	}
 		
-	private Map getParameterValuesJson(DiscreteFeature<?,?> feature, Dataset dataset, boolean includeValues, String featureUrl) {
-		String root = getRootRef().toString() + "/datasets/" + dataset.getId() + "/params/";
+	private static Map getParameterValuesJson(DiscreteFeature<?,?> feature, Dataset dataset, boolean includeValues, String rootUri) {
+		String root = rootUri + "/datasets/" + dataset.getId();
 		Builder values = ImmutableMap.builder();
 
 		for (String paramId : feature.getParameterIds()) {
 			
 			Map rangeParam = ImmutableMap.of(
-					"id", featureUrl + "/range/" + paramId
+					"id", root + "/features/" + feature.getId() + "/range/" + paramId
 					);
 			
 			if (includeValues) {
@@ -235,7 +267,7 @@ public class FeatureResource extends ServerResource {
 						.build();
 			}
 			
-			values.put(root + paramId, rangeParam);
+			values.put(root + "/params/" + paramId, rangeParam);
 		}
 		
 		return values.build();

@@ -28,15 +28,17 @@ public class DatasetResource extends ServerResource {
 	@Get("json")
 	public Representation json() throws IOException, EdalException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
+		FeatureResource.Details details = FeatureResource.Details.from(getQueryValue("details"));
 		Dataset dataset = Utils.getDataset(datasetId);
 		
-		String datasetUrl = getReference().toString();
+		String datasetUrl = getRootRef().toString() + "/datasets/" + dataset.getId();
 		
 		List jsonFeatures = new LinkedList();
 		
 		for (String featureId : dataset.getFeatureIds()) {
 			Feature feature;
 			try {
+				// TODO how resource intensive is this operation?
 				feature = dataset.readFeature(featureId);
 			} catch (DataReadingException | VariableNotFoundException e) {
 				e.printStackTrace();
@@ -45,11 +47,13 @@ public class DatasetResource extends ServerResource {
 			if (!(feature instanceof DiscreteFeature)) {
 				continue;
 			}
+			DiscreteFeature discreteFeat = (DiscreteFeature) feature;
 			
-			jsonFeatures.add(ImmutableMap.of(
-				"id", datasetUrl + "/features/" + feature.getId(),
-				"title", feature.getName()
-				));
+			// TODO apply search filter
+			
+			
+			jsonFeatures.add(FeatureResource.getFeatureJson(dataset, discreteFeat, getRootRef().toString(), 
+					details));
 		}
 		
 		List jsonParams = new LinkedList();
