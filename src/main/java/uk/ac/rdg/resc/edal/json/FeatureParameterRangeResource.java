@@ -53,7 +53,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		Representation r = new JsonRepresentation(j);
 		
 		// TODO think about caching strategy
-		Date exp = Date.from(LocalDate.of(2015, 6, 15).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
+		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
 		r.setExpirationDate(exp);
 		return r;
 	}
@@ -64,7 +64,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		Representation r = new MessagePackRepresentation(j);
 		
 		// TODO think about caching strategy
-		Date exp = Date.from(LocalDate.of(2015, 6, 15).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
+		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
 		r.setExpirationDate(exp);
 		return r;
 	}

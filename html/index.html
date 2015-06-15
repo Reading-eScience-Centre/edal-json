@@ -18,6 +18,7 @@
 	-->
 	
 	<script src="js/ndarray.js"></script>
+	
 	<script src="js/palettes.js"></script>
 	<script src="js/interpolation.js"></script>
 	<script src="js/msgpack.js"></script>
@@ -100,6 +101,7 @@
 
 	<script>
 	var ndarray = require("ndarray");
+	var ops = require("ndarray-ops");
 	
 	var map = L.map('map').setView([10, 0], 2);	
 	
@@ -160,10 +162,23 @@
 				var range = layer.featureResult.range[layer.paramId];
 				if (action == "global") {
 					delete range.min;
-					delete range.min;
+					delete range.max;
 				} else if (action == "fov") {
 					// TODO recalculate range for current field-of-view
 					// first, get current bounding box
+					var bounds = map.getBounds();
+					var result = layer.featureResult;
+					
+					var paramRange4D = getParameterRange4D(result.domain, range.values, layer.paramId);
+					var subset = horizontalSubset(result.domain, paramRange4D, bounds).range;
+					
+					// TODO how is time/vertical dimension handled?
+					var extent = ndMinMax(subset);
+					
+					// TODO hacky, should not be written to the actual range
+					range.min = extent.min;
+					range.max = extent.max;
+					
 				} else if (action == "custom") {
 					// TODO display popup to set range extent for each layer
 				}
@@ -240,7 +255,50 @@
 		
 	var supportedCrs = {
 		"http://www.opengis.net/def/crs/OGC/1.3/CRS84": {}
-	};	
+	};
+	
+	function horizontalSubset(domain, paramRange4D, bounds) {
+		// prepare bounding box
+		var southWest = bounds.getSouthWest();
+		var northEast = bounds.getNorthEast();
+		var lonRange = [domain.lonDiscontinuity, domain.lonDiscontinuity+360];
+		southWest.lng = wrapLongitude(southWest.lng, lonRange);
+		northEast.lng = wrapLongitude(northEast.lng, lonRange);
+		if (northEast.lng < southWest.lng) {
+			// unwrap lng after wrapping, so that both are in right order again
+			northEast.lng+= 360;
+		}
+		
+		// we only support CRS84 here for now (lon-lat order)
+		var domainLon = domain.x;
+		var domainLat = domain.y;
+		
+		// find indices for subsetting
+		var iLonStart = indexOfNearest(domainLon, southWest.lng);
+		var iLonEnd = indexOfNearest(domainLon, northEast.lng);
+		var iLatStart = indexOfNearest(domainLat, southWest.lat);
+		var iLatEnd = indexOfNearest(domainLat, northEast.lat);
+		
+		// subset
+		domainLon = domainLon.slice(iLonStart, iLonEnd+1); // could use ndarray here as well
+		domainLat = domainLat.slice(iLatStart, iLatEnd+1);
+		paramRange4D = paramRange4D.hi(null,null,iLatEnd+1,iLonEnd+1).lo(null,null,iLatStart,iLonStart);
+		
+		return {
+			x: domainLat,
+			y: domainLon,
+			range: paramRange4D
+		};
+	}
+	
+	function getParameterRange4D(domain, paramRange) {
+		var nX = domain.x.length;
+		var nY = domain.y.length;
+		var nVertical = 'vertical' in domain ? domain.vertical.length : 1;
+		var nTime = 'time' in domain ? domain.time.length : 1;
+		
+		return ndarray(paramRange, [nTime,nVertical,nY,nX]);
+	}
 	
 	function drawTileFn(layer, paramId) {
 		function drawTile(canvas, tilePoint, zoom) {
@@ -262,18 +320,11 @@
 			var startX = start.x;
 			var startY = start.y;
 			
-			// array shape
-			// we only support CRS84 here for now (lon-lat order)
-			var nLon = result.domain.x.length;
-			var nLat = result.domain.y.length;
-			var nVertical = 'vertical' in result.domain ? result.domain.vertical.length : 1;
-			var nTime = 'time' in result.domain ? result.domain.time.length : 1;
-			
-			var paramArr = ndarray(param.values, [nTime,nVertical,nLat,nLon]);
-			// TODO expose time/height choice via UI
-			paramArr = paramArr.pick(0,0,null,null);
+			// 4D values array (time, vertical, y, x)
+			var paramRange4D = getParameterRange4D(result.domain, param.values);
 			
 			// store for faster access
+			// we only support CRS84 here for now (lon-lat order)
 			var domainLon = result.domain.x;
 			var domainLat = result.domain.y;
 			var domainBbox = result.domain.bbox;
@@ -293,20 +344,11 @@
 				// TODO check if this is really the case for bigger datasets
 				var tileTopLeftGeo = map.unproject(start);
 				var tileBottomRightGeo = map.unproject(L.point(startX+tileSize, startY+tileSize));
-				
-				tileTopLeftGeo.lng = wrapLongitude(tileTopLeftGeo.lng, lonRange);
-				tileBottomRightGeo.lng = wrapLongitude(tileBottomRightGeo.lng, lonRange);
-				if (tileBottomRightGeo.lng < tileTopLeftGeo.lng) {
-					// unwrap lng after wrapping, so that both are in right order again
-					tileBottomRightGeo.lng+= 360;
-				}
-				var iLonStart = indexOfNearest(domainLon, tileTopLeftGeo.lng);
-				var iLonEnd = indexOfNearest(domainLon, tileBottomRightGeo.lng);
-				var iLatStart = indexOfNearest(domainLat, tileBottomRightGeo.lat);
-				var iLatEnd = indexOfNearest(domainLat, tileTopLeftGeo.lat);
-				domainLon = domainLon.slice(iLonStart, iLonEnd+1); // could use ndarray here as well
-				domainLat = domainLat.slice(iLatStart, iLatEnd+1);
-				paramArr = paramArr.hi(iLatEnd+1,iLonEnd+1).lo(iLatStart,iLonStart);
+				var bounds = L.latLngBounds([southWest, northEast]);
+				var subset = horizontalSubset(result.domain, paramRange4D, bounds);
+				domainLon = subset.y;
+				domainLat = subset.x;
+				paramRange4D = subset.range;
 			}
 			
 			var imgData = ctx.getImageData(0, 0, tileSize, tileSize);
@@ -328,6 +370,9 @@
 				rgba.set(tileY,tileX,2,paletteBlue[valScaled]);
 				rgba.set(tileY,tileX,3,255);
 			}
+			
+			// TODO expose time/height choice via UI
+			paramRange2D = paramRange4D.pick(0,0,null,null);
 			
 			function drawAnyProjection() {
 				// TODO rewrite with interpolation support like drawMercator
@@ -363,7 +408,7 @@
 						//tNear += Date.now()-t0;
 											
 						// now we fetch the range value at the given grid cell
-						var val = interp(paramArr, lon, lat, domainLon, domainLat, iLonNeighbors, iLatNeighbors);
+						var val = interp(paramRange2D, lon, lat, domainLon, domainLat, iLonNeighbors, iLatNeighbors);
 						if (val === null) {
 							continue;
 						}
@@ -409,7 +454,7 @@
 						var iLatNeighbors = iLatNeighborsCache[tileY];
 						
 						// now we fetch the range value at the given grid cell						
-						var val = interp(paramArr, lon, lat, domainLon, domainLat, iLonNeighbors, iLatNeighbors);
+						var val = interp(paramRange2D, lon, lat, domainLon, domainLat, iLonNeighbors, iLatNeighbors);
 						if (val === null) {
 							continue;
 						}
@@ -473,7 +518,66 @@
 			}
 		}
 		return {min: min, max: max};
-	};
+	}
+	
+	// handle null values in arrays
+	// ndarray-ops only provides standard argmin and argmax
+	var compile = require("cwise-compiler");
+	ops.nullargmin = compile({
+	  args:["index","array","shape"],
+	  pre:{
+		body:"{this_v=Infinity;this_i=_inline_0_arg2_.slice(0)}",
+		args:[
+		  {name:"_inline_0_arg0_",lvalue:false,rvalue:false,count:0},
+		  {name:"_inline_0_arg1_",lvalue:false,rvalue:false,count:0},
+		  {name:"_inline_0_arg2_",lvalue:false,rvalue:true,count:1}
+		  ],
+		thisVars:["this_i","this_v"],
+		localVars:[]},
+	  body:{
+		body:"{if(_inline_1_arg1_ !== null && _inline_1_arg1_<this_v){this_v=_inline_1_arg1_;for(var _inline_1_k=0;_inline_1_k<_inline_1_arg0_.length;++_inline_1_k){this_i[_inline_1_k]=_inline_1_arg0_[_inline_1_k]}}}",
+		args:[
+		  {name:"_inline_1_arg0_",lvalue:false,rvalue:true,count:2},
+		  {name:"_inline_1_arg1_",lvalue:false,rvalue:true,count:2}],
+		thisVars:["this_i","this_v"],
+		localVars:["_inline_1_k"]},
+	  post:{
+		body:"{return this_i}",
+		args:[],
+		thisVars:["this_i"],
+		localVars:[]}
+	});
+
+	ops.nullargmax = compile({
+	  args:["index","array","shape"],
+	  pre:{
+		body:"{this_v=-Infinity;this_i=_inline_0_arg2_.slice(0)}",
+		args:[
+		  {name:"_inline_0_arg0_",lvalue:false,rvalue:false,count:0},
+		  {name:"_inline_0_arg1_",lvalue:false,rvalue:false,count:0},
+		  {name:"_inline_0_arg2_",lvalue:false,rvalue:true,count:1}
+		  ],
+		thisVars:["this_i","this_v"],
+		localVars:[]},
+	  body:{
+		body:"{if(_inline_1_arg1_ !== null && _inline_1_arg1_>this_v){this_v=_inline_1_arg1_;for(var _inline_1_k=0;_inline_1_k<_inline_1_arg0_.length;++_inline_1_k){this_i[_inline_1_k]=_inline_1_arg0_[_inline_1_k]}}}",
+		args:[
+		  {name:"_inline_1_arg0_",lvalue:false,rvalue:true,count:2},
+		  {name:"_inline_1_arg1_",lvalue:false,rvalue:true,count:2}],
+		thisVars:["this_i","this_v"],
+		localVars:["_inline_1_k"]},
+	  post:{
+		body:"{return this_i}",
+		args:[],
+		thisVars:["this_i"],
+		localVars:[]}
+	});
+	
+	function ndMinMax(arr) {
+		var min = arr.get.apply(arr, ops.nullargmin(arr));
+		var max = arr.get.apply(arr, ops.nullargmax(arr));
+		return {min: min, max: max};
+	}
 	
 	function indicesOfNearest(a, x) {
 		// return the indices of the two neighbors closest to x 
