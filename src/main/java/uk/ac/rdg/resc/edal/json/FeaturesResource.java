@@ -22,41 +22,43 @@ import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 
 import com.google.common.collect.ImmutableMap;
 
-public class DatasetResource extends ServerResource {
+public class FeaturesResource extends ServerResource {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Get("json")
 	public Representation json() throws IOException, EdalException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
+		FeatureResource.Details details = FeatureResource.Details.from(getQueryValue("details"));
 		Dataset dataset = Utils.getDataset(datasetId);
 		
 		String datasetUrl = getRootRef().toString() + "/datasets/" + dataset.getId();
-				
-		List jsonParams = new LinkedList();
-		// TODO check what the relation between variable and parameter is
-		for (String paramId : dataset.getVariableIds()) {
-			Parameter param = dataset.getVariableMetadata(paramId).getParameter();
-			Map m = ImmutableMap.of(
-					"id", datasetUrl + "/params/" + param.getId(),
-					"title", param.getTitle(),
-					"description", param.getDescription(),
-					"uom", param.getUnits()
-					);
-			
-			if (param.getStandardName() != null) {
-				// TODO translate into URI
-				m = ImmutableMap.builder()
-						.putAll(m)
-					    .put("observedProperty", param.getStandardName())
-					    .build();
+		
+		List jsonFeatures = new LinkedList();
+		
+		for (String featureId : dataset.getFeatureIds()) {
+			Feature feature;
+			try {
+				// TODO how resource intensive is this operation?
+				feature = dataset.readFeature(featureId);
+			} catch (DataReadingException | VariableNotFoundException e) {
+				e.printStackTrace();
+				continue;
 			}
-			jsonParams.add(m);
+			if (!(feature instanceof DiscreteFeature)) {
+				continue;
+			}
+			DiscreteFeature discreteFeat = (DiscreteFeature) feature;
+			
+			// TODO apply search filter
+			
+			
+			jsonFeatures.add(FeatureResource.getFeatureJson(dataset, discreteFeat, getRootRef().toString(), 
+					details));
 		}
 		
 		Map j = ImmutableMap.of(
-				"id", datasetUrl,
-				"title", "TODO: where to get this from EDAL?",
-				"parameters", jsonParams
+				"id", datasetUrl + "/features",
+				"features", jsonFeatures
 				);
 		
 		JsonRepresentation r = new JsonRepresentation(j);

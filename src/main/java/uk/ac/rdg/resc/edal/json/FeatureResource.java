@@ -46,7 +46,7 @@ public class FeatureResource extends ServerResource {
 	static class Details {
 		final boolean domain, rangeMetadata, range;
 		static Details from(String details) {
-			if (details == null) return new Details(false, false, false);
+			if (details == null) return new Details(false, true, false);
 			List<String> parts = Arrays.asList(details.split(","));
 			return new Details(parts.contains("domain"), parts.contains("rangeMetadata"), 
 					parts.contains("range"));
@@ -84,16 +84,7 @@ public class FeatureResource extends ServerResource {
 			if (details.rangeMetadata) {
 				result.put("rangeType", getParameterTypesJson(feature, dataset, rootUri));
 			}
-			if (details.range) {
-				Object range;
-				if (feature.getDomain() instanceof GridDomain) {
-					// grids are big, so we don't supply the parameter values with the feature itself
-					range = getParameterValuesJson(feature, dataset, false, rootUri);
-				} else {
-					range = getParameterValuesJson(feature, dataset, true, rootUri);
-				}
-				result.put("range", range);
-			}
+			result.put("range", getParameterValuesJson(feature, dataset, details.range, rootUri));
 			j.put("result", result);
 		}
 		addPhenomenonTime(domainJson, j);

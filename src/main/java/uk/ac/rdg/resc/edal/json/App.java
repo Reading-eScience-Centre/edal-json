@@ -40,6 +40,8 @@ public class App extends Application {
 				FeatureParameterRangeResource.class);
 		router.attach("/datasets/{datasetId}/features/{featureId}",
 				FeatureResource.class);
+		router.attach("/datasets/{datasetId}/features",
+				FeaturesResource.class);
 		router.attach("/datasets/{datasetId}", DatasetResource.class);
 		// router.attach("/datasets",
 		// DatasetsResource.class);
