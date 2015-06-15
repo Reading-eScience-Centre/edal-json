@@ -95,7 +95,7 @@
 			Palette Range:
 			<button class="palette-range-button" data-palette-range="global">Global</button>
 			<button class="palette-range-button" data-palette-range="fov">Field of view</button>
-			<button class="palette-range-button" data-palette-range="custom">Custom</button>
+			<!--<button class="palette-range-button" data-palette-range="custom">Custom</button>-->
 		</div>
 	</template>
 
@@ -342,9 +342,10 @@
 				// use subset of domain/values based on bounding box
 				// will speed up indexOfNearest
 				// TODO check if this is really the case for bigger datasets
+				// TODO check if this has any effect on quality
 				var tileTopLeftGeo = map.unproject(start);
 				var tileBottomRightGeo = map.unproject(L.point(startX+tileSize, startY+tileSize));
-				var bounds = L.latLngBounds([southWest, northEast]);
+				var bounds = L.latLngBounds([tileTopLeftGeo, tileBottomRightGeo]);
 				var subset = horizontalSubset(result.domain, paramRange4D, bounds);
 				domainLon = subset.y;
 				domainLat = subset.x;
