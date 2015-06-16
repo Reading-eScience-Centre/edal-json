@@ -6,22 +6,31 @@
 	
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
 	
-	<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
-	<script src="https://cdn.rawgit.com/acigna/jquery-ajax-native/1.0.1/src/jquery-ajax-native.js"></script>
-	
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet-src.js"></script>
+	<script>window.L || document.write('<link rel="stylesheet" href="css/leaflet/leaflet-0.7.3.css" />')</script>
+	<script>window.L || document.write('<script src="js/ext/leaflet-src-0.7.3.js">\x3C/script>')</script>
+	
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.0.29/leaflet-providers.min.js"></script>
+	<script>window.L.TileLayer.Provider || document.write('<script src="js/ext/leaflet-providers.min-1.0.29.js">\x3C/script>')</script>
+	
+	<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+	<script>window.jQuery || document.write('<script src="js/ext/jquery-1.11.3.min.js">\x3C/script>')</script>
+	
+	<script src="https://cdn.rawgit.com/acigna/jquery-ajax-native/1.0.1/src/jquery-ajax-native.js"></script>
+	<script>window.$.getNative || document.write('<script src="js/ext/jquery-ajax-native-1.0.1.js">\x3C/script>')</script>
+		
 	<!--
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.6/proj4.js"></script>
 	<script src="https://cdn.rawgit.com/kartena/Proj4Leaflet/0.7.1/src/proj4leaflet.js"></script>
 	<script src="polarmap-src.js"></script>
 	-->
 	
-	<script src="js/ndarray.js"></script>
+	<script src="js/ext/ndarray-1.0.18.js"></script>
+	<script src="js/ext/msgpack-1.0.5.js"></script>
 	
 	<script src="js/palettes.js"></script>
 	<script src="js/interpolation.js"></script>
-	<script src="js/msgpack.js"></script>
+	
 	
 	<style>
 		html, body { height: 98%; }
