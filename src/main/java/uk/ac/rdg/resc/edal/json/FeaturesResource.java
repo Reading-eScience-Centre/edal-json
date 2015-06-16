@@ -45,14 +45,7 @@ public class FeaturesResource extends ServerResource {
 			return featureMetadata.get(featureId);
 		}
 		public Supplier<Dataset> getLazyDataset() {
-			// TODO make EDALException a RuntimeException
-			return Suppliers.memoize(() -> {
-				try {
-					return Utils.getDataset(datasetId);
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			});
+			return Suppliers.memoize(() -> Utils.getDataset(datasetId));
 		}
 	}
 	
@@ -133,7 +126,7 @@ public class FeaturesResource extends ServerResource {
 			 * 2a. Time filter is given -> check intersection
 			 * 2b. Time filter not given -> include
 			 */
-			if (filter.timeExtent.isEmpty()) {
+			if (filter.timeExtent.getLow() == null && filter.timeExtent.getHigh() == null) {
 				// include
 			} else {
 				Extent<DateTime> t = domainMeta.getTimeExtent();
@@ -151,7 +144,7 @@ public class FeaturesResource extends ServerResource {
 			 * 2a. Vertical filter is given -> check intersection
 			 * 2b. Vertical filter not given -> include
 			 */
-			if (filter.verticalExtent.isEmpty()) {
+			if (filter.verticalExtent.getLow() == null && filter.verticalExtent.getHigh() == null) {
 				// include
 			} else {
 				Extent<Double> v = domainMeta.getVerticalExtent();

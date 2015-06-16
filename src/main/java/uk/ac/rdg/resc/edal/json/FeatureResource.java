@@ -157,7 +157,6 @@ public class FeatureResource extends ServerResource {
 				RectilinearGrid rectgrid = (RectilinearGrid) grid.getHorizontalGrid();
 				TimeAxis t = grid.getTimeAxis();
 				VerticalAxis z = grid.getVerticalAxis();
-				// TODO vertical CRS?
 				
 				BoundingBox bb = rectgrid.getBoundingBox();
 				domainJson = new HashMap(ImmutableMap.of(

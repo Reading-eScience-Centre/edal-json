@@ -19,8 +19,7 @@ import uk.ac.rdg.resc.edal.dataset.cdm.En3DatasetFactory;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 
 public final class Utils {
-	public static Dataset getDataset(String datasetId) throws IOException,
-			EdalException {
+	public static Dataset getDataset(String datasetId) {
 
 		URL resource = Utils.class.getResource("/" + datasetId);
 		Dataset dataset;
@@ -31,8 +30,12 @@ public final class Utils {
 					resource.getFile());
 		} catch (Exception e) {
 			datasetFactory = new En3DatasetFactory();
-			dataset = datasetFactory.createDataset(datasetId,
-					resource.getFile());
+			try {
+				dataset = datasetFactory.createDataset(datasetId,
+						resource.getFile());
+			} catch (IOException | EdalException e1) {
+				throw new RuntimeException(e1);
+			}
 		}
 		return dataset;
 	}
