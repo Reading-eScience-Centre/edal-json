@@ -2,6 +2,8 @@ package uk.ac.rdg.resc.edal.json;
 
 import static uk.ac.rdg.resc.edal.json.Utils.mapList;
 
+
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +13,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+
+
 import org.joda.time.DateTime;
 import org.restlet.data.Reference;
 import org.restlet.ext.json.JsonRepresentation;
@@ -18,8 +22,11 @@ import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 
+
+
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Domain;
+import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.domain.GridDomain;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
@@ -31,11 +38,16 @@ import uk.ac.rdg.resc.edal.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
+import uk.ac.rdg.resc.edal.json.FeaturesResource.DatasetMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Array;
 import uk.ac.rdg.resc.edal.util.Array4D;
 
+
+
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -43,10 +55,25 @@ import com.google.common.collect.ImmutableMap.Builder;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeatureResource extends ServerResource {
 	
+	static class FeatureMetadata {
+		public final DomainMetadata domainMeta;
+		public final RangeMetadata rangeMeta;
+		public final String featureId;
+		public final String datasetId;
+		public final  String name;
+		public FeatureMetadata(String datasetId, Feature feature) {
+			this.datasetId = datasetId;
+			this.featureId = feature.getId();
+			this.domainMeta = new DomainMetadata(feature);
+			this.rangeMeta = new RangeMetadata(feature);
+			this.name = feature.getName();
+		}
+	}
+	
 	static class Details {
 		final boolean domain, rangeMetadata, range;
-		static Details from(String details) {
-			if (details == null) return new Details(false, true, false);
+		static Details from(String details, Details fallback) {
+			if (details == null) return fallback;
 			List<String> parts = Arrays.asList(details.split(","));
 			return new Details(parts.contains("domain"), parts.contains("rangeMetadata"), 
 					parts.contains("range"));
@@ -57,37 +84,37 @@ public class FeatureResource extends ServerResource {
 			this.range = range;
 		}
 	}
-	
-	public static Map getFeatureJson(Dataset dataset, String featureId, String rootUri, Details details) throws EdalException {
-		DiscreteFeature feature;
-		try {
-			feature = (DiscreteFeature) dataset.readFeature(featureId);
-		} catch (ClassCastException e) {
-			throw new IllegalArgumentException("Only discrete features are supported");
-		}
-		return getFeatureJson(dataset, feature, rootUri, details);
-	}
-	
-	public static Map getFeatureJson(Dataset dataset, DiscreteFeature feature, String rootUri, Details details) throws EdalException {
-		String featureUrl = rootUri + "/datasets/" + dataset.getId() + "/features/" + feature.getId();
+		
+	public static Map getFeatureJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, Details details) throws EdalException {
+		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
 				
 		Map j = new HashMap(ImmutableMap.of(
 				"id", featureUrl,
-				"title", feature.getName()
+				"title", meta.name
 				));
-		Map domainJson = getDomainJson(feature);
+		
 		if (details.domain || details.range || details.rangeMetadata) {
 			Map result = new HashMap();
+			Supplier<DiscreteFeature<?,?>> feature;
+			feature = Suppliers.memoize(() -> {
+				try {
+					return (DiscreteFeature<?, ?>) dataset.get().readFeature(meta.featureId);
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			});
+
 			if (details.domain) {
+				Map domainJson = getDomainJson(feature.get());
 				result.put("domain", domainJson);
 			}
 			if (details.rangeMetadata) {
-				result.put("rangeType", getParameterTypesJson(feature, dataset, rootUri));
+				result.put("rangeType", getParameterTypesJson(meta, rootUri));
 			}
-			result.put("range", getParameterValuesJson(feature, dataset, details.range, rootUri));
+			result.put("range", getParameterValuesJson(meta, feature, details.range, rootUri));
 			j.put("result", result);
 		}
-		addPhenomenonTime(domainJson, j);
+		addPhenomenonTime(j, meta.domainMeta);
 		
 		return j;
 	}
@@ -96,23 +123,26 @@ public class FeatureResource extends ServerResource {
 	public Representation json() throws IOException, EdalException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("featureId"));
-		Details details = Details.from(getQueryValue("details"));
-		Dataset dataset = Utils.getDataset(datasetId);
-		Map featureJson = getFeatureJson(dataset, featureId, getRootRef().toString(), details);
+		Details fallback = new Details(true, true, false);
+		Details details = Details.from(getQueryValue("details"), fallback);
+		
+		DatasetMetadata meta = FeaturesResource.getDatasetMetadata(datasetId);
+		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
+				meta.getFeatureMetadata(featureId), getRootRef().toString(), details);
 		JsonRepresentation r = new JsonRepresentation(featureJson);
 		r.setIndenting(true);
 		return r;
 	}
 	
-	private static void addPhenomenonTime(Map domainJson, Map featureJson) {
+	private static void addPhenomenonTime(Map featureJson, DomainMetadata meta) {
 		// a time range or a single point in time
-		List time = (List) domainJson.get("time");
+		Extent<DateTime> time = meta.getTimeExtent();
 		if (time == null) return;
 
-		featureJson.put("phenomenonTime", time.size() == 1 ? time.get(0) :
+		featureJson.put("phenomenonTime", time.getLow() == time.getHigh() ? time.getLow() :
 			ImmutableMap.of(
-					"start", time.get(0),
-					"end", time.get(time.size()-1)
+					"start", time.getLow().toString(),
+					"end", time.getHigh().toString()
 					)); 
 	}
 	
@@ -222,13 +252,12 @@ public class FeatureResource extends ServerResource {
 				);
 	}
 		
-	private static Map getParameterTypesJson(DiscreteFeature<?,?> feature, Dataset dataset, String rootUri) {
-		String root = rootUri + "/datasets/" + dataset.getId() + "/params/";
+	private static Map getParameterTypesJson(FeatureMetadata meta, String rootUri) {
+		String root = rootUri + "/datasets/" + meta.datasetId + "/params/";
 		
 		Builder types = ImmutableMap.builder();
-		for (String paramId : feature.getParameterIds()) {
-			Parameter param = feature.getParameter(paramId);
-			types.put(root + paramId, ImmutableMap.of(
+		for (Parameter param : meta.rangeMeta.getParameters()) {
+			types.put(root + param.getId(), ImmutableMap.of(
 					"title", param.getTitle(),
 					"description", param.getDescription(),
 					"observedProperty", param.getStandardName() == null ? "UNKNOWN" : param.getStandardName(),
@@ -238,19 +267,19 @@ public class FeatureResource extends ServerResource {
 		return types.build();
 	}
 		
-	private static Map getParameterValuesJson(DiscreteFeature<?,?> feature, Dataset dataset, boolean includeValues, String rootUri) {
-		String root = rootUri + "/datasets/" + dataset.getId();
+	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<DiscreteFeature<?,?>> feature, boolean includeValues, String rootUri) {
+		String root = rootUri + "/datasets/" + meta.datasetId;
 		Builder values = ImmutableMap.builder();
 
-		for (String paramId : feature.getParameterIds()) {
+		for (String paramId : meta.rangeMeta.getParameterIds()) {
 			
 			Map rangeParam = ImmutableMap.of(
-					"id", root + "/features/" + feature.getId() + "/range/" + paramId
+					"id", root + "/features/" + meta.featureId + "/range/" + paramId
 					);
 			
 			if (includeValues) {
 				// TODO how do we know which axis order the array has?!
-				Array<Number> valsArr = feature.getValues(paramId);
+				Array<Number> valsArr = feature.get().getValues(paramId);
 				
 				rangeParam = ImmutableMap.builder()
 						.putAll(rangeParam)

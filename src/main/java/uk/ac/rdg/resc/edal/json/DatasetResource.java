@@ -53,11 +53,13 @@ public class DatasetResource extends ServerResource {
 			jsonParams.add(m);
 		}
 		
+		// TODO add spatiotemporal extent
 		Map j = ImmutableMap.of(
 				"id", datasetUrl,
 				"title", "TODO: where to get this from EDAL?",
-				"parameters", jsonParams
-				);
+				"parameters", jsonParams,
+				"features", datasetUrl + "/features"
+				);		
 		
 		JsonRepresentation r = new JsonRepresentation(j);
 		r.setIndenting(true);
