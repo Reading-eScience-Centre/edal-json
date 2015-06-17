@@ -6,8 +6,9 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.Map;
 
+import org.restlet.data.MediaType;
 import org.restlet.data.Reference;
-import org.restlet.ext.json.JsonRepresentation;
+import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
@@ -41,7 +42,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		Map j = ImmutableMap.of(
 				"id", parameterRangeUrl,
 				"name", param.getId(),
-				"values", FeatureResource.getValues(feature.getValues(param.getId()))
+				"values", FeatureResource.getValues_(feature.getValues(param.getId()))
 				);
 		return j;
 	}
@@ -50,7 +51,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 	public Representation json() throws IOException, EdalException {
 		Map j = rangeData();
 		
-		Representation r = new JsonRepresentation(j);
+		Representation r = new JacksonRepresentation(j);
 		
 		// TODO think about caching strategy
 		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());

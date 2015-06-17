@@ -10,7 +10,7 @@ import java.util.Set;
 
 import org.joda.time.DateTime;
 import org.restlet.data.Reference;
-import org.restlet.ext.json.JsonRepresentation;
+import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
@@ -162,8 +162,7 @@ public class FeaturesResource extends ServerResource {
 				"features", jsonFeatures
 				);
 		
-		JsonRepresentation r = new JsonRepresentation(j);
-		r.setIndenting(true);
+		JacksonRepresentation r = new JacksonRepresentation(j);
 		return r;
 	}
 

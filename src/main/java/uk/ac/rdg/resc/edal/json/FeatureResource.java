@@ -2,27 +2,20 @@ package uk.ac.rdg.resc.edal.json;
 
 import static uk.ac.rdg.resc.edal.json.Utils.mapList;
 
-
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-
-
 import org.joda.time.DateTime;
 import org.restlet.data.Reference;
-import org.restlet.ext.json.JsonRepresentation;
+import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
-
-
 
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Domain;
@@ -43,8 +36,6 @@ import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Array;
 import uk.ac.rdg.resc.edal.util.Array4D;
-
-
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -129,8 +120,7 @@ public class FeatureResource extends ServerResource {
 		DatasetMetadata meta = FeaturesResource.getDatasetMetadata(datasetId);
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(featureId), getRootRef().toString(), details);
-		JsonRepresentation r = new JsonRepresentation(featureJson);
-		r.setIndenting(true);
+		JacksonRepresentation r = new JacksonRepresentation(featureJson);
 		return r;
 	}
 	
@@ -308,13 +298,13 @@ public class FeatureResource extends ServerResource {
 		return vals;
 	}
 	
-	public static int[] getValues_(Array<Number> valsArr) {
+	public static float[] getValues_(Array<Number> valsArr) {
 		if (valsArr.size() > Integer.MAX_VALUE) {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
 		
 		// TODO make this more clever, depending on input data
-		int[] vals = new int[(int) valsArr.size()];
+		float[] vals = new float[(int) valsArr.size()];
 		
 		Iterator<Number> it;
 		if (valsArr instanceof Array4D) {
