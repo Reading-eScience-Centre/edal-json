@@ -3,7 +3,9 @@ package uk.ac.rdg.resc.edal.json;
 import org.restlet.Application;
 import org.restlet.Component;
 import org.restlet.Restlet;
+import org.restlet.data.ClientInfo;
 import org.restlet.data.MediaType;
+import org.restlet.data.Preference;
 import org.restlet.data.Protocol;
 import org.restlet.routing.Router;
 import org.restlet.service.CorsService;
@@ -46,5 +48,14 @@ public class App extends Application {
 		// router.attach("/datasets",
 		// DatasetsResource.class);
 		return router;
+	}
+	
+	public static boolean acceptsJSON(ClientInfo info) {
+		for (Preference<MediaType> pref : info.getAcceptedMediaTypes()) {
+			if (pref.getMetadata().equals(MediaType.APPLICATION_JSON)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

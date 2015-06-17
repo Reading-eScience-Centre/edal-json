@@ -14,6 +14,7 @@ import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableMap;
 
 public class DatasetResource extends ServerResource {
@@ -56,6 +57,9 @@ public class DatasetResource extends ServerResource {
 				);		
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
+		if (!App.acceptsJSON(getClientInfo())) {
+			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		}
 		return r;
 	}
 

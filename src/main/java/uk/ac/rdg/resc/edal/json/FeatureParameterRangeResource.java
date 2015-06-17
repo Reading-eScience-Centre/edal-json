@@ -18,6 +18,7 @@ import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableMap;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -42,7 +43,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		Map j = ImmutableMap.of(
 				"id", parameterRangeUrl,
 				"name", param.getId(),
-				"values", FeatureResource.getValues_(feature.getValues(param.getId()))
+				"values", FeatureResource.getValues(feature.getValues(param.getId()))
 				);
 		return j;
 	}
@@ -51,7 +52,10 @@ public class FeatureParameterRangeResource extends ServerResource {
 	public Representation json() throws IOException, EdalException {
 		Map j = rangeData();
 		
-		Representation r = new JacksonRepresentation(j);
+		JacksonRepresentation r = new JacksonRepresentation(j);
+		if (!App.acceptsJSON(getClientInfo())) {
+			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		}
 		
 		// TODO think about caching strategy
 		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());

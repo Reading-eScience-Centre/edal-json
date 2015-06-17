@@ -37,6 +37,7 @@ import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Array;
 import uk.ac.rdg.resc.edal.util.Array4D;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -121,6 +122,9 @@ public class FeatureResource extends ServerResource {
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(featureId), getRootRef().toString(), details);
 		JacksonRepresentation r = new JacksonRepresentation(featureJson);
+		if (!App.acceptsJSON(getClientInfo())) {
+			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		}
 		return r;
 	}
 	

@@ -25,6 +25,7 @@ import uk.ac.rdg.resc.edal.json.FeatureResource.Details;
 import uk.ac.rdg.resc.edal.json.FeatureResource.FeatureMetadata;
 import uk.ac.rdg.resc.edal.util.GISUtils;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -163,6 +164,9 @@ public class FeaturesResource extends ServerResource {
 				);
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
+		if (!App.acceptsJSON(getClientInfo())) {
+			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		}
 		return r;
 	}
 
