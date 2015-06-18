@@ -7,6 +7,7 @@ import org.restlet.data.ClientInfo;
 import org.restlet.data.MediaType;
 import org.restlet.data.Preference;
 import org.restlet.data.Protocol;
+import org.restlet.resource.Directory;
 import org.restlet.routing.Router;
 import org.restlet.service.CorsService;
 
@@ -16,13 +17,25 @@ public class App extends Application {
 	public static void main(String[] args) throws Exception {
 		Component component = new Component();
 		component.getServers().add(Protocol.HTTP, 8182);
+		
+		// our REST API
 		App app = new App();
 		app.getEncoderService().setEnabled(true);
 		CorsService corsService = new CorsService();
 		corsService.setAllowedOrigins(ImmutableSet.of("*"));
 		corsService.setAllowedCredentials(true);
 		app.getServices().add(corsService);
-		component.getDefaultHost().attach(app);
+		component.getDefaultHost().attach("/api", app);
+		
+		// static files
+		component.getClients().add(Protocol.CLAP);
+		component.getDefaultHost().attach("/static", new Application() {  
+            @Override  
+            public Restlet createInboundRoot() {  
+                return new Directory(getContext(), "clap://class/static/");
+            }  
+        });
+		
 		component.start();
 	}
 
