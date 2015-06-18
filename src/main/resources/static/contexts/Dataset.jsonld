@@ -1,0 +1,27 @@
+{
+  "@context": {
+    "type": "@type",
+    "id": "@id",
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dct": "http://purl.org/dc/terms/",
+    "locn": "http://www.w3.org/ns/locn#",
+    "schema": "http://schema.org/",
+    "oml": "http://def.seegrid.csiro.au/ontology/om/om-lite#",
+    "mel": "http://melodiesproject.eu/ont/geo#",
+    "geometry": { "@id": "locn:geometry", "@type": "gsp:wktLiteral" },
+    "gsp": "http://www.opengis.net/ont/geosparql#",
+    "startDate": { "@id": "schema:startDate", "@type": "xsd:date" },
+    "endDate": { "@id": "schema:endDate", "@type": "xsd:date" },
+    "title": { "@id": "dct:title" },
+    "description": { "@id": "dct:description" },
+    "issued": { "@id": "dct:issued", "@type": "http://www.w3.org/2001/XMLSchema#dateTime" },
+    "spatial": { "@id": "dct:spatial" },
+    "temporal": { "@id": "dct:temporal" },
+    "distributions": { "@id": "dcat:distribution" },
+    "accessURL": { "@id": "dcat:accessURL", "@type": "@id" },
+    "downloadURL": { "@id": "dcat:downloadURL", "@type": "@id" },
+    "mediaType": { "@id": "dcat:mediaType" },
+    "features": { "@id": "oml:hasObservationCollectionTODO", "@type": "@id" },
+    "parameters":  { "@id": "mel:hasParameter" }
+  }
+}
