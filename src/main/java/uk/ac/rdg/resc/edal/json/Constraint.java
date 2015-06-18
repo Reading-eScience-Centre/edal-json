@@ -3,7 +3,6 @@ package uk.ac.rdg.resc.edal.json;
 import java.util.Set;
 
 import org.joda.time.DateTime;
-import org.opengis.metadata.extent.GeographicBoundingBox;
 
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.util.Extents;

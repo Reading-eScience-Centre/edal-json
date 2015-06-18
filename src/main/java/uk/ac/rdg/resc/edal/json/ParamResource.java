@@ -15,6 +15,7 @@ import uk.ac.rdg.resc.edal.metadata.Parameter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableMap;
 
+@SuppressWarnings({ "unchecked", "rawtypes" })
 public class ParamResource extends ServerResource {
 	
 	public static Map getParamJson(Dataset dataset, Parameter param, String rootUri) {
@@ -37,7 +38,6 @@ public class ParamResource extends ServerResource {
 		return j;
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Get("json")
 	public Representation json() throws VariableNotFoundException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));

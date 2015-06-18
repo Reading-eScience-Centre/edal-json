@@ -1,7 +1,5 @@
 package uk.ac.rdg.resc.edal.json;
 
-import static uk.ac.rdg.resc.edal.json.Utils.mapList;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +34,6 @@ import uk.ac.rdg.resc.edal.json.FeaturesResource.DatasetMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Array;
-import uk.ac.rdg.resc.edal.util.Array4D;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
