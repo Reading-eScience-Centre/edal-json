@@ -3,15 +3,13 @@ package uk.ac.rdg.resc.edal.json;
 import static uk.ac.rdg.resc.edal.json.Utils.mapList;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
 import org.restlet.data.Reference;
@@ -79,8 +77,9 @@ public class FeatureResource extends ServerResource {
 			this.range = range;
 		}
 	}
-		
-	public static Map getFeatureJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, Details details) throws EdalException {
+	
+	public static Map getFeatureJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
+			Details details, Constraint subset) throws EdalException {
 		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
 				
 		Map j = new HashMap(ImmutableMap.of(
@@ -88,27 +87,20 @@ public class FeatureResource extends ServerResource {
 				"title", meta.name
 				));
 		
-		// TODO range without domain is useless
 		if (details.domain || details.range || details.rangeMetadata) {
 			Map result = new HashMap();
-			Supplier<DiscreteFeature<?,?>> feature;
-			feature = Suppliers.memoize(() -> {
-				try {
-					return (DiscreteFeature<?, ?>) dataset.get().readFeature(meta.featureId);
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			});
+			Supplier<DiscreteFeature<?,?>> feature =
+					Suppliers.memoize(() -> (DiscreteFeature<?, ?>) dataset.get().readFeature(meta.featureId));
 
 			if (details.domain) {
-				Map domainJson = getDomainJson(feature.get());
+				Map domainJson = getDomainJson(feature.get(), subset);
 				result.put("domain", domainJson);
 			}
 			// TODO we may not need that at all!
 			if (details.rangeMetadata) {
 				result.put("rangeType", getParameterTypesJson(meta, rootUri));
 			}
-			result.put("range", getParameterValuesJson(meta, feature, details.range, rootUri));
+			result.put("range", getParameterValuesJson(meta, feature, details.range, subset, rootUri));
 			j.put("result", result);
 		}
 		addPhenomenonTime(j, meta.domainMeta);
@@ -121,10 +113,11 @@ public class FeatureResource extends ServerResource {
 		String featureId = Reference.decode(getAttribute("featureId"));
 		Details fallback = new Details(true, true, false);
 		Details details = Details.from(getQueryValue("details"), fallback);
+		Constraint subset = new Constraint(getQueryValue("subset"));
 		
 		DatasetMetadata meta = FeaturesResource.getDatasetMetadata(datasetId);
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
-				meta.getFeatureMetadata(featureId), getRootRef().toString(), details);
+				meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset);
 		return featureJson;
 	}
 	
@@ -155,7 +148,7 @@ public class FeatureResource extends ServerResource {
 					)); 
 	}
 	
-	private static Map getDomainJson(Feature<?> feature) {
+	private static Map getDomainJson(Feature<?> feature, Constraint subset) {
 		Map domainJson;
 		
 		// FIXME feature types should be interfaces
@@ -166,6 +159,8 @@ public class FeatureResource extends ServerResource {
 				RectilinearGrid rectgrid = (RectilinearGrid) grid.getHorizontalGrid();
 				TimeAxis t = grid.getTimeAxis();
 				VerticalAxis z = grid.getVerticalAxis();
+				
+				// TODO add subset by bounding box
 				
 				BoundingBox bb = rectgrid.getBoundingBox();
 				domainJson = new HashMap(ImmutableMap.of(
@@ -187,8 +182,8 @@ public class FeatureResource extends ServerResource {
 				}
 				
 				// TODO should we name the type "RegularGrid" even if z or t is irregular?
-				addVerticalAxis(z, domainJson);
-				addTimeAxis(t, domainJson);
+				addVerticalAxis(z, subset, domainJson);
+				addTimeAxis(t, subset, domainJson);
 
 			} else {
 				domainJson = unsupportedDomain(feature.getDomain(), grid.getHorizontalGrid().getClass().getName());
@@ -199,6 +194,14 @@ public class FeatureResource extends ServerResource {
 			DateTime t = profile.getTime();
 			HorizontalPosition pos = profile.getHorizontalPosition();
 			
+			if (!subset.timeExtent.contains(t)) {
+				// TODO design a JSON error document
+				throw new RuntimeException("subsetting must not produce an empty domain");
+			}
+			if (subset.bbox != null && !subset.bbox.contains(pos)) {
+				throw new RuntimeException("subsetting must not produce an empty domain");
+			}
+			
 			domainJson = new HashMap(ImmutableMap.of(
 					"type", "Profile",
 				    "crs", Utils.getCrsUri(pos.getCoordinateReferenceSystem()),
@@ -207,7 +210,7 @@ public class FeatureResource extends ServerResource {
 				    "y", ImmutableList.of(pos.getY())
 					));
 			
-			addVerticalAxis(z, domainJson);
+			addVerticalAxis(z, subset, domainJson);
 			addTime(t, domainJson);
 			
 		} else {
@@ -219,25 +222,36 @@ public class FeatureResource extends ServerResource {
 		return domainJson;
 	}
 	
-	private static void addVerticalAxis(VerticalAxis z, Map domainJson) {
-		if (z != null) {
-			domainJson.put("vertical", z.getCoordinateValues());
-			// TODO are there no standards for vertical CRS, with codes etc.?
-			domainJson.put("verticalCrs", ImmutableMap.of(
-					"uom", z.getVerticalCrs().getUnits(),
-					"positiveUpwards", z.getVerticalCrs().isPositiveUpwards(),
-					"dimensionless", z.getVerticalCrs().isDimensionless(),
-					"pressure", z.getVerticalCrs().isPressure()
-					));
-		}		
+	private static void addVerticalAxis(VerticalAxis z, Constraint subset, Map domainJson) {
+		if (z == null) {
+			return;
+		}
+		List<Double> v = z.getCoordinateValues().stream()
+				.filter(subset.verticalExtent::contains)
+				.collect(Collectors.toList());
+		
+		domainJson.put("vertical", v);
+		
+		// TODO are there no standards for vertical CRS, with codes etc.?
+		domainJson.put("verticalCrs", ImmutableMap.of(
+				"uom", z.getVerticalCrs().getUnits(),
+				"positiveUpwards", z.getVerticalCrs().isPositiveUpwards(),
+				"dimensionless", z.getVerticalCrs().isDimensionless(),
+				"pressure", z.getVerticalCrs().isPressure()
+				));
+		
 	}
 		
-	private static void addTimeAxis(TimeAxis t, Map domainJson) {
+	private static void addTimeAxis(TimeAxis t, Constraint subset, Map domainJson) {
 		if (t == null) {
 			return;
 			// TODO why is time null? shouldn't there be always a time?
 		} 
-		domainJson.put("time", mapList(t.getCoordinateValues(), time -> time.toString()));
+		List<String> times = t.getCoordinateValues().stream()
+				.filter(subset.timeExtent::contains)
+				.map(time -> time.toString())
+				.collect(Collectors.toList());
+		domainJson.put("time", times);
 	}
 	
 	private static void addTime(DateTime t, Map domainJson) {
@@ -265,7 +279,7 @@ public class FeatureResource extends ServerResource {
 		
 		Builder types = ImmutableMap.builder();
 		for (Parameter param : meta.rangeMeta.getParameters()) {
-			types.put(root + param.getId(), ImmutableMap.of(
+			types.put(root + param.getVariableId(), ImmutableMap.of(
 					"title", param.getTitle(),
 					"description", param.getDescription(),
 					"observedProperty", param.getStandardName() == null ? "UNKNOWN" : param.getStandardName(),
@@ -275,7 +289,8 @@ public class FeatureResource extends ServerResource {
 		return types.build();
 	}
 		
-	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<DiscreteFeature<?,?>> feature, boolean includeValues, String rootUri) {
+	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<DiscreteFeature<?,?>> feature, boolean includeValues,
+			Constraint subset, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId;
 		Builder values = ImmutableMap.builder();
 
@@ -307,13 +322,10 @@ public class FeatureResource extends ServerResource {
 		}
 		
 		List<Number> vals = new ArrayList<Number>((int) valsArr.size());
+		valsArr.forEach(vals::add);
 		
-		if (valsArr instanceof Array4D) {
-			// workaround because CdmGridDataSource->WrappedArray broken...
-			iterator((Array4D<Number>) valsArr).forEachRemaining(vals::add);
-		} else {
-			valsArr.forEach(vals::add);
-		}
+		// TODO subset!
+		
 		return vals;
 	}
 	
@@ -325,13 +337,7 @@ public class FeatureResource extends ServerResource {
 		// TODO make this more clever, depending on input data
 		float[] vals = new float[(int) valsArr.size()];
 		
-		Iterator<Number> it;
-		if (valsArr instanceof Array4D) {
-			// workaround because CdmGridDataSource->WrappedArray broken...
-			it = iterator((Array4D<Number>) valsArr);
-		} else {
-			it = valsArr.iterator();
-		}
+		Iterator<Number> it = valsArr.iterator();
 		int i = 0;
 		while (it.hasNext()) {
 			Number v = it.next();
@@ -344,54 +350,5 @@ public class FeatureResource extends ServerResource {
 		}
 		return vals;
 	}
-	
-    private static <T> Iterator<T> iterator(Array4D<T> arr) {
-    	// FIXME remove this once CdmGridDataSource::WrappedArray is fixed
-        final int X_IND = 3;
-        final int Y_IND = 2;
-        final int Z_IND = 1;
-        final int T_IND = 0;
-    	
-        return new Iterator<T>() {
-            private int xCounter = 0;
-            private int yCounter = 0;
-            private int zCounter = 0;
-            private int tCounter = 0;
-
-            boolean done = false;
-
-            @Override
-            public boolean hasNext() {
-                return (!done);
-            }
-
-            @Override
-            public T next() {
-                T value = arr.get(tCounter, zCounter, yCounter, xCounter);
-                /*
-                 * Increment the counters, resetting to zero if necessary
-                 */
-                if (++xCounter >= arr.getShape()[X_IND]) {
-                    xCounter = 0;
-                    if (++yCounter >= arr.getShape()[Y_IND]) {
-                        yCounter = 0;
-                        if (++zCounter >= arr.getShape()[Z_IND]) {
-                            zCounter = 0;
-                            if (++tCounter >= arr.getShape()[T_IND]) {
-                                tCounter = 0;
-                                done = true;
-                            }
-                        }
-                    }
-                }
-                return value;
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Remove is not supported for this iterator");
-            }
-        };
-    }
 
 }

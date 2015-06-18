@@ -39,11 +39,11 @@ public class FeatureParameterRangeResource extends ServerResource {
 		Parameter param = feature.getParameter(parameterId);
 		
 		String parameterRangeUrl = getRootRef().toString() + "/datasets/" + dataset.getId() +
-				"/features/" + feature.getId() + "/range/" + param.getId();
+				"/features/" + feature.getId() + "/range/" + param.getVariableId();
 		
 		Map j = ImmutableMap.of(
 				"id", parameterRangeUrl,
-				"values", FeatureResource.getValues(feature.getValues(param.getId()))
+				"values", FeatureResource.getValues(feature.getValues(param.getVariableId()))
 				);
 		return j;
 	}

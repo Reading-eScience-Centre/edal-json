@@ -6,6 +6,8 @@ import java.util.List;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
+import uk.ac.rdg.resc.edal.geometry.BoundingBoxImpl;
+import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.GISUtils;
 
 /**
@@ -104,6 +106,13 @@ public class DatelineBoundingBox implements GeographicBoundingBox {
 			}
 		}
 		return false;
+	}
+	
+	public boolean contains(HorizontalPosition pos) {
+		BoundingBox bb = new BoundingBoxImpl(pos.getX(), pos.getY(), pos.getX(),
+				pos.getY(), pos.getCoordinateReferenceSystem());
+		DatelineBoundingBox bb1 = new DatelineBoundingBox(bb);
+		return intersects(bb1);
 	}
 
 }

@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 public class ParamResource extends ServerResource {
 	
 	public static Map getParamJson(Dataset dataset, Parameter param, String rootUri) {
-		String paramUrl = rootUri + "/datasets/" + dataset.getId() + "/params/" + param.getId();
+		String paramUrl = rootUri + "/datasets/" + dataset.getId() + "/params/" + param.getVariableId();
 		Map j = ImmutableMap.of(
 				"id", paramUrl,
 				"title", param.getTitle(),

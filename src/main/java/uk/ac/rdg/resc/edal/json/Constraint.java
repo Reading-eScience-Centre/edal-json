@@ -18,7 +18,7 @@ public final class Constraint {
 	
 	private DateTime timeStart, timeEnd;
 	public Extent<DateTime> timeExtent;
-	public GeographicBoundingBox bbox;
+	public DatelineBoundingBox bbox;
 	private Double verticalStart, verticalEnd;
 	public Extent<Double> verticalExtent;
 	public Set<String> params;
@@ -48,6 +48,7 @@ public final class Constraint {
 			}
 		}
 		// FIXME implementation for DateTimeExtent doesn't seem to support open ends
+		// -> fixed in EDAL snapshot
 		timeExtent = Extents.newExtent(timeStart, timeEnd);
 		verticalExtent = Extents.newExtent(verticalStart, verticalEnd);
 	}

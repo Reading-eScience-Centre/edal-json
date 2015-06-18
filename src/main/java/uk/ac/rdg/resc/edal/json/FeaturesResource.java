@@ -83,7 +83,7 @@ public class FeaturesResource extends ServerResource {
 		Details fallback = new Details(false, false, false);
 		Details details = Details.from(getQueryValue("details"), fallback);
 		Constraint filter = new Constraint(getQueryValue("filter"));
-		
+		Constraint subset = new Constraint(getQueryValue("subset"));
 		
 		DatasetMetadata datasetMeta = getDatasetMetadata(datasetId);
 		
@@ -155,7 +155,7 @@ public class FeaturesResource extends ServerResource {
 			}
 			
 			jsonFeatures.add(FeatureResource.getFeatureJson(dataset, meta, getRootRef().toString(), 
-					details));
+					details, subset));
 		}
 		
 		Map j = ImmutableMap.of(

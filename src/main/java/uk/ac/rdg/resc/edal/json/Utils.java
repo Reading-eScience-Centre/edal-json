@@ -16,7 +16,6 @@ import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.dataset.DatasetFactory;
 import uk.ac.rdg.resc.edal.dataset.cdm.CdmGridDatasetFactory;
 import uk.ac.rdg.resc.edal.dataset.cdm.En3DatasetFactory;
-import uk.ac.rdg.resc.edal.exceptions.EdalException;
 
 public final class Utils {
 	public static Dataset getDataset(String datasetId) {
@@ -33,7 +32,7 @@ public final class Utils {
 			try {
 				dataset = datasetFactory.createDataset(datasetId,
 						resource.getFile());
-			} catch (IOException | EdalException e1) {
+			} catch (IOException e1) {
 				throw new RuntimeException(e1);
 			}
 		}
