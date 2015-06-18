@@ -140,10 +140,21 @@ public class FeatureResource extends ServerResource {
 		Extent<DateTime> time = meta.getTimeExtent();
 		if (time == null) return;
 
-		featureJson.put("phenomenonTime", time.getLow() == time.getHigh() ? time.getLow().toString() :
-			ImmutableMap.of(
-					"start", time.getLow().toString(),
-					"end", time.getHigh().toString()
+		featureJson.put("phenomenonTime", time.getLow() == time.getHigh() 
+			? ImmutableMap.of(
+					"type", "Instant",
+					"dateTime", time.getLow().toString()
+					)
+			: ImmutableMap.of(
+					"type", "Interval",
+					"hasBeginning", ImmutableMap.of(
+							"type", "Instant",
+							"dateTime", time.getLow().toString()
+							),
+					"hasEnd", ImmutableMap.of(
+							"type", "Instant",
+							"dateTime", time.getHigh().toString()
+							)
 					)); 
 	}
 	
