@@ -15,6 +15,7 @@ import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 public class DatasetResource extends ServerResource {
@@ -36,12 +37,15 @@ public class DatasetResource extends ServerResource {
 		}
 		
 		// TODO add spatiotemporal extent
-		Map j = ImmutableMap.of(
-				"id", datasetUrl,
-				"title", "TODO: where to get this from EDAL?",
-				"parameters", jsonParams,
-				"features", datasetUrl + "/features"
-				);		
+		Map j = ImmutableMap.builder()
+				// TODO how to get URL of other static Application?
+				.put("@context", "/static/dataset.jsonld")
+				.put("id", datasetUrl)
+				.put("type", ImmutableList.of("dcat:Dataset"))
+				.put("title", "TODO: where to get this from EDAL?")
+				.put("parameters", jsonParams)
+				.put("features", datasetUrl + "/features")
+				.build();		
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {

@@ -159,7 +159,9 @@ public class FeaturesResource extends ServerResource {
 		}
 		
 		Map j = ImmutableMap.of(
+				"@context", "/static/FeatureCollection.jsonld",
 				"id", datasetUrl + "/features",
+				"type", "oml:ObservationCollectionTODO",
 				"features", jsonFeatures
 				);
 		return j;

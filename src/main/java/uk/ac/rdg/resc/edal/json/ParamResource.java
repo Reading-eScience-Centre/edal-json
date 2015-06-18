@@ -21,6 +21,7 @@ public class ParamResource extends ServerResource {
 		String paramUrl = rootUri + "/datasets/" + dataset.getId() + "/params/" + param.getVariableId();
 		Map j = ImmutableMap.of(
 				"id", paramUrl,
+				"type", "mel:Parameter",
 				"title", param.getTitle(),
 				"description", param.getDescription(),
 				"uom", param.getUnits()
@@ -45,6 +46,7 @@ public class ParamResource extends ServerResource {
 		Parameter param = dataset.getVariableMetadata(paramId).getParameter();
 		
 		Map j = getParamJson(dataset, param, getRootRef().toString());
+		j.put("@context", "/static/Dataset.jsonld");
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {

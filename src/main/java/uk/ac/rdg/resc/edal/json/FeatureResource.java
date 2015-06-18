@@ -83,6 +83,7 @@ public class FeatureResource extends ServerResource {
 		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
 				
 		Map j = new HashMap(ImmutableMap.of(
+				"type", "oml:Observation",
 				"id", featureUrl,
 				"title", meta.name
 				));
@@ -118,6 +119,7 @@ public class FeatureResource extends ServerResource {
 		DatasetMetadata meta = FeaturesResource.getDatasetMetadata(datasetId);
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset);
+		featureJson.put("@context", "/static/Feature.jsonld");
 		return featureJson;
 	}
 	
