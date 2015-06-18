@@ -44,6 +44,8 @@ public class App extends Application {
 				FeatureResource.class);
 		router.attach("/datasets/{datasetId}/features",
 				FeaturesResource.class);
+		router.attach("/datasets/{datasetId}/params/{paramId}",
+				ParamResource.class);
 		router.attach("/datasets/{datasetId}", DatasetResource.class);
 		// router.attach("/datasets",
 		// DatasetsResource.class);

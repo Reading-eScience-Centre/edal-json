@@ -34,15 +34,15 @@ public class FeatureParameterRangeResource extends ServerResource {
 		try {
 			feature = (DiscreteFeature) dataset.readFeature(featureId);
 		} catch (ClassCastException e) {
-			throw new IllegalArgumentException("Only disrete features are supported");
+			throw new IllegalArgumentException("Only discrete features are supported");
 		}
 		Parameter param = feature.getParameter(parameterId);
 		
-		String parameterRangeUrl = getReference().toString();
+		String parameterRangeUrl = getRootRef().toString() + "/datasets/" + dataset.getId() +
+				"/features/" + feature.getId() + "/range/" + param.getId();
 		
 		Map j = ImmutableMap.of(
 				"id", parameterRangeUrl,
-				"name", param.getId(),
 				"values", FeatureResource.getValues(feature.getValues(param.getId()))
 				);
 		return j;

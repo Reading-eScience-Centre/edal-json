@@ -30,6 +30,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeaturesResource extends ServerResource {
 	
 	static class DatasetMetadata {
@@ -77,13 +78,12 @@ public class FeaturesResource extends ServerResource {
 		return datasetMeta;
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Get("json")
-	public Representation json() throws IOException, EdalException {
+	private Map getFeaturesJson() throws IOException, EdalException {
 		final String datasetId = Reference.decode(getAttribute("datasetId"));
-		Details fallback = new Details(false, true, false);
+		Details fallback = new Details(false, false, false);
 		Details details = Details.from(getQueryValue("details"), fallback);
 		Constraint filter = new Constraint(getQueryValue("filter"));
+		
 		
 		DatasetMetadata datasetMeta = getDatasetMetadata(datasetId);
 		
@@ -99,7 +99,7 @@ public class FeaturesResource extends ServerResource {
 			RangeMetadata rangeMeta = meta.rangeMeta;
 			
 			if (filter.params != null) {
-				Set<String> params = new HashSet(rangeMeta.getParameterIds());
+				Set<String> params = new HashSet<>(rangeMeta.getParameterIds());
 				params.retainAll(filter.params);
 				if (params.isEmpty()) continue;
 			}
@@ -162,12 +162,24 @@ public class FeaturesResource extends ServerResource {
 				"id", datasetUrl + "/features",
 				"features", jsonFeatures
 				);
+		return j;
+	}
+	
+	 
+	@Get("json")
+	public Representation json() throws IOException, EdalException {
+		Map j = getFeaturesJson();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;
+	}
+	
+	@Get("msgpack")
+	public Representation msgpack() throws IOException, EdalException {
+		return new MessagePackRepresentation(getFeaturesJson());
 	}
 
 

@@ -3,8 +3,11 @@ package uk.ac.rdg.resc.edal.json;
 import static uk.ac.rdg.resc.edal.json.Utils.mapList;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -71,7 +74,7 @@ public class FeatureResource extends ServerResource {
 					parts.contains("range"));
 		}
 		public Details(boolean domain, boolean rangeMetadata, boolean range) {
-			this.domain = domain;
+			this.domain = domain || range;
 			this.rangeMetadata = rangeMetadata;
 			this.range = range;
 		}
@@ -85,6 +88,7 @@ public class FeatureResource extends ServerResource {
 				"title", meta.name
 				));
 		
+		// TODO range without domain is useless
 		if (details.domain || details.range || details.rangeMetadata) {
 			Map result = new HashMap();
 			Supplier<DiscreteFeature<?,?>> feature;
@@ -100,6 +104,7 @@ public class FeatureResource extends ServerResource {
 				Map domainJson = getDomainJson(feature.get());
 				result.put("domain", domainJson);
 			}
+			// TODO we may not need that at all!
 			if (details.rangeMetadata) {
 				result.put("rangeType", getParameterTypesJson(meta, rootUri));
 			}
@@ -111,8 +116,7 @@ public class FeatureResource extends ServerResource {
 		return j;
 	}
 	
-	@Get("json")
-	public Representation json() throws IOException, EdalException {
+	private Map getFeatureJson() throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("featureId"));
 		Details fallback = new Details(true, true, false);
@@ -121,6 +125,12 @@ public class FeatureResource extends ServerResource {
 		DatasetMetadata meta = FeaturesResource.getDatasetMetadata(datasetId);
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(featureId), getRootRef().toString(), details);
+		return featureJson;
+	}
+	
+	@Get("json")
+	public Representation json() throws IOException, EdalException {
+		Map featureJson = getFeatureJson();
 		JacksonRepresentation r = new JacksonRepresentation(featureJson);
 		if (!App.acceptsJSON(getClientInfo())) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -128,12 +138,17 @@ public class FeatureResource extends ServerResource {
 		return r;
 	}
 	
+	@Get("msgpack")
+	public Representation msgpack() throws IOException, EdalException {
+		return new MessagePackRepresentation(getFeatureJson());
+	}
+	
 	private static void addPhenomenonTime(Map featureJson, DomainMetadata meta) {
 		// a time range or a single point in time
 		Extent<DateTime> time = meta.getTimeExtent();
 		if (time == null) return;
 
-		featureJson.put("phenomenonTime", time.getLow() == time.getHigh() ? time.getLow() :
+		featureJson.put("phenomenonTime", time.getLow() == time.getHigh() ? time.getLow().toString() :
 			ImmutableMap.of(
 					"start", time.getLow().toString(),
 					"end", time.getHigh().toString()

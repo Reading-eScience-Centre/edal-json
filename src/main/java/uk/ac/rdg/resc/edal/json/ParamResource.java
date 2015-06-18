@@ -1,7 +1,5 @@
 package uk.ac.rdg.resc.edal.json;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import org.restlet.data.Reference;
@@ -17,31 +15,36 @@ import uk.ac.rdg.resc.edal.metadata.Parameter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableMap;
 
-public class DatasetResource extends ServerResource {
+public class ParamResource extends ServerResource {
+	
+	public static Map getParamJson(Dataset dataset, Parameter param, String rootUri) {
+		String paramUrl = rootUri + "/datasets/" + dataset.getId() + "/params/" + param.getId();
+		Map j = ImmutableMap.of(
+				"id", paramUrl,
+				"title", param.getTitle(),
+				"description", param.getDescription(),
+				"uom", param.getUnits()
+				);
+			
+		if (param.getStandardName() != null) {
+			// TODO translate into URI
+			j = ImmutableMap.builder()
+					.putAll(j)
+				    .put("observedProperty", param.getStandardName())
+				    .build();
+		}
+		return j;
+	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Get("json")
 	public Representation json() throws VariableNotFoundException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
+		String paramId = Reference.decode(getAttribute("paramId"));
 		Dataset dataset = Utils.getDataset(datasetId);
-
-		String datasetUrl = getRootRef().toString() + "/datasets/" + dataset.getId();
+		Parameter param = dataset.getVariableMetadata(paramId).getParameter();
 		
-		List jsonParams = new LinkedList();
-		// TODO check what the relation between variable and parameter is
-		for (String paramId : dataset.getVariableIds()) {
-			Parameter param = dataset.getVariableMetadata(paramId).getParameter();
-			Map m = ParamResource.getParamJson(dataset, param, getRootRef().toString());
-			jsonParams.add(m);
-		}
-		
-		// TODO add spatiotemporal extent
-		Map j = ImmutableMap.of(
-				"id", datasetUrl,
-				"title", "TODO: where to get this from EDAL?",
-				"parameters", jsonParams,
-				"features", datasetUrl + "/features"
-				);		
+		Map j = getParamJson(dataset, param, getRootRef().toString());
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {
