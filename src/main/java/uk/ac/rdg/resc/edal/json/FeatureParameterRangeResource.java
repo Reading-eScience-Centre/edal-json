@@ -27,6 +27,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("featureId"));
 		String parameterId = Reference.decode(getAttribute("parameterId"));
+		Constraint subset = new Constraint(getQueryValue("subset"));
 		
 		Dataset dataset = Utils.getDataset(datasetId);
 		DiscreteFeature feature;
@@ -42,7 +43,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		
 		Map j = ImmutableMap.of(
 				"id", parameterRangeUrl,
-				"values", FeatureResource.getValues(feature.getValues(param.getVariableId()))
+				"values", FeatureResource.getValues(feature.getValues(param.getVariableId()), feature, subset)
 				);
 		return j;
 	}

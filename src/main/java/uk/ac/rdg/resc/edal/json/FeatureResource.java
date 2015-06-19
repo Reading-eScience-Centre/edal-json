@@ -7,9 +7,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.joda.time.DateTime;
+import org.opengis.referencing.cs.CoordinateSystem;
+import org.opengis.referencing.cs.RangeMeaning;
 import org.restlet.data.Reference;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
@@ -27,13 +30,18 @@ import uk.ac.rdg.resc.edal.feature.GridFeature;
 import uk.ac.rdg.resc.edal.feature.ProfileFeature;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.grid.RectilinearGrid;
+import uk.ac.rdg.resc.edal.grid.RectilinearGridImpl;
+import uk.ac.rdg.resc.edal.grid.ReferenceableAxis;
+import uk.ac.rdg.resc.edal.grid.ReferenceableAxisImpl;
 import uk.ac.rdg.resc.edal.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
+import uk.ac.rdg.resc.edal.grid.TimeAxisImpl;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
 import uk.ac.rdg.resc.edal.json.FeaturesResource.DatasetMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Array;
+import uk.ac.rdg.resc.edal.util.Array4D;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
@@ -84,21 +92,27 @@ public class FeatureResource extends ServerResource {
 				"id", featureUrl,
 				"title", meta.name
 				));
-		
+				
 		if (details.domain || details.range || details.rangeMetadata) {
-			Map result = new HashMap();
-			Supplier<DiscreteFeature<?,?>> feature =
-					Suppliers.memoize(() -> (DiscreteFeature<?, ?>) dataset.get().readFeature(meta.featureId));
 
-			if (details.domain) {
-				Map domainJson = getDomainJson(feature.get(), subset);
-				result.put("domain", domainJson);
+			Map result = new HashMap();
+			Supplier<UniformFeature> feature =
+					Suppliers.memoize(() -> new UniformFeature((DiscreteFeature)dataset.get().readFeature(meta.featureId)));
+
+			try {
+				if (details.domain) {
+					Map domainJson = getDomainJson(feature.get(), subset);
+					result.put("domain", domainJson);
+				}
+				// TODO we may not need that at all!
+				if (details.rangeMetadata) {
+					result.put("rangeType", getParameterTypesJson(meta, rootUri));
+				}
+				result.put("range", getParameterValuesJson(meta, feature, details.range, subset, rootUri));
+			
+			} catch (UnsupportedDomainException e) {
+				result.put("domain", unsupportedDomain(e.domain, e.info));
 			}
-			// TODO we may not need that at all!
-			if (details.rangeMetadata) {
-				result.put("rangeType", getParameterTypesJson(meta, rootUri));
-			}
-			result.put("range", getParameterValuesJson(meta, feature, details.range, subset, rootUri));
 			j.put("result", result);
 		}
 		addPhenomenonTime(j, meta.domainMeta);
@@ -158,89 +172,150 @@ public class FeatureResource extends ServerResource {
 					)); 
 	}
 	
-	private static Map getDomainJson(Feature<?> feature, Constraint subset) {
-		Map domainJson;
-		
-		// FIXME feature types should be interfaces
-		if (feature instanceof GridFeature) {
-			GridFeature gridFeature = (GridFeature) feature;
-			GridDomain grid = gridFeature.getDomain();
-			if (grid.getHorizontalGrid() instanceof RectilinearGrid) {
-				RectilinearGrid rectgrid = (RectilinearGrid) grid.getHorizontalGrid();
-				TimeAxis t = grid.getTimeAxis();
-				VerticalAxis z = grid.getVerticalAxis();
+	static class UniformFeature {
+		DiscreteFeature<?,?> feature;
+		RectilinearGrid rectgrid;
+		TimeAxis t;
+		VerticalAxis z;
+		String type;
+		public UniformFeature(DiscreteFeature<?,?> feature) {
+			this.feature = feature;
+			
+			// TODO should we name the type "RegularGrid" even if z or t is irregular?
+			
+			// FIXME feature types should be interfaces
+			
+			// the following piece of code checks and uniformizes different feature types 
+			if (feature instanceof GridFeature) {
+				GridFeature gridFeature = (GridFeature) feature;
+				GridDomain grid = gridFeature.getDomain();
+				t = grid.getTimeAxis();
+				z = grid.getVerticalAxis();
 				
-				// TODO add subset by bounding box
-				
-				BoundingBox bb = rectgrid.getBoundingBox();
-				domainJson = new HashMap(ImmutableMap.of(
-						"type", "RectilinearGrid",
-					    "crs", Utils.getCrsUri(rectgrid.getCoordinateReferenceSystem()),
-					    "bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()),
-					    "x", rectgrid.getXAxis().getCoordinateValues(),
-						"y", rectgrid.getYAxis().getCoordinateValues()
-						));
-				if (rectgrid instanceof RegularGrid) {
-					RegularGrid reggrid = (RegularGrid) rectgrid;
-					domainJson.putAll(ImmutableMap.of(
-							"type", "RegularGrid",
-							"delta", ImmutableList.of(
-						    		reggrid.getXAxis().getCoordinateSpacing(),
-						    		reggrid.getYAxis().getCoordinateSpacing()
-						    		)						    
-						    ));
+				if (grid.getHorizontalGrid() instanceof RectilinearGrid) {
+					rectgrid = (RectilinearGrid) grid.getHorizontalGrid();
+					type = rectgrid instanceof RegularGrid ? "RegularGrid" : "RectilinearGrid";
+				} else {
+					throw new UnsupportedDomainException(feature.getDomain(), grid.getHorizontalGrid().getClass().getName());
 				}
+			} else if (feature instanceof ProfileFeature) {
+				ProfileFeature profile = (ProfileFeature) feature;
+				z = profile.getDomain();
+				t = new TimeAxisImpl("time", ImmutableList.of(profile.getTime()));
+				HorizontalPosition pos = profile.getHorizontalPosition();
+				CoordinateSystem cs = pos.getCoordinateReferenceSystem().getCoordinateSystem();
+				boolean isLongitudeX = cs.getAxis(0).getRangeMeaning() == RangeMeaning.WRAPAROUND;
+				boolean isLongitudeY = cs.getAxis(1).getRangeMeaning() == RangeMeaning.WRAPAROUND;
+				// TODO what are the bounds of the single cell here actually?
+				//  -> does EDAL derive that from grids automatically?
+				rectgrid = new RectilinearGridImpl(
+						new ReferenceableAxisImpl("x", ImmutableList.of(pos.getX()), isLongitudeX),
+						new ReferenceableAxisImpl("y", ImmutableList.of(pos.getY()), isLongitudeY),
+						pos.getCoordinateReferenceSystem());
 				
-				// TODO should we name the type "RegularGrid" even if z or t is irregular?
-				addVerticalAxis(z, subset, domainJson);
-				addTimeAxis(t, subset, domainJson);
-
+				type = "Profile";
 			} else {
-				domainJson = unsupportedDomain(feature.getDomain(), grid.getHorizontalGrid().getClass().getName());
-			}
-		} else if (feature instanceof ProfileFeature) {
-			ProfileFeature profile = (ProfileFeature) feature;
-			VerticalAxis z = profile.getDomain();
-			DateTime t = profile.getTime();
-			HorizontalPosition pos = profile.getHorizontalPosition();
-			
-			if (!subset.timeExtent.contains(t)) {
-				// TODO design a JSON error document
-				throw new RuntimeException("subsetting must not produce an empty domain");
-			}
-			if (subset.bbox != null && !subset.bbox.contains(pos)) {
-				throw new RuntimeException("subsetting must not produce an empty domain");
+				// TODO should probably say unsupported feature
+				throw new UnsupportedDomainException(feature.getDomain());
 			}
 			
-			domainJson = new HashMap(ImmutableMap.of(
-					"type", "Profile",
-				    "crs", Utils.getCrsUri(pos.getCoordinateReferenceSystem()),
-				    "bbox", ImmutableList.of(pos.getX(), pos.getY(), pos.getX(), pos.getY()),
-				    "x", ImmutableList.of(pos.getX()),
-				    "y", ImmutableList.of(pos.getY())
-					));
-			
-			addVerticalAxis(z, subset, domainJson);
-			addTime(t, domainJson);
-			
-		} else {
-			// TODO should probably say unsupported feature
-			domainJson = unsupportedDomain(feature.getDomain());
 		}
+	}
+	
+	private static Map getDomainJson(UniformFeature uniFeature, Constraint subset) {
+		Map domainJson = new HashMap();
 		
-		 
+		// no support for trajectories currently
+		// we support everything which is a subtype of a rectilinear grid (includes profiles)
+		
+		// TODO add shortcuts when no subsetting is requested
+		
+		addHorizontalGrid(uniFeature.rectgrid, subset, domainJson);
+		addVerticalAxis(uniFeature.z, subset, domainJson);
+		addTimeAxis(uniFeature.t, subset, domainJson);
+		
 		return domainJson;
+	}
+		
+	private static IntStream getVerticalAxisIndices(VerticalAxis ax, Constraint subset) {
+		if (ax == null) {
+			return IntStream.of(0);
+		}
+		List<Double> v = ax.getCoordinateValues();		
+		IntStream axIndices = IntStream.range(0, v.size())
+			.filter(i -> subset.verticalExtent.contains(v.get(i)));
+		return axIndices;
+	}
+	
+	private static IntStream getTimeAxisIndices(TimeAxis ax, Constraint subset) {
+		if (ax == null) {
+			return IntStream.of(0);
+		}
+		List<DateTime> v = ax.getCoordinateValues();		
+		IntStream axIndices = IntStream.range(0, v.size())
+			.filter(i -> subset.timeExtent.contains(v.get(i)));
+		return axIndices;
+	}
+	
+	/**
+	 * NOTE: supports rectilinear lon-lat grids only for now
+	 */
+	private static IntStream getXAxisIndices(ReferenceableAxis<Double> ax, Constraint subset) {
+		List<Double> v = ax.getCoordinateValues();
+		// FIXME longitudes must be (un)wrapped the same way!!
+		IntStream axIndices = IntStream.range(0, v.size())
+			.filter(i -> subset.longitudeExtent.contains(v.get(i)));
+		return axIndices;
+	}
+
+	/**
+	 * NOTE: supports rectilinear lon-lat grids only for now
+	 */
+	private static IntStream getYAxisIndices(ReferenceableAxis<Double> ax, Constraint subset) {
+		List<Double> v = ax.getCoordinateValues();
+		IntStream axIndices = IntStream.range(0, v.size())
+			.filter(i -> subset.latitudeExtent.contains(v.get(i)));
+		return axIndices;
+	}
+	
+	/**
+	 * NOTE: supports rectilinear lon-lat grids only for now
+	 */
+	private static void addHorizontalGrid(RectilinearGrid grid, Constraint subset, Map domainJson) {
+		List<Double> x = grid.getXAxis().getCoordinateValues();
+		List<Double> y = grid.getYAxis().getCoordinateValues();
+		Stream<Double> subsettedX = getXAxisIndices(grid.getXAxis(), subset).mapToObj(x::get);
+		Stream<Double> subsettedY = getYAxisIndices(grid.getYAxis(), subset).mapToObj(y::get);
+				
+		BoundingBox bb = grid.getBoundingBox();
+		domainJson.putAll(ImmutableMap.of(
+			    "crs", Utils.getCrsUri(grid.getCoordinateReferenceSystem()),
+			    // FIXME have to subset bbox as well
+			    "bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()),
+			    "x", subsettedX.toArray(),
+				"y", subsettedY.toArray()
+				));
+		
+		if (grid instanceof RegularGrid && (grid.getXSize() > 1 || grid.getYSize() > 1)) {
+			RegularGrid reggrid = (RegularGrid) grid;
+			domainJson.putAll(ImmutableMap.of(
+					"delta", ImmutableList.of(
+				    		reggrid.getXAxis().getCoordinateSpacing(),
+				    		reggrid.getYAxis().getCoordinateSpacing()
+				    		)
+				    ));
+		}
 	}
 	
 	private static void addVerticalAxis(VerticalAxis z, Constraint subset, Map domainJson) {
 		if (z == null) {
 			return;
 		}
-		List<Double> v = z.getCoordinateValues().stream()
-				.filter(subset.verticalExtent::contains)
-				.collect(Collectors.toList());
+		List<Double> heights = z.getCoordinateValues();
+		Stream<Double> subsettedHeights = getVerticalAxisIndices(z, subset).mapToObj(heights::get);
 		
-		domainJson.put("vertical", v);
+		domainJson.put("vertical", subsettedHeights.toArray());
+		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
 		
 		// TODO are there no standards for vertical CRS, with codes etc.?
 		domainJson.put("verticalCrs", ImmutableMap.of(
@@ -255,27 +330,26 @@ public class FeatureResource extends ServerResource {
 	private static void addTimeAxis(TimeAxis t, Constraint subset, Map domainJson) {
 		if (t == null) {
 			return;
-			// TODO why is time null? shouldn't there be always a time?
-		} 
-		List<String> times = t.getCoordinateValues().stream()
-				.filter(subset.timeExtent::contains)
-				.map(time -> time.toString())
-				.collect(Collectors.toList());
-		domainJson.put("time", times);
+		}
+		List<DateTime> times = t.getCoordinateValues();
+		Stream<String> subsettedTimes = getTimeAxisIndices(t, subset).mapToObj(i -> times.get(i).toString());
+		domainJson.put("time", subsettedTimes.toArray());
+		//domainJson.put("timeBounds", t.getDomainObjects().iterator());
 	}
 	
-	private static void addTime(DateTime t, Map domainJson) {
-		// TODO profile should have a timeaxis with a single element
-		// this would avoid special handling here
-		if (t != null) {
-			domainJson.put("time", ImmutableList.of(t.toString()));
+	static class UnsupportedDomainException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		Domain<?> domain;
+		String info;
+		public UnsupportedDomainException(Domain<?> domain, String info) {
+			this.domain = domain;
+			this.info = info;
+		}
+		public UnsupportedDomainException(Domain<?> domain) {
+			this.domain = domain;
 		}
 	}
-	
-	private static Map unsupportedDomain(Domain<?> domain) {
-		return unsupportedDomain(domain, "");
-	}
-	
+		
 	private static Map unsupportedDomain(Domain<?> domain, String info) {
 		return ImmutableMap.of(
 				"type", domain.getClass().getName(),
@@ -299,7 +373,7 @@ public class FeatureResource extends ServerResource {
 		return types.build();
 	}
 		
-	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<DiscreteFeature<?,?>> feature, boolean includeValues,
+	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, boolean includeValues,
 			Constraint subset, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId;
 		Builder values = ImmutableMap.builder();
@@ -312,11 +386,11 @@ public class FeatureResource extends ServerResource {
 			
 			if (includeValues) {
 				// TODO how do we know which axis order the array has?!
-				Array<Number> valsArr = feature.get().getValues(paramId);
+				UniformFeature uniFeature = uniFeatureFn.get();
 				
 				rangeParam = ImmutableMap.builder()
 						.putAll(rangeParam)
-						.put("values", getValues(valsArr))
+						.put("values", getValues(uniFeature.feature.getValues(paramId), uniFeature, subset))
 						.build();
 			}
 			
@@ -325,8 +399,12 @@ public class FeatureResource extends ServerResource {
 		
 		return values.build();
 	}
+
+	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, Constraint subset) {
+		return getValues(valsArr, new UniformFeature(feature), subset);
+	}
 	
-	public static List<Number> getValues(Array<Number> valsArr) {
+	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, Constraint subset) {
 		if (valsArr.size() > Integer.MAX_VALUE) {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
@@ -334,7 +412,22 @@ public class FeatureResource extends ServerResource {
 		List<Number> vals = new ArrayList<Number>((int) valsArr.size());
 		valsArr.forEach(vals::add);
 		
-		// TODO subset!
+		
+		// FIXME wrap all array classes as Array4D for subsetting
+		
+		Array4D<Number> vals4D = null;
+		
+		IntStream xIndices = getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset);
+		IntStream yIndices = getYAxisIndices(uniFeature.rectgrid.getYAxis(), subset);
+		IntStream zIndices = getVerticalAxisIndices(uniFeature.z, subset);
+		IntStream tIndices = getTimeAxisIndices(uniFeature.t, subset);
+		
+		tIndices.forEachOrdered(t ->
+		  zIndices.forEachOrdered(z ->
+		    yIndices.forEachOrdered(y -> 
+		      xIndices.forEachOrdered(x ->
+		        vals.add(vals4D.get(t, z, y, x))
+		  ))));
 		
 		return vals;
 	}

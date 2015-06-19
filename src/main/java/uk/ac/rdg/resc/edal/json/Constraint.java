@@ -18,6 +18,7 @@ public final class Constraint {
 	private DateTime timeStart, timeEnd;
 	public Extent<DateTime> timeExtent;
 	public DatelineBoundingBox bbox;
+	public Extent<Double> longitudeExtent, latitudeExtent;
 	private Double verticalStart, verticalEnd;
 	public Extent<Double> verticalExtent;
 	public Set<String> params;
@@ -37,7 +38,7 @@ public final class Constraint {
 			case "bbox":
 				String[] bb = val.split(",");
 				bbox = new DatelineBoundingBox(
-						Double.parseDouble(bb[0]), 
+						Double.parseDouble(bb[0]),
 						Double.parseDouble(bb[1]), 
 						Double.parseDouble(bb[2]), 
 						Double.parseDouble(bb[3])); break;
@@ -46,9 +47,14 @@ public final class Constraint {
 			case "params": params = Sets.newHashSet(val.split(",")); break;
 			}
 		}
-		// FIXME implementation for DateTimeExtent doesn't seem to support open ends
-		// -> fixed in EDAL snapshot
 		timeExtent = Extents.newExtent(timeStart, timeEnd);
 		verticalExtent = Extents.newExtent(verticalStart, verticalEnd);
+		if (bbox != null) {
+			longitudeExtent = Extents.newExtent(bbox.getWestBoundLongitude(), bbox.getUnwrappedEastBoundLongitude());
+			latitudeExtent = Extents.newExtent(bbox.getSouthBoundLatitude(), bbox.getNorthBoundLatitude());
+		} else {
+			longitudeExtent = Extents.newExtent(null, null);
+			latitudeExtent = Extents.newExtent(null, null);
+		}
 	}
 }

@@ -76,6 +76,10 @@ public class DatelineBoundingBox implements GeographicBoundingBox {
 	public double getEastBoundLongitude() {
 		return lonEast;
 	}
+	
+	public double getUnwrappedEastBoundLongitude() {
+		return lonEast < lonWest ? lonEast + 360 : lonEast;
+	}
 
 	@Override
 	public double getSouthBoundLatitude() {
