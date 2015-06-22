@@ -15,6 +15,7 @@ import org.restlet.resource.ServerResource;
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
+import uk.ac.rdg.resc.edal.json.FeatureResource.FeatureMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -29,6 +30,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		String parameterId = Reference.decode(getAttribute("parameterId"));
 		Constraint subset = new Constraint(getQueryValue("subset"));
 		
+		FeatureMetadata meta = FeaturesResource.getDatasetMetadata(datasetId).getFeatureMetadata(featureId);
 		Dataset dataset = Utils.getDataset(datasetId);
 		DiscreteFeature feature;
 		try {
@@ -41,9 +43,13 @@ public class FeatureParameterRangeResource extends ServerResource {
 		String parameterRangeUrl = getRootRef().toString() + "/datasets/" + dataset.getId() +
 				"/features/" + feature.getId() + "/range/" + param.getVariableId();
 		
+		// TODO remove duplication with FeatureResource
+		
 		Map j = ImmutableMap.of(
 				"id", parameterRangeUrl,
-				"values", FeatureResource.getValues(feature.getValues(param.getVariableId()), feature, subset)
+				"values", FeatureResource.getValues(feature.getValues(param.getVariableId()), feature, subset),
+				"min", meta.rangeMeta.getMinValue(param),
+				"max", meta.rangeMeta.getMaxValue(param)
 				);
 		return j;
 	}

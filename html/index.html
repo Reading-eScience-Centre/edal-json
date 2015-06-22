@@ -239,20 +239,12 @@
 	}
 		
 	map.on('overlayadd', function (e) {
-		// As we lazy-load range data within drawTile, the range extent may not have been
-		// calculated yet. As a quick work-around, we introduce a delay here.
-		// A better solution would be to have an initialization function when a adding
-		// a layer and an event that would need to be fired once done. After that, the
-		// tile drawing could start. However, leaflet doesn't support that yet.
-		
-		setTimeout(function() {
-			var layer = e.layer;
-			var rangeType = layer.featureResult.rangeType[layer.paramId];
-			var range = layer.featureResult.range[layer.paramId];
-			var legend = createLegend(map.palette, rangeType.title, range.min.toFixed(2), range.max.toFixed(2), rangeType.uom);
-			legend.addTo(map);
-			layer.legend = legend;
-		}, 3000);
+		var layer = e.layer;
+		var rangeType = layer.featureResult.rangeType[layer.paramId];
+		var range = layer.featureResult.range[layer.paramId];
+		var legend = createLegend(map.palette, rangeType.title, range.min.toFixed(2), range.max.toFixed(2), rangeType.uom);
+		legend.addTo(map);
+		layer.legend = legend;
 	});
 	
 	map.on('overlayremove', function (e) {
@@ -647,8 +639,8 @@
 				alert("Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: " + result.domain.crs);
 				return;
 			}
-			result.domain.x = new Int16Array(result.domain.x);
-			result.domain.y = new Int8Array(result.domain.y);
+			result.domain.x = new Float64Array(result.domain.x);
+			result.domain.y = new Float64Array(result.domain.y);
 			wrapLongitudes(result.domain);
 			// create a canvas layer for each parameter
 			for (paramId in result.rangeType) {
@@ -661,12 +653,12 @@
 		});
 	}
 	
-	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/ICEC");
-	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/TMP");
-	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/SALTY");
-	addFeature("http://localhost:8182/datasets/foam_one_degree-2011-01-01.nc/features/M");
-	addFeature("http://localhost:8182/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst")
-	addFeature("http://localhost:8182/datasets/en3_test_data.nc/features/7880:C:%5CUsers%5Cnx910562%5Cgit%5Cedal-json%5Ctarget%5Cclasses%5Cen3_test_data.nc");
+	addFeature("http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/ICEC");
+	addFeature("http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/TMP");
+	addFeature("http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/SALTY");
+	addFeature("http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/M");
+	addFeature("http://localhost:8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst")
+	addFeature("http://localhost:8182/api/datasets/en3_test_data.nc/features/0:7880");
 	</script>
 </body>
 </html>

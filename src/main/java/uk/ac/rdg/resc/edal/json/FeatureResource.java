@@ -1,7 +1,6 @@
 package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -379,9 +378,11 @@ public class FeatureResource extends ServerResource {
 		Builder values = ImmutableMap.builder();
 
 		for (String paramId : meta.rangeMeta.getParameterIds()) {
-			
+			Parameter param = meta.rangeMeta.getParameter(paramId);
 			Map rangeParam = ImmutableMap.of(
-					"id", root + "/features/" + meta.featureId + "/range/" + paramId
+					"id", root + "/features/" + meta.featureId + "/range/" + paramId,
+					"min", meta.rangeMeta.getMinValue(param),
+					"max", meta.rangeMeta.getMaxValue(param)
 					);
 			
 			if (includeValues) {
@@ -400,11 +401,11 @@ public class FeatureResource extends ServerResource {
 		return values.build();
 	}
 
-	public static Number[] getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, Constraint subset) {
+	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, Constraint subset) {
 		return getValues(valsArr, new UniformFeature(feature), subset);
 	}
 	
-	public static Number[] getValues(Array<Number> valsArr, UniformFeature uniFeature, Constraint subset) {
+	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, Constraint subset) {
 		if (valsArr.size() > Integer.MAX_VALUE) {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
@@ -454,7 +455,7 @@ public class FeatureResource extends ServerResource {
 			}
 		}
 		
-		return vals;
+		return Arrays.asList(vals);
 	}
 	
 	public static float[] getValues_(Array<Number> valsArr) {

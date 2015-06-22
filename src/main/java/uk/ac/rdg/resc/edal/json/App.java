@@ -18,13 +18,14 @@ public class App extends Application {
 		Component component = new Component();
 		component.getServers().add(Protocol.HTTP, 8182);
 		
-		// our REST API
-		App app = new App();
-		app.getEncoderService().setEnabled(true);
 		CorsService corsService = new CorsService();
 		corsService.setAllowedOrigins(ImmutableSet.of("*"));
 		corsService.setAllowedCredentials(true);
-		app.getServices().add(corsService);
+		component.getServices().add(corsService);
+		
+		// our REST API
+		App app = new App();
+		app.getEncoderService().setEnabled(true);
 		component.getDefaultHost().attach("/api", app);
 		
 		// static files
