@@ -34,7 +34,8 @@ public class RangeMetadata {
 					double v = val.doubleValue();
 					if (v < min) {
 						min = v;
-					} else if (v > max) {
+					} 
+					if (v > max) {
 						max = v;
 					}
 				}

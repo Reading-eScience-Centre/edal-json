@@ -308,13 +308,6 @@
 			var result = this.featureResult; // our own little cache
 			
 			var param = result.range[paramId];
-			
-			// calculate and cache range extent if not provided
-			if (!('min' in param)) {
-				var extent = arrayMinMax(param.values);
-				param.min = extent.min;
-				param.max = extent.max;
-			}
 
 			// projection coordinates of top left tile pixel
 			var start = tilePoint.multiplyBy(tileSize);
@@ -479,10 +472,15 @@
 		// the following lazy-loads range values
 		return function(canvas, tilePoint, zoom) {
 			var self = this;
+			drawTile.call(self, canvas, tilePoint, zoom);
+			// currently we load all data when adding the layer
+			// but later we may load the subsetted data for each tile
+			/*
 			var paramRange = layer.featureResult.range[paramId];
 			if ('values' in paramRange) {
 				drawTile.call(self, canvas, tilePoint, zoom);
 			} else {
+				console.log("fetching range");
 				$.ajax({
 					dataType: 'native',
 					accepts: {
@@ -498,12 +496,9 @@
 						drawTile.call(self, canvas, tilePoint, zoom);
 					}
 				});
-				/*
-				$.getJSON(paramRange.id, function( paramRangeWithValues ) {
-					layer.featureResult.range[paramId] = paramRangeWithValues;
-					drawTile.call(self, canvas, tilePoint, zoom);
-				});*/
+				
 			}
+			*/
 		};
 	}
 	
@@ -643,14 +638,50 @@
 			result.domain.y = new Float64Array(result.domain.y);
 			wrapLongitudes(result.domain);
 			// create a canvas layer for each parameter
-			for (paramId in result.rangeType) {
-				var canvasTiles = L.tileLayer.canvas();
-				canvasTiles.drawTile = drawTileFn(canvasTiles, paramId);
-				canvasTiles.featureResult = result;
-				canvasTiles.paramId = paramId;
-				lc.addOverlay(canvasTiles, result.rangeType[paramId].title);
+			for (var paramId in result.rangeType) {
+				var layer = L.tileLayer.canvas();
+				layer.drawTile = drawTileFn(layer, paramId);
+				layer.featureResult = result;
+				layer.paramId = paramId;
+				lc.addOverlay(layer, result.rangeType[paramId].title);
+				
+				// TODO put this into our own TileLayer class (extending TileLayer.Canvas)
+				var originalOnAdd = layer.onAdd;
+				layer.onAdd = function (map) {
+					var paramRange = layer.featureResult.range[layer.paramId];
+					if ('values' in paramRange) {
+						calculateExtent(paramRange);
+						originalOnAdd.call(layer, map);
+					} else {
+						$.ajax({
+							dataType: 'native',
+							accepts: {
+								'native': 'application/x-msgpack'
+							},
+							url: paramRange.id,
+							xhrFields: {
+							  responseType: 'arraybuffer'
+							},
+							success: function( raw ) {
+								var paramRangeWithValues = msgpack.unpack(new Uint8Array(raw));
+								layer.featureResult.range[paramId] = paramRangeWithValues;
+								calculateExtent(paramRange);
+								originalOnAdd.call(layer, map);
+							}
+						});
+					}
+				};
 			}
 		});
+	}
+	
+	function calculateExtent(param) {
+		// calculate and cache range extent if not provided
+		if (!('min' in param)) {
+			var extent = arrayMinMax(param.values);
+			param.min = extent.min;
+			param.max = extent.max;
+		}
 	}
 	
 	addFeature("http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/ICEC");
