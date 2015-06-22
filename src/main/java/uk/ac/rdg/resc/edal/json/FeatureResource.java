@@ -400,34 +400,59 @@ public class FeatureResource extends ServerResource {
 		return values.build();
 	}
 
-	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, Constraint subset) {
+	public static Number[] getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, Constraint subset) {
 		return getValues(valsArr, new UniformFeature(feature), subset);
 	}
 	
-	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, Constraint subset) {
+	public static Number[] getValues(Array<Number> valsArr, UniformFeature uniFeature, Constraint subset) {
 		if (valsArr.size() > Integer.MAX_VALUE) {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
 		
-		List<Number> vals = new ArrayList<Number>((int) valsArr.size());
-		valsArr.forEach(vals::add);
+		int[] xIndices = getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset).toArray();
+		int[] yIndices = getYAxisIndices(uniFeature.rectgrid.getYAxis(), subset).toArray();
+		int[] zIndices = getVerticalAxisIndices(uniFeature.z, subset).toArray();
+		int[] tIndices = getTimeAxisIndices(uniFeature.t, subset).toArray();
 		
 		
-		// FIXME wrap all array classes as Array4D for subsetting
+//		valsArr.forEach(vals::add);
 		
-		Array4D<Number> vals4D = null;
+				
+		Array4D<Number> vals4D;
 		
-		IntStream xIndices = getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset);
-		IntStream yIndices = getYAxisIndices(uniFeature.rectgrid.getYAxis(), subset);
-		IntStream zIndices = getVerticalAxisIndices(uniFeature.z, subset);
-		IntStream tIndices = getTimeAxisIndices(uniFeature.t, subset);
+		if (valsArr instanceof Array4D) {
+			vals4D = (Array4D<Number>) valsArr;
+		} else if (uniFeature.feature instanceof ProfileFeature) {
+			// Array1D varying over vertical axis
+			vals4D = new Array4D<Number>(1, zIndices.length, 1, 1) {
+				@Override
+				public Number get(int... coords) {
+					return valsArr.get(coords[1]);
+				}
+				@Override
+				public void set(Number value, int... coords) {
+					throw new UnsupportedOperationException();
+				}
+			};
+		} else {
+			throw new RuntimeException("not supported: " + valsArr.getClass().getName());
+		}
 		
-		tIndices.forEachOrdered(t ->
-		  zIndices.forEachOrdered(z ->
-		    yIndices.forEachOrdered(y -> 
-		      xIndices.forEachOrdered(x ->
-		        vals.add(vals4D.get(t, z, y, x))
-		  ))));
+
+		
+		Number[] vals = new Number[xIndices.length * yIndices.length * 
+				zIndices.length * tIndices.length];
+		
+		int i = 0;
+		for (int t : tIndices) {
+			for (int z : zIndices) {
+				for (int y : yIndices) {
+					for (int x : xIndices) {
+						vals[i++] = vals4D.get(t, z, y, x);
+					}
+				}
+			}
+		}
 		
 		return vals;
 	}
