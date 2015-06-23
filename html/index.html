@@ -85,9 +85,15 @@
 		<div class="info palettes">
 			Palette:
 			<button class="palette-button" data-palette="dem">DEM</button>
-			<button class="palette-button" data-palette="gray">Grayscale</button>
 			<button class="palette-button" data-palette="rainbow">Rainbow</button>
 			<button class="palette-button" data-palette="linearL">LinearL</button>
+			<button class="palette-button" data-palette="gray">Grays</button>
+			<button class="palette-button" data-palette="grayinv">Grays (inv)</button>
+			<button class="palette-button" data-palette="blues">Blues</button>
+			<button class="palette-button" data-palette="greens">Greens</button>
+			<button class="palette-button" data-palette="reds">Reds</button>
+			<button class="palette-button" data-palette="GnBu">GnBu</button>
+			<button class="palette-button" data-palette="YlGnBu">YlGnBu</button>			
 		</div>
 	</template>
 	
@@ -139,6 +145,62 @@
 			}
 		});
 	}
+	
+	function createLinearPalette(colors) {
+		var indexSize = 256;
+		
+		// draw the gradient in a canvas
+		var canvas = document.createElement('canvas');
+		canvas.width  = indexSize;
+		canvas.height = 1;
+		var ctx = canvas.getContext("2d");
+		var gradient = ctx.createLinearGradient(0,0,indexSize-1,0);
+		var num = colors.length;
+		for (var i=0; i<num; i++) {
+			gradient.addColorStop(i/(num-1), colors[i]);
+		}
+		ctx.fillStyle = gradient;
+		ctx.fillRect(0,0,indexSize,1);
+		
+		// now read back values into arrays
+		var red = new Uint8Array(indexSize);
+		var green = new Uint8Array(indexSize);
+		var blue = new Uint8Array(indexSize);
+		
+		var pix = ctx.getImageData(0, 0, indexSize, 1).data;
+		for (var i=0, j=0; i<pix.length; i+=4, j++) {
+			red[j] = pix[i];
+			green[j] = pix[i+1];
+			blue[j] = pix[i+2];
+		}
+		
+		return {
+			ncolors: indexSize,
+			red: red,
+			green: green,
+			blue: blue
+		};
+	}
+	
+	function addPalette(name, paletteValues) {
+		palettes[name] = {
+			allowedValues: paletteValues
+		};
+	}
+	
+	addPalette("gray", createLinearPalette(["#FFFFFF", "#000000"]));
+	addPalette("grayinv", createLinearPalette(["#000000", "#FFFFFF"]));
+	addPalette("rainbow", createLinearPalette(["#0000FF", "#00FFFF", "#00FF00", "#FFFF00", "#FF0000"]));
+	addPalette("blues", createLinearPalette(
+		["#f7fbff","#deebf7","#c6dbef","#9ecae1","#6baed6","#4292c6","#2171b5","#08519c","#08306b"]));
+	addPalette("greens", createLinearPalette(
+		["#f7fcf5","#e5f5e0","#c7e9c0","#a1d99b","#74c476","#41ab5d","#238b45","#006d2c","#00441b"]));
+	addPalette("reds", createLinearPalette(
+		["#fff5f0","#fee0d2","#fcbba1","#fc9272","#fb6a4a","#ef3b2c","#cb181d","#a50f15","#67000d"]));
+	addPalette("GnBu", createLinearPalette(
+		["#f7fcf0","#e0f3db","#ccebc5","#a8ddb5","#7bccc4","#4eb3d3","#2b8cbe","#0868ac","#084081"]));
+	addPalette("YlGnBu", createLinearPalette(
+		["#ffffd9","#edf8b1","#c7e9b4","#7fcdbb","#41b6c4","#1d91c0","#225ea8","#253494","#081d58"]));
 	
 	// default palette, note that map.palette is our own attribute
 	var defaultPalette = 'rainbow';

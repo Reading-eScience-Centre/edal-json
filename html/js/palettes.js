@@ -13,7 +13,7 @@ palettes.dem =
 	},
 	"nilValues": "PENDING!"
 }
-
+/*
 palettes.gray =
 {
 	"type": "palette",
@@ -27,7 +27,8 @@ palettes.gray =
 	},
 	"nilValues": "PENDING!"
 }
-
+*/
+/*
 palettes.rainbow =
 {
 	"type": "palette",
@@ -41,7 +42,7 @@ palettes.rainbow =
 	},
 	"nilValues": "PENDING!"
 }
-
+*/
 palettes.linearL =
 {
 	"type": "palette",
