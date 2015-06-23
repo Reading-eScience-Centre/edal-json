@@ -203,7 +203,7 @@
 		["#ffffd9","#edf8b1","#c7e9b4","#7fcdbb","#41b6c4","#1d91c0","#225ea8","#253494","#081d58"]));
 	
 	// default palette, note that map.palette is our own attribute
-	var defaultPalette = 'rainbow';
+	var defaultPalette = 'blues';
 	var defaultInterpolation = 'nearestNeighbor';
 	map.palette = palettes[defaultPalette];
 	map.interpolation = interpolationMethods[defaultInterpolation];
@@ -232,10 +232,9 @@
 				if (!('drawTile' in layer)) return;
 				var range = layer.featureResult.range[layer.paramId];
 				if (action == "global") {
-					delete range.min;
-					delete range.max;
+					range.paletteMin = range.min;
+					range.paletteMax = range.max;
 				} else if (action == "fov") {
-					// TODO recalculate range for current field-of-view
 					// first, get current bounding box
 					var bounds = map.getBounds();
 					var result = layer.featureResult;
@@ -246,9 +245,8 @@
 					// TODO how is time/vertical dimension handled?
 					var extent = ndMinMax(subset);
 					
-					// TODO hacky, should not be written to the actual range
-					range.min = extent.min;
-					range.max = extent.max;
+					range.paletteMin = extent.min;
+					range.paletteMax = extent.max;
 					
 				} else if (action == "custom") {
 					// TODO display popup to set range extent for each layer
@@ -299,20 +297,6 @@
 		};
 		return legend;
 	}
-		
-	map.on('overlayadd', function (e) {
-		var layer = e.layer;
-		var rangeType = layer.featureResult.rangeType[layer.paramId];
-		var range = layer.featureResult.range[layer.paramId];
-		var legend = createLegend(map.palette, rangeType.title, range.min.toFixed(2), range.max.toFixed(2), rangeType.uom);
-		legend.addTo(map);
-		layer.legend = legend;
-	});
-	
-	map.on('overlayremove', function (e) {
-		var layer = e.layer;
-		map.removeControl(layer.legend);
-	});
 	
 	// the following assumes a rectilinear data grid
 		
@@ -325,8 +309,14 @@
 		var southWest = bounds.getSouthWest();
 		var northEast = bounds.getNorthEast();
 		var lonRange = [domain.lonDiscontinuity, domain.lonDiscontinuity+360];
-		southWest.lng = wrapLongitude(southWest.lng, lonRange);
-		northEast.lng = wrapLongitude(northEast.lng, lonRange);
+		// if the map is zoomed out a lot it can span more than 360deg
+		if (northEast.lng - southWest.lng > 360) {
+			southWest.lng = -180;
+			northEast.lng = 180;
+		} else {
+			southWest.lng = wrapLongitude(southWest.lng, lonRange);
+			northEast.lng = wrapLongitude(northEast.lng, lonRange);
+		}
 		if (northEast.lng < southWest.lng) {
 			// unwrap lng after wrapping, so that both are in right order again
 			northEast.lng+= 360;
@@ -420,7 +410,7 @@
 				// map value to color using a palette
 				// scale val to [0,255] using the range extent
 				// (IDL bytscl formula: http://www.exelisvis.com/docs/BYTSCL.html)
-				valScaled = Math.trunc((255 + 0.9999) * (val - param.min)/(param.max - param.min));
+				valScaled = Math.trunc((255 + 0.9999) * (val - param.paletteMin)/(param.paletteMax - param.paletteMin));
 				
 				rgba.set(tileY,tileX,0,paletteRed[valScaled]);
 				rgba.set(tileY,tileX,1,paletteGreen[valScaled]);
@@ -701,11 +691,12 @@
 			wrapLongitudes(result.domain);
 			// create a canvas layer for each parameter
 			for (var paramId in result.rangeType) {
+				var rangeType = result.rangeType[paramId];
 				var layer = L.tileLayer.canvas();
 				layer.drawTile = drawTileFn(layer, paramId);
 				layer.featureResult = result;
 				layer.paramId = paramId;
-				lc.addOverlay(layer, result.rangeType[paramId].title);
+				lc.addOverlay(layer, rangeType.title);
 				
 				// TODO put this into our own TileLayer class (extending TileLayer.Canvas)
 				var originalOnAdd = layer.onAdd;
@@ -713,6 +704,7 @@
 					var paramRange = layer.featureResult.range[layer.paramId];
 					if ('values' in paramRange) {
 						calculateExtent(paramRange);
+						addLegend(map, layer, rangeType, paramRange);
 						originalOnAdd.call(layer, map);
 					} else {
 						console.time("loadRange");
@@ -728,17 +720,33 @@
 							success: function( raw ) {
 								console.timeEnd("loadRange");
 								console.time("decodeRange");
-								var paramRangeWithValues = msgpack.unpack(new Uint8Array(raw));
+								var range = msgpack.unpack(new Uint8Array(raw));
 								console.timeEnd("decodeRange");
-								layer.featureResult.range[paramId] = paramRangeWithValues;
-								calculateExtent(paramRange);
+								layer.featureResult.range[paramId] = range;
+								calculateExtent(range);
+								addLegend(map, layer, rangeType, range);
 								originalOnAdd.call(layer, map);
 							}
 						});
 					}
 				};
+				
+				var originalOnRemove = layer.onRemove;
+				layer.onRemove = function (map) {
+					map.removeControl(layer.legend);
+					originalOnRemove.call(layer, map);
+				};
 			}
 		});
+	}
+	
+	// TODO refactor this, put palette info somewhere else
+	function addLegend(map, layer, rangeType, range) {
+		// add legend to map
+		var legend = createLegend(map.palette, rangeType.title, 
+		    range.paletteMin.toFixed(2), range.paletteMax.toFixed(2), rangeType.uom);
+		legend.addTo(map);
+		layer.legend = legend;
 	}
 	
 	function calculateExtent(param) {
@@ -747,6 +755,10 @@
 			var extent = arrayMinMax(param.values);
 			param.min = extent.min;
 			param.max = extent.max;
+		}
+		if (!('paletteMin' in param)) {
+			param.paletteMin = param.min;
+			param.paletteMax = param.max;
 		}
 	}
 	

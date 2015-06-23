@@ -25,7 +25,7 @@ public class App extends Application {
 		
 		// our REST API
 		App app = new App();
-		// app.getEncoderService().setEnabled(true); // gzip
+		app.getEncoderService().setEnabled(true); // gzip
 		component.getDefaultHost().attach("/api", app);
 		
 		// static files
