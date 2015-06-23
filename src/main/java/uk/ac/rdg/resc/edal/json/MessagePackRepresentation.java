@@ -25,7 +25,9 @@ public class MessagePackRepresentation extends StreamRepresentation {
 
     @Override
     public void write(OutputStream out) throws IOException {
+    	long t0 = System.currentTimeMillis();
     	new MessagePack().write(out, this.o);
+    	System.out.println("write to stream: " + String.valueOf(System.currentTimeMillis()-t0));
     }
 
 	@Override

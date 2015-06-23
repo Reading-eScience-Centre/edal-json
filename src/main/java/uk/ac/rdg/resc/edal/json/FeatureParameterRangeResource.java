@@ -56,7 +56,9 @@ public class FeatureParameterRangeResource extends ServerResource {
 
 	@Get("json")
 	public Representation json() throws IOException, EdalException {
+		
 		Map j = rangeData();
+		
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {
@@ -71,7 +73,10 @@ public class FeatureParameterRangeResource extends ServerResource {
 	
 	@Get("msgpack")
 	public Representation msgpack() throws IOException, EdalException {
+		long t0 = System.currentTimeMillis();
 		Map j = rangeData();
+		System.out.println("build range data: " + String.valueOf(System.currentTimeMillis()-t0));
+		
 		Representation r = new MessagePackRepresentation(j);
 		
 		// TODO think about caching strategy
