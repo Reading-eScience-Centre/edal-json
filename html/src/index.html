@@ -3,44 +3,13 @@
 <head>
 	<title></title>
 	<meta charset="utf-8">
-	
-	<link rel="stylesheet" href="css/leaflet/leaflet-0.7.3.css" />
-	<link rel="stylesheet" href="css/style-0.1.css" />
-	
-	<script>
-	var version = '0.1';
-	var require = {
-		enforceDefine: true,
-		baseUrl: 'js',
-		paths: {
-			jquery: [
-				'https://code.jquery.com/jquery-1.11.3.min.js',
-				'ext/jquery-1.11.3.min'
-			],
-			jquery-ajax-native: [
-				'https://cdn.rawgit.com/acigna/jquery-ajax-native/1.0.1/src/jquery-ajax-native.js',
-				'ext/jquery-ajax-native-1.0.1'			
-			],
-			ndarray: 'ext/ndarray-1.0.18',
-			leaflet: [
-				'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet-src',
-				'ext/leaflet-src-0.7.3'
-			],
-			leaflet-providers: [
-				'https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.0.29/leaflet-providers.min',
-				'ext/leaflet-providers.min-1.0.29'
-			],
-			msgpack: 'ext/msgpack-1.0.5',
-			main: 'main-' + version,
-			palettes: 'palettes-' + version,
-			interpolation: 'interpolation-' + version
-		},
-		bundles: {
-			ndarray: ["ndarray", "ndarray-ops"],
-		}
-	};
-	</script>
-	<script data-main="main" src="js/ext/require.min-2.1.18.js"></script>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		
+	<script src="jspm_packages/system.js"></script>
+    <script src="config.js"></script>
+    <script>
+    	System.import('app/main');
+    </script>
 </head>
 <body>
 	<div id="map"></div>

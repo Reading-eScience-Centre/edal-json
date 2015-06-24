@@ -69,7 +69,7 @@ function inverseDistanceWeighted(paramArr, lon, lat, domainLon, domainLat, iLonN
 	return num/denom;
 }
 
-interpolationMethods = {
+var interpolationMethods = {
 	nearestNeighbor: {
 		title: "None (nearest neighbor)",
 		fn: nearestNeighbor
@@ -79,3 +79,5 @@ interpolationMethods = {
 		fn: inverseDistanceWeighted
 	}
 };
+
+export default interpolationMethods;
