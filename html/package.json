@@ -2,11 +2,21 @@
   "name": "edal-json-web",
   "version": "0.1.0",
   "scripts": {
-    "serveit": "browser-sync start --files '**/*.html,**/*.css,**/*.js' --server src"
+    "serveit": "browser-sync start --files '**/*.html,**/*.css,**/*.js' --server src",
+    "test": "standard"
   },
   "devDependencies": {
     "browser-sync": "^2.7.1",
-    "jspm": "^0.15.6"
+    "jspm": "^0.15.6",
+    "standard": "^4.3.2",
+    "babel-eslint": "^3.1.18"
+  },
+  "standard": {
+    "parser": "babel-eslint",
+    "ignore": [
+			"src/jspm_packages/**",
+			"src/config.js"
+		]
   },
   "jspm": {
     "directories": {
@@ -23,8 +33,9 @@
       "ndarray-ops": "npm:ndarray-ops@^1.2.2"
     },
     "devDependencies": {
-      "traceur": "github:jmcriffey/bower-traceur@0.0.88",
-      "traceur-runtime": "github:jmcriffey/bower-traceur-runtime@0.0.88"
+      "babel": "npm:babel-core@^5.1.13",
+      "babel-runtime": "npm:babel-runtime@^5.1.13",
+      "core-js": "npm:core-js@^0.9.4"
     }
   }
 }
