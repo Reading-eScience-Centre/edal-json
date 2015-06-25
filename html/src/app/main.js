@@ -4,12 +4,13 @@ import './css/style.css!'
 import $ from 'jquery'
 import 'jquery-ajax-native'
 import ndarray from 'ndarray'
-import ops from 'ndarray-ops'
+import * as ops from 'ndarray-ops'
+import * as opsnull from 'app/ndarray-ops-null'
 import msgpack from 'msgpack'
 import L from 'leaflet'
 import 'leaflet-providers'
 import interpolation from 'app/interpolation'
-import palettes from 'app/palettes'
+import * as palettes from 'app/palettes'
 
 var map = L.map('map').setView([10, 0], 2)
 
@@ -60,7 +61,7 @@ palettes.add('YlGnBu', palettes.linear(
 var defaultPalette = 'blues'
 var defaultInterpolation = 'nearestNeighbor'
 map.palette = palettes.palettes[defaultPalette]
-map.interpolation = interpolation.methods[defaultInterpolation]
+map.interpolation = interpolation[defaultInterpolation]
 
 var paletteSwitcher = L.control({position: 'bottomleft'})
 paletteSwitcher.onAdd = function (map) {
@@ -424,65 +425,9 @@ function arrayMinMax (arr) {
   return {min: min, max: max}
 }
 
-// handle null values in arrays
-// ndarray-ops only provides standard argmin and argmax
-// TODO don't extend ops!
-var compile = require('cwise-compiler')
-/*eslint-disable */
-ops.nullargmin = compile({
-  args:['index','array','shape'],
-  pre:{
-  body:'{this_v=Infinitythis_i=_inline_0_arg2_.slice(0)}',
-  args:[
-    {name:'_inline_0_arg0_',lvalue:false,rvalue:false,count:0},
-    {name:'_inline_0_arg1_',lvalue:false,rvalue:false,count:0},
-    {name:'_inline_0_arg2_',lvalue:false,rvalue:true,count:1}
-    ],
-  thisVars:['this_i','this_v'],
-  localVars:[]},
-  body:{
-  body:'{if(_inline_1_arg1_ !== null && _inline_1_arg1_<this_v){this_v=_inline_1_arg1_for(var _inline_1_k=0_inline_1_k<_inline_1_arg0_.length++_inline_1_k){this_i[_inline_1_k]=_inline_1_arg0_[_inline_1_k]}}}',
-  args:[
-    {name:'_inline_1_arg0_',lvalue:false,rvalue:true,count:2},
-    {name:'_inline_1_arg1_',lvalue:false,rvalue:true,count:2}],
-  thisVars:['this_i','this_v'],
-  localVars:['_inline_1_k']},
-  post:{
-  body:'{return this_i}',
-  args:[],
-  thisVars:['this_i'],
-  localVars:[]}
-})
-
-ops.nullargmax = compile({
-  args:['index','array','shape'],
-  pre:{
-  body:'{this_v=-Infinitythis_i=_inline_0_arg2_.slice(0)}',
-  args:[
-    {name:'_inline_0_arg0_',lvalue:false,rvalue:false,count:0},
-    {name:'_inline_0_arg1_',lvalue:false,rvalue:false,count:0},
-    {name:'_inline_0_arg2_',lvalue:false,rvalue:true,count:1}
-    ],
-  thisVars:['this_i','this_v'],
-  localVars:[]},
-  body:{
-  body:'{if(_inline_1_arg1_ !== null && _inline_1_arg1_>this_v){this_v=_inline_1_arg1_for(var _inline_1_k=0_inline_1_k<_inline_1_arg0_.length++_inline_1_k){this_i[_inline_1_k]=_inline_1_arg0_[_inline_1_k]}}}',
-  args:[
-    {name:'_inline_1_arg0_',lvalue:false,rvalue:true,count:2},
-    {name:'_inline_1_arg1_',lvalue:false,rvalue:true,count:2}],
-  thisVars:['this_i','this_v'],
-  localVars:['_inline_1_k']},
-  post:{
-  body:'{return this_i}',
-  args:[],
-  thisVars:['this_i'],
-  localVars:[]}
-})
-/*eslint-enable */
-
 function ndMinMax (arr) {
-  var min = arr.get.apply(arr, ops.nullargmin(arr))
-  var max = arr.get.apply(arr, ops.nullargmax(arr))
+  var min = arr.get.apply(arr, opsnull.nullargmin(arr))
+  var max = arr.get.apply(arr, opsnull.nullargmax(arr))
   return {min: min, max: max}
 }
 
@@ -580,7 +525,7 @@ function addFeature (url) {
             success: function (raw) {
               console.timeEnd('loadRange')
               console.time('decodeRange')
-              var range = msgpack.unpack(new Uint8Array(raw))
+              var range = msgpack.decode(raw)
               console.timeEnd('decodeRange')
               layer.featureResult.range[paramId] = range
               calculateExtent(range)

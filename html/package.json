@@ -3,20 +3,23 @@
   "version": "0.1.0",
   "scripts": {
     "serveit": "browser-sync start --files '**/*.html,**/*.css,**/*.js' --server src",
-    "test": "standard"
+    "test": "standard",
+    "buildMode": "jspm bundle app/main --inject",
+    "buildSafeMode": "jspm bundle-sfx app/main safe-bundle.js",
+    "devMode": "jspm unbundle"
   },
   "devDependencies": {
+    "babel-eslint": "^3.1.18",
     "browser-sync": "^2.7.1",
     "jspm": "^0.15.6",
-    "standard": "^4.3.2",
-    "babel-eslint": "^3.1.18"
+    "standard": "^4.3.2"
   },
   "standard": {
     "parser": "babel-eslint",
     "ignore": [
-			"src/jspm_packages/**",
-			"src/config.js"
-		]
+      "src/jspm_packages/**",
+      "src/config.js"
+    ]
   },
   "jspm": {
     "directories": {
@@ -24,6 +27,7 @@
     },
     "dependencies": {
       "css": "github:systemjs/plugin-css@^0.1.13",
+      "cwise-compiler": "npm:cwise-compiler@^1.1.0",
       "jquery": "github:components/jquery@^2.1.4",
       "jquery-ajax-native": "github:acigna/jquery-ajax-native@^1.0.1",
       "leaflet": "github:Leaflet/Leaflet@^0.7.3",

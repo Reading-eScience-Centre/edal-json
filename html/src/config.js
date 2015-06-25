@@ -10,15 +10,75 @@ System.config({
     "*": "*.js",
     "github:*": "jspm_packages/github/*.js",
     "npm:*": "jspm_packages/npm/*.js"
-  }
+  },
+  "bundles": {
+    "build": [
+      "npm:core-js@0.9.18/library/modules/$.fw",
+      "npm:core-js@0.9.18/library/modules/$.def",
+      "npm:core-js@0.9.18/library/modules/$.get-names",
+      "npm:core-js@0.9.18/library/modules/es6.math",
+      "github:components/jquery@2.1.4/jquery",
+      "github:acigna/jquery-ajax-native@1.0.1/src/jquery-ajax-native",
+      "npm:iota-array@1.0.0/iota",
+      "npm:base64-js@0.0.8/lib/b64",
+      "npm:ieee754@1.1.6/index",
+      "npm:is-array@1.0.1/index",
+      "npm:uniq@1.0.1/uniq",
+      "npm:process@0.10.1/browser",
+      "app/ndarray-ops-null",
+      "github:creationix/msgpack-js-browser@0.1.4/msgpack",
+      "github:Leaflet/Leaflet@0.7.3/dist/leaflet-src",
+      "github:leaflet-extras/leaflet-providers@1.1.1/leaflet-providers",
+      "app/interpolation",
+      "app/palettes",
+      "github:systemjs/plugin-css@0.1.13/css",
+      "npm:core-js@0.9.18/library/modules/$",
+      "npm:core-js@0.9.18/library/fn/math/trunc",
+      "github:components/jquery@2.1.4",
+      "github:acigna/jquery-ajax-native@1.0.1",
+      "npm:iota-array@1.0.0",
+      "npm:base64-js@0.0.8",
+      "npm:ieee754@1.1.6",
+      "npm:is-array@1.0.1",
+      "npm:uniq@1.0.1",
+      "npm:process@0.10.1",
+      "github:creationix/msgpack-js-browser@0.1.4",
+      "github:Leaflet/Leaflet@0.7.3",
+      "github:leaflet-extras/leaflet-providers@1.1.1",
+      "github:systemjs/plugin-css@0.1.13",
+      "npm:core-js@0.9.18/library/modules/es6.object.statics-accept-primitives",
+      "npm:babel-runtime@5.6.7/core-js/math/trunc",
+      "npm:buffer@3.2.2/index",
+      "github:jspm/nodelibs-process@0.1.1/index",
+      "npm:core-js@0.9.18/library/fn/object/keys",
+      "npm:buffer@3.2.2",
+      "github:jspm/nodelibs-process@0.1.1",
+      "npm:babel-runtime@5.6.7/core-js/object/keys",
+      "github:jspm/nodelibs-buffer@0.1.0/index",
+      "npm:cwise-compiler@1.1.0/lib/compile",
+      "github:jspm/nodelibs-buffer@0.1.0",
+      "npm:cwise-compiler@1.1.0/lib/thunk",
+      "npm:is-buffer@1.0.2/index",
+      "npm:cwise-compiler@1.1.0/compiler",
+      "npm:is-buffer@1.0.2",
+      "npm:cwise-compiler@1.1.0",
+      "npm:ndarray@1.0.18/ndarray",
+      "npm:ndarray-ops@1.2.2/ndarray-ops",
+      "npm:ndarray@1.0.18",
+      "npm:ndarray-ops@1.2.2",
+      "app/main"
+    ]
+  },
+  "buildCSS": false
 });
 
 System.config({
   "map": {
-    "babel": "npm:babel-core@5.6.5",
-    "babel-runtime": "npm:babel-runtime@5.6.5",
+    "babel": "npm:babel-core@5.6.7",
+    "babel-runtime": "npm:babel-runtime@5.6.7",
     "core-js": "npm:core-js@0.9.18",
     "css": "github:systemjs/plugin-css@0.1.13",
+    "cwise-compiler": "npm:cwise-compiler@1.1.0",
     "jquery": "github:components/jquery@2.1.4",
     "jquery-ajax-native": "github:acigna/jquery-ajax-native@1.0.1",
     "leaflet": "github:Leaflet/Leaflet@0.7.3",
@@ -33,6 +93,9 @@ System.config({
       "process": "npm:process@0.10.1"
     },
     "npm:babel-runtime@5.6.5": {
+      "process": "github:jspm/nodelibs-process@0.1.1"
+    },
+    "npm:babel-runtime@5.6.7": {
       "process": "github:jspm/nodelibs-process@0.1.1"
     },
     "npm:buffer@3.2.2": {
