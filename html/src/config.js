@@ -25,7 +25,6 @@ System.config({
       "npm:is-array@1.0.1/index",
       "npm:uniq@1.0.1/uniq",
       "npm:process@0.10.1/browser",
-      "app/ndarray-ops-null",
       "github:creationix/msgpack-js-browser@0.1.4/msgpack",
       "github:Leaflet/Leaflet@0.7.3/dist/leaflet-src",
       "github:leaflet-extras/leaflet-providers@1.1.1/leaflet-providers",
@@ -63,9 +62,8 @@ System.config({
       "npm:is-buffer@1.0.2",
       "npm:cwise-compiler@1.1.0",
       "npm:ndarray@1.0.18/ndarray",
-      "npm:ndarray-ops@1.2.2/ndarray-ops",
+      "app/ndarray-ops-null",
       "npm:ndarray@1.0.18",
-      "npm:ndarray-ops@1.2.2",
       "app/main"
     ]
   },
