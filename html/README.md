@@ -4,7 +4,7 @@
 #### Step 1: Install jspm CLI globally
 
 ```
-sudo npm install jspm/jspm-cli -g
+npm install jspm/jspm-cli -g
 ```
 
 #### Step 2: From a terminal in the root of the html/ directoy run:
