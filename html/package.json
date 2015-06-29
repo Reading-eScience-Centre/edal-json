@@ -17,7 +17,6 @@
   "standard": {
     "parser": "babel-eslint",
     "ignore": [
-      "src/jspm_packages/**",
       "src/config.js"
     ]
   },
