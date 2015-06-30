@@ -5,6 +5,11 @@ import * as utils from 'app/utils'
 import * as controls from 'app/controls'
 
 // TODO generalize to MultiCoverageLayer
+/**
+ * Draws a single parameter of a coverage on a canvas layer.
+ * Should be used for gridded coverages, not profiles or other
+ * point coverages.
+ */
 export default class CoverageLayer extends L.TileLayer.Canvas {
   
   // TODO we need the surrounding object as well
