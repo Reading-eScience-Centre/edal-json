@@ -22,6 +22,12 @@ public final class Constraint {
 	private Double verticalStart, verticalEnd;
 	public Extent<Double> verticalExtent;
 	public Set<String> params;
+	/**
+	 * verticalTarget is only usable for subsetting.
+	 * If given, it restrict the vertical axis to exactly the element
+	 * which is closest to verticalTarget.
+	 */
+	public Double verticalTarget;
 	
 	public Constraint(String urlParam) {
 		if (urlParam == null) urlParam = "";
@@ -44,6 +50,7 @@ public final class Constraint {
 						Double.parseDouble(bb[3])); break;
 			case "verticalStart": verticalStart = Double.parseDouble(val); break;
 			case "verticalEnd": verticalEnd = Double.parseDouble(val); break;
+			case "verticalTarget": verticalTarget = Double.parseDouble(val); break;
 			case "params": params = Sets.newHashSet(val.split(",")); break;
 			}
 		}

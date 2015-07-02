@@ -1,7 +1,6 @@
 package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,8 +17,6 @@ import org.restlet.resource.ServerResource;
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
-import uk.ac.rdg.resc.edal.feature.Feature;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.json.FeatureResource.Details;
 import uk.ac.rdg.resc.edal.json.FeatureResource.FeatureMetadata;
@@ -27,57 +24,11 @@ import uk.ac.rdg.resc.edal.util.GISUtils;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeaturesResource extends ServerResource {
 	
-	static class DatasetMetadata {
-		private final Map<String,FeatureMetadata> featureMetadata;
-		private final String datasetId;
-		public DatasetMetadata(String datasetId, Map<String,FeatureMetadata> featureMetadata) {
-			this.datasetId = datasetId;
-			this.featureMetadata = featureMetadata;
-		}
-		public Set<String> getFeatureIds() {
-			return featureMetadata.keySet();
-		}
-		public FeatureMetadata getFeatureMetadata(String featureId) {
-			return featureMetadata.get(featureId);
-		}
-		public Supplier<Dataset> getLazyDataset() {
-			return Suppliers.memoize(() -> Utils.getDataset(datasetId));
-		}
-	}
-	
-	// cache with datasetId as key
-	private static Map<String,DatasetMetadata> datasetMetadataCache = new HashMap<>();
-	
-	/**
-	 * cache
-	 */
-	public static DatasetMetadata getDatasetMetadata(String datasetId) throws IOException, EdalException {
-		DatasetMetadata datasetMeta = datasetMetadataCache.get(datasetId);
-		if (datasetMeta == null) {
-			Dataset dataset = Utils.getDataset(datasetId);
-			
-			Map<String,FeatureMetadata> featureMetadata = new HashMap<>();
-			for (String featureId : dataset.getFeatureIds()) {
-				Feature<?> feature = dataset.readFeature(featureId);
-				if (!(feature instanceof DiscreteFeature)) {
-					continue;
-				}
-				featureMetadata.put(featureId, new FeatureMetadata(
-							datasetId,
-							feature));
-			}
-			datasetMeta = new DatasetMetadata(datasetId, featureMetadata);
-			datasetMetadataCache.put(datasetId, datasetMeta);
-		}
-		return datasetMeta;
-	}
-
 	private Map getFeaturesJson() throws IOException, EdalException {
 		final String datasetId = Reference.decode(getAttribute("datasetId"));
 		Details fallback = new Details(false, false, false);
@@ -85,7 +36,7 @@ public class FeaturesResource extends ServerResource {
 		Constraint filter = new Constraint(getQueryValue("filter"));
 		Constraint subset = new Constraint(getQueryValue("subset"));
 		
-		DatasetMetadata datasetMeta = getDatasetMetadata(datasetId);
+		DatasetMetadata datasetMeta = DatasetResource.getDatasetMetadata(datasetId);
 		
 		String datasetUrl = getRootRef().toString() + "/datasets/" + datasetId;
 		

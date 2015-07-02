@@ -1,5 +1,9 @@
 package uk.ac.rdg.resc.edal.json;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,6 +16,9 @@ import uk.ac.rdg.resc.edal.util.GISUtils;
 
 /**
  * Geographic bounding box which supports spanning the dateline.
+ * 
+ * TODO BoundingBox also supports the dateline however longitudes are always unwrapped there
+ *  -> should unify both
  *  
  * @author Maik
  *
@@ -117,6 +124,72 @@ public class DatelineBoundingBox implements GeographicBoundingBox {
 				pos.getY(), pos.getCoordinateReferenceSystem());
 		DatelineBoundingBox bb1 = new DatelineBoundingBox(bb);
 		return intersects(bb1);
+	}
+	
+	/**
+	 * Return the smallest bounding box that contains all given bounding boxes.
+	 * Note that this is not simply the min/max of longitude!
+	 * 
+	 * @see https://github.com/esa/auromat/blob/master/auromat/mapping/mapping.py#L232
+	 * @see http://gis.stackexchange.com/q/17788
+	 */
+	public static DatelineBoundingBox smallestBoundingBox(Collection<DatelineBoundingBox> bbs) {
+		double latSouth = bbs.stream().mapToDouble(bb -> bb.getSouthBoundLatitude()).min().getAsDouble();
+		double latNorth = bbs.stream().mapToDouble(bb -> bb.getNorthBoundLatitude()).max().getAsDouble();
+		
+		// TODO write unit tests
+		
+		// longitude parts of bounding boxes
+		List<Double> lons = new ArrayList<>(bbs.size()*2); // will be bigger in case of discontinuity
+		for (DatelineBoundingBox bb : bbs) {
+			if (bb.containsDiscontinuity) {
+				// add both representations so that later checking is easier
+				lons.add(bb.getWestBoundLongitude());
+				lons.add(bb.getUnwrappedEastBoundLongitude());
+				lons.add(bb.getWestBoundLongitude() - 360);
+				lons.add(bb.getEastBoundLongitude());
+			} else {
+				lons.add(bb.getWestBoundLongitude());
+				lons.add(bb.getEastBoundLongitude());
+			}
+		}
+		
+		// sorted intervals
+		List<Double> xs = new ArrayList<>(lons.size()+1);
+		for (DatelineBoundingBox bb : bbs) {
+			xs.add(bb.getWestBoundLongitude());
+			xs.add(bb.getEastBoundLongitude());
+		}
+		Collections.sort(xs);
+		xs.add(xs.get(0) + 360);
+		
+		// whether an interval is covered by any bounding box
+		boolean[] isCovered = new boolean[xs.size()-1];
+		for (int i=1; i < xs.size(); i++) {
+			for (int j=0; j < lons.size(); j += 2) {
+				if (lons.get(j) <= xs.get(i-1) && xs.get(i) <= lons.get(j+1)) {
+					isCovered[i-1] = true;
+					break;
+				}
+			}
+		}
+		
+		// find index of biggest gap
+		double maxGapLength = 0;
+		int biggestGapIdx = -1;
+		for (int i=0; i < xs.size()-1; i++) {
+			if (isCovered[i]) continue;
+			double gapLength = xs.get(i+1) - xs.get(i);
+			if (gapLength > maxGapLength) {
+				maxGapLength = gapLength;
+				biggestGapIdx = i;
+			}
+		}
+		
+		double lonWest = wrapLongitude(xs.get(biggestGapIdx+1));
+		double lonEast = wrapLongitude(xs.get(biggestGapIdx));
+		
+		return new DatelineBoundingBox(lonWest, latSouth, lonEast, latNorth);
 	}
 
 }

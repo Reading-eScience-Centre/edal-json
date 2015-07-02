@@ -36,7 +36,6 @@ import uk.ac.rdg.resc.edal.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
 import uk.ac.rdg.resc.edal.grid.TimeAxisImpl;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
-import uk.ac.rdg.resc.edal.json.FeaturesResource.DatasetMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Array;
@@ -126,7 +125,7 @@ public class FeatureResource extends ServerResource {
 		Details details = Details.from(getQueryValue("details"), fallback);
 		Constraint subset = new Constraint(getQueryValue("subset"));
 		
-		DatasetMetadata meta = FeaturesResource.getDatasetMetadata(datasetId);
+		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset);
 		featureJson.put("@context", "/static/Feature.jsonld");
@@ -232,6 +231,7 @@ public class FeatureResource extends ServerResource {
 		addHorizontalGrid(uniFeature.rectgrid, subset, domainJson);
 		addVerticalAxis(uniFeature.z, subset, domainJson);
 		addTimeAxis(uniFeature.t, subset, domainJson);
+		domainJson.put("type", uniFeature.type);
 		
 		return domainJson;
 	}
@@ -240,7 +240,8 @@ public class FeatureResource extends ServerResource {
 		if (ax == null) {
 			return IntStream.of(0);
 		}
-		List<Double> v = ax.getCoordinateValues();		
+		List<Double> v = ax.getCoordinateValues();
+		// FIXME implement subset.verticalTarget subsetting
 		IntStream axIndices = IntStream.range(0, v.size())
 			.filter(i -> subset.verticalExtent.contains(v.get(i)));
 		return axIndices;
@@ -283,16 +284,16 @@ public class FeatureResource extends ServerResource {
 	private static void addHorizontalGrid(RectilinearGrid grid, Constraint subset, Map domainJson) {
 		List<Double> x = grid.getXAxis().getCoordinateValues();
 		List<Double> y = grid.getYAxis().getCoordinateValues();
-		Stream<Double> subsettedX = getXAxisIndices(grid.getXAxis(), subset).mapToObj(x::get);
-		Stream<Double> subsettedY = getYAxisIndices(grid.getYAxis(), subset).mapToObj(y::get);
+		double[] subsettedX = getXAxisIndices(grid.getXAxis(), subset).mapToDouble(x::get).toArray();
+		double[] subsettedY = getYAxisIndices(grid.getYAxis(), subset).mapToDouble(y::get).toArray();
 				
 		BoundingBox bb = grid.getBoundingBox();
 		domainJson.putAll(ImmutableMap.of(
 			    "crs", Utils.getCrsUri(grid.getCoordinateReferenceSystem()),
 			    // FIXME have to subset bbox as well
 			    "bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()),
-			    "x", subsettedX.toArray(),
-				"y", subsettedY.toArray()
+			    "x", subsettedX.length == 1 ? subsettedX[0] : subsettedX,
+				"y", subsettedY.length == 1 ? subsettedY[0] : subsettedY
 				));
 		
 		if (grid instanceof RegularGrid && (grid.getXSize() > 1 || grid.getYSize() > 1)) {
@@ -331,8 +332,8 @@ public class FeatureResource extends ServerResource {
 			return;
 		}
 		List<DateTime> times = t.getCoordinateValues();
-		Stream<String> subsettedTimes = getTimeAxisIndices(t, subset).mapToObj(i -> times.get(i).toString());
-		domainJson.put("time", subsettedTimes.toArray());
+		String[] subsettedTimes = getTimeAxisIndices(t, subset).mapToObj(i -> times.get(i).toString()).toArray(String[]::new);
+		domainJson.put("time", subsettedTimes.length == 1 ? subsettedTimes[0] : subsettedTimes);
 		//domainJson.put("timeBounds", t.getDomainObjects().iterator());
 	}
 	

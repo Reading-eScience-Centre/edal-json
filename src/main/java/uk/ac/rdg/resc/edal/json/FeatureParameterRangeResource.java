@@ -30,7 +30,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		String parameterId = Reference.decode(getAttribute("parameterId"));
 		Constraint subset = new Constraint(getQueryValue("subset"));
 		
-		FeatureMetadata meta = FeaturesResource.getDatasetMetadata(datasetId).getFeatureMetadata(featureId);
+		FeatureMetadata meta = DatasetResource.getDatasetMetadata(datasetId).getFeatureMetadata(featureId);
 		Dataset dataset = Utils.getDataset(datasetId);
 		DiscreteFeature feature;
 		try {
