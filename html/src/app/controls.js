@@ -2,11 +2,16 @@ import $ from 'jquery'
 import L from 'leaflet'
 import * as utils from 'app/utils'
 
-function redrawLayers (map) {
+function redrawLayers (map, tilesOnly=false) {
   map.eachLayer(function (layer) {
     if ('drawTile' in layer) {
-      map.removeLayer(layer)
-      map.addLayer(layer)
+      if (tilesOnly) {
+        // will not refresh legends etc.
+        layer.redraw()
+      } else {
+        map.removeLayer(layer)
+        map.addLayer(layer)
+      }
     }
   })
 }
@@ -48,7 +53,7 @@ export function paletteRangeAdjuster () {
 	      } else if (action === 'fov') {
 	        // first, get current bounding box
 	        var bounds = map.getBounds()
-	        var result = layer.featureResult
+	        var result = layer.coverage
 	
 	        var paramRange4D = utils.getParameterRange4D(result.domain, range.values, layer.paramId)
 	        var subset = utils.horizontalSubset(result.domain, paramRange4D, bounds).range

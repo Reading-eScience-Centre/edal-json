@@ -64,7 +64,7 @@ System.config({
       "npm:core-js@0.9.18/library/fn/object/keys",
       "npm:buffer@3.2.2",
       "github:jspm/nodelibs-process@0.1.1",
-      "app/TileLayer.Coverage",
+      "app/TileLayer.GridCoverage",
       "npm:babel-runtime@5.6.7/core-js/object/keys",
       "github:jspm/nodelibs-buffer@0.1.0/index",
       "npm:cwise-compiler@1.1.0/lib/compile",

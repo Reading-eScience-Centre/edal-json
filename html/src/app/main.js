@@ -13,7 +13,8 @@ import interpolationMethods from 'app/interpolation'
 import * as palettes from 'app/palettes'
 import * as controls from 'app/controls'
 import * as utils from 'app/utils'
-import CoverageLayer from 'app/TileLayer.Coverage'
+import GridCoverageLayer from 'app/TileLayer.GridCoverage'
+import ProfileCoverageLayer from 'app/ProfileCoverage'
 
 var map = L.map('map').setView([10, 0], 2)
 
@@ -68,6 +69,9 @@ var supportedCrs = {
   'http://www.opengis.net/def/crs/OGC/1.3/CRS84': {}
 }
 
+// TODO add support for adding feature collections as single layer (for profiles)
+//  -> this makes most sense when server-side filtering can be done on feature types
+//      e.g. &type=Profile
 function addFeature (url) {
   $.getJSON(url, function (featureData) {
     var result = featureData.result
@@ -81,10 +85,23 @@ function addFeature (url) {
     // create a canvas layer for each parameter
     for (let paramId in result.rangeType) {
       let rangeType = result.rangeType[paramId]
-      let layer = new CoverageLayer(result, paramId)
+      let clazz = getCoverageClass(result.domain.type)
+      if (clazz === null) continue
+      let layer = new clazz(result, paramId)
       lc.addOverlay(layer, rangeType.title)
     }
   })
+}
+
+function getCoverageClass(domainType) {
+  if (domainType === 'RegularGrid' || domainType == 'RectilinearGrid') {
+    return GridCoverageLayer
+  } else if (domainType === 'Profile') {
+    return 
+  } else {
+    console.log(domainType + ' not supported!')
+  }
+  return null;
 }
 
 
