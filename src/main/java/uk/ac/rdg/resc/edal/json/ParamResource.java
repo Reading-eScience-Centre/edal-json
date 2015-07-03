@@ -24,13 +24,14 @@ public class ParamResource extends ServerResource {
 	
 	public static Map getParamJson(Dataset dataset, Parameter param, String rootUri) {
 		String paramUrl = getParamUrl(dataset.getId(), param.getVariableId(), rootUri);
-		Map j = ImmutableMap.of(
-				"id", paramUrl,
-				"type", "mel:Parameter",
-				"title", param.getTitle(),
-				"description", param.getDescription(),
-				"uom", param.getUnits()
-				);
+		Map j = ImmutableMap.builder()
+				.put("id", paramUrl)
+				.put("type", "mel:Parameter")
+				.put("localId", param.getVariableId())
+				.put("title", param.getTitle())
+				.put("description", param.getDescription())
+				.put("uom", param.getUnits())
+				.build();
 			
 		if (param.getStandardName() != null) {
 			// TODO translate into URI
