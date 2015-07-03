@@ -18,8 +18,12 @@ import com.google.common.collect.ImmutableMap;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class ParamResource extends ServerResource {
 	
+	public static String getParamUrl(String datasetId, String variableId, String rootUri) {
+		return rootUri + "/datasets/" + datasetId + "/params/" + variableId;
+	}
+	
 	public static Map getParamJson(Dataset dataset, Parameter param, String rootUri) {
-		String paramUrl = rootUri + "/datasets/" + dataset.getId() + "/params/" + param.getVariableId();
+		String paramUrl = getParamUrl(dataset.getId(), param.getVariableId(), rootUri);
 		Map j = ImmutableMap.of(
 				"id", paramUrl,
 				"type", "mel:Parameter",

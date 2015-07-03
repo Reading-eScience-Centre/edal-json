@@ -35,7 +35,8 @@ public class DatasetResource extends ServerResource {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		Dataset dataset = Utils.getDataset(datasetId);
 
-		String datasetUrl = getRootRef().toString() + "/datasets/" + dataset.getId();
+		String rootUri = getRootRef().toString();
+		String datasetUrl = rootUri + "/datasets/" + dataset.getId();
 		
 		List jsonParams = new LinkedList();
 		for (String paramId : dataset.getVariableIds()) {
@@ -48,10 +49,18 @@ public class DatasetResource extends ServerResource {
 		DomainMetadata domainMeta = datasetMeta.getDomainMetadata();
 		BoundingBox bb = domainMeta.getBoundingBox();
 		
-		Map counts = new HashMap();
+		Map jsonCounts = new HashMap();
 		for (Class<?> type : datasetMeta.getFeatureTypes()) {
 			String name = FeatureTypes.getName(type);
-			counts.put(name, datasetMeta.getFeatureCount(type));
+			jsonCounts.put(name, datasetMeta.getFeatureCount(type));
+		}
+		
+		Map jsonFeatureParams = new HashMap<>();
+		for (Class<?> type : datasetMeta.getFeatureTypes()) {
+			String name = FeatureTypes.getName(type);
+			List<String> uris = Utils.mapList(datasetMeta.getFeatureParameters(type), param -> 
+				ParamResource.getParamUrl(dataset.getId(), param.getVariableId(), rootUri));
+			jsonFeatureParams.put(name, uris);
 		}
 		
 		Builder b = ImmutableMap.builder()
@@ -62,7 +71,8 @@ public class DatasetResource extends ServerResource {
 				.put("title", "TODO: where to get this from EDAL?")
 				.put("parameters", jsonParams)
 				.put("features", datasetUrl + "/features")
-				.put("featureCounts", counts)
+				.put("featureCounts", jsonCounts)
+				.put("featureParameters", jsonFeatureParams)
 				// TODO CRS if non-default
 				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()));
 		if (domainMeta.getVerticalExtent() != null) {
