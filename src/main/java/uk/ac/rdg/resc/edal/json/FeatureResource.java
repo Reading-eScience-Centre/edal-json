@@ -104,7 +104,7 @@ public class FeatureResource extends ServerResource {
 					Map domainJson = getDomainJson(feature.get(), subset);
 					result.put("domain", domainJson);
 				}
-				// TODO we may not need that at all!
+				// parameter metadata is repeated so that a feature can be processed stand-alone
 				if (details.rangeMetadata) {
 					result.put("rangeType", getParameterTypesJson(meta, rootUri));
 				}

@@ -18,6 +18,7 @@ import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
+import uk.ac.rdg.resc.edal.util.GISUtils;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
@@ -34,7 +35,7 @@ public class DatasetResource extends ServerResource {
 	public Representation json() throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		Dataset dataset = Utils.getDataset(datasetId);
-
+		
 		String rootUri = getRootRef().toString();
 		String datasetUrl = rootUri + "/datasets/" + dataset.getId();
 		
@@ -49,19 +50,8 @@ public class DatasetResource extends ServerResource {
 		DomainMetadata domainMeta = datasetMeta.getDomainMetadata();
 		BoundingBox bb = domainMeta.getBoundingBox();
 		
-		Map jsonCounts = new HashMap();
-		for (Class<?> type : datasetMeta.getFeatureTypes()) {
-			String name = FeatureTypes.getName(type);
-			jsonCounts.put(name, datasetMeta.getFeatureCount(type));
-		}
-		
-		Map jsonFeatureParams = new HashMap<>();
-		for (Class<?> type : datasetMeta.getFeatureTypes()) {
-			String name = FeatureTypes.getName(type);
-			List<String> uris = Utils.mapList(datasetMeta.getFeatureParameters(type), param -> 
-				ParamResource.getParamUrl(dataset.getId(), param.getVariableId(), rootUri));
-			jsonFeatureParams.put(name, uris);
-		}
+		long count = datasetMeta.getFeatureTypes().stream().mapToLong(datasetMeta::getFeatureCount).sum();		
+		List<String> jsonFeatureTypes = Utils.mapList(datasetMeta.getFeatureTypes(), FeatureTypes::getName);
 		
 		Builder b = ImmutableMap.builder()
 				// TODO how to get URL of other static Application?
@@ -71,19 +61,26 @@ public class DatasetResource extends ServerResource {
 				.put("title", "TODO: where to get this from EDAL?")
 				.put("parameters", jsonParams)
 				.put("features", datasetUrl + "/features")
-				.put("featureCounts", jsonCounts)
-				.put("featureParameters", jsonFeatureParams)
+				.put("featureCount", count)
+				.put("featureTypes", jsonFeatureTypes)
 				// TODO CRS if non-default
 				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()));
+		
+		if (!GISUtils.isWgs84LonLat(bb.getCoordinateReferenceSystem())) {
+			b.put("horizontalCrs", Utils.getCrsUri(bb.getCoordinateReferenceSystem()));
+		}
+		
 		if (domainMeta.getVerticalExtent() != null) {
 			Extent<Double> ex = domainMeta.getVerticalExtent();
 			b.put("verticalExtent", ImmutableList.of(ex.getLow(), ex.getHigh()));
-			// TODO CRS if non-default
+			b.put("verticalCrs", "TODO vertical/crs/uri/");
 		}
+		
 		if (domainMeta.getTimeExtent() != null) {
 			Extent<DateTime> ex = domainMeta.getTimeExtent();
 			b.put("timeExtent", ImmutableList.of(ex.getLow().toString(), ex.getHigh().toString()));
 			// TODO CRS if non-default
+			//  -> does EDAL currently support other calendars etc.?
 		}		
 		
 		Map j = b.build();
