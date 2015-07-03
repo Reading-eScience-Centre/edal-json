@@ -70,25 +70,9 @@ var supportedCrs = {
 }
 
 
-/*
- * The plan is the following:
- * The main entry point should be to give the URL to the dataset, 
- * and from there on everything should be automatic.
- * This means, if the dataset contains profiles, there should be
- * layers for each parameter measured by profiles.
- * If there are grids, then each parameter of each grid becomes
- * a separate layer.
- * The initial information of what the dataset contains should
- * only be retrieved from the "parameters", "featureCounts", "featureParameters",
- * and spatiotemporal extent fields of the dataset, that is,
- * no actual feature should be loaded yet.
- * -> TODO for grids, we have to load the basic data of the features though, right?
- * 
- * Each dataset should probably have its own time and vertical slider,
- * however there may be an option to synchronize sliders as far as possible
- * or indeed just have a single visible slider which controls underlying
- * sliders where the current state of the individual sliders can be displayed somehow.
- */
+
+
+
 
 
 // TODO add support for adding feature collections as single layer (for profiles)
@@ -115,6 +99,72 @@ function addFeature (url) {
   })
 }
 
+function addFeatureParam (result, paramId) {
+  if (!(result.domain.crs in supportedCrs)) {
+    window.alert('Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: ' + result.domain.crs)
+    return
+  }
+  result.domain.x = new Float64Array(result.domain.x)
+  result.domain.y = new Float64Array(result.domain.y)
+  utils.wrapLongitudes(result.domain)
+
+  let rangeType = result.rangeType[paramId]
+  let clazz = getCoverageClass(result.domain.type)
+  if (clazz === null) throw result.domain.type
+  let layer = new clazz(result, paramId)
+  lc.addOverlay(layer, rangeType.title)
+}
+
+/**
+ * The plan is the following:
+ * The main entry point should be to give the URL to the dataset, 
+ * and from there on everything should be automatic.
+ * This means, if the dataset contains profiles, there should be
+ * layers for each parameter measured by profiles.
+ * If there are grids, then each parameter of each grid becomes
+ * a separate layer.
+ * The initial information of what the dataset contains should
+ * only be retrieved from the "parameters", "featureCounts", "featureParameters",
+ * and spatiotemporal extent fields of the dataset, that is,
+ * no actual feature should be loaded yet.
+ * -> TODO for grids, we have to load the basic data of the features though, right?
+ * 
+ * Each dataset should probably have its own time and vertical slider,
+ * however there may be an option to synchronize sliders as far as possible
+ * or indeed just have a single visible slider which controls underlying
+ * sliders where the current state of the individual sliders can be displayed somehow.
+ * 
+ */
+function addDataset (datasetUrl) {
+  $.getJSON(datasetUrl, dataset => {
+    // we need to determine what layers we should add based on the dataset metadata
+    let featureTypes = new Set(dataset.featureTypes)
+    
+    if (featureTypes.has('Profile')) {
+      // We assume that all profiles in this dataset belong together.
+      // For each parameter a layer is created.
+      for (let param of dataset.parameters) {
+        let paramId = param.id
+        // TODO create me dynamic layer
+        
+      }
+    }
+    
+    if (featureTypes.has('Grid')) {
+      // We load all Grid features (without their range) and construct the layers.
+      // TODO this loads the domains as well which may be too much in this first step
+      let gridFeaturesUrl = dataset.features + '?filter=type=Grid&details=domain,rangeMetadata'
+      $.getJSON(gridFeaturesUrl, features => {
+        for (let feature of features.features) {
+          for (let paramId of Object.keys(feature.result.range)) {
+            addFeatureParam(feature.result, paramId)
+          }
+        }
+      })
+    }
+  })
+}
+
 function getCoverageClass(domainType) {
   if (domainType === 'RegularGrid' || domainType == 'RectilinearGrid') {
     return GridCoverageLayer
@@ -129,10 +179,16 @@ function getCoverageClass(domainType) {
 
 
 
-
+/*
 addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/ICEC')
 addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/TMP')
 addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/SALTY')
 addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/M')
 addFeature('http://localhost:8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst')
 addFeature('http://localhost:8182/api/datasets/en3_test_data.nc/features/0:7880')
+*/
+
+addDataset('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc')
+addDataset('http://localhost:8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc')
+addDataset('http://localhost:8182/api/datasets/01_nemo_test_data.nc')
+addDataset('http://localhost:8182/api/datasets/en3_test_data.nc')
