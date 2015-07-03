@@ -69,6 +69,28 @@ var supportedCrs = {
   'http://www.opengis.net/def/crs/OGC/1.3/CRS84': {}
 }
 
+
+/*
+ * The plan is the following:
+ * The main entry point should be to give the URL to the dataset, 
+ * and from there on everything should be automatic.
+ * This means, if the dataset contains profiles, there should be
+ * layers for each parameter measured by profiles.
+ * If there are grids, then each parameter of each grid becomes
+ * a separate layer.
+ * The initial information of what the dataset contains should
+ * only be retrieved from the "parameters", "featureCounts", "featureParameters",
+ * and spatiotemporal extent fields of the dataset, that is,
+ * no actual feature should be loaded yet.
+ * -> TODO for grids, we have to load the basic data of the features though, right?
+ * 
+ * Each dataset should probably have its own time and vertical slider,
+ * however there may be an option to synchronize sliders as far as possible
+ * or indeed just have a single visible slider which controls underlying
+ * sliders where the current state of the individual sliders can be displayed somehow.
+ */
+
+
 // TODO add support for adding feature collections as single layer (for profiles)
 //  -> this makes most sense when server-side filtering can be done on feature types
 //      e.g. &type=Profile

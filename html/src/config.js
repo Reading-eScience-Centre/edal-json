@@ -35,6 +35,7 @@ System.config({
       "npm:core-js@0.9.18/library/fn/object/define-property",
       "npm:babel-runtime@5.6.7/helpers/class-call-check",
       "npm:core-js@0.9.18/library/modules/es6.math",
+      "app/ProfileCoverage",
       "github:systemjs/plugin-css@0.1.13/css",
       "npm:core-js@0.9.18/library/modules/$",
       "github:components/jquery@2.1.4",

@@ -22,11 +22,11 @@ export default function getProfileCoverageLayer (coverages, paramId) {
     coverages = [coverages]
   }
   
-  coverages = coverages.filter(cov -> cov.domain.type === 'Profile' && paramId in cov.rangeType)
+  coverages = coverages.filter(cov => cov.domain.type === 'Profile' && paramId in cov.rangeType)
   
   // calculate extent of paramId over the whole domain
-  var min = Math.min.apply(Math, coverages.map(cov -> cov.range[paramId].min))
-  var max = Math.max.apply(Math, coverages.map(cov -> cov.range[paramId].max))
+  var min = Math.min.apply(Math, coverages.map(cov => cov.range[paramId].min))
+  var max = Math.max.apply(Math, coverages.map(cov => cov.range[paramId].max))
   
   // TODO where do we get the palette from? probably need to do all of this lazily on layer add
   var paletteRed = map.palette.allowedValues.red
