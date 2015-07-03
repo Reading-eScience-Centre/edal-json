@@ -56,13 +56,15 @@ public class FeatureResource extends ServerResource {
 		public final RangeMetadata rangeMeta;
 		public final String featureId;
 		public final String datasetId;
-		public final  String name;
+		public final String name;
+		public final Class<?> type;
 		public FeatureMetadata(String datasetId, Feature feature) {
 			this.datasetId = datasetId;
 			this.featureId = feature.getId();
 			this.domainMeta = new DomainMetadata(feature);
 			this.rangeMeta = new RangeMetadata(feature);
 			this.name = feature.getName();
+			this.type = feature.getClass();
 		}
 	}
 	

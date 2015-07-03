@@ -16,11 +16,9 @@ import org.restlet.resource.ServerResource;
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
-import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
-import uk.ac.rdg.resc.edal.feature.Feature;
+import uk.ac.rdg.resc.edal.feature.GridFeature;
+import uk.ac.rdg.resc.edal.feature.ProfileFeature;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
-import uk.ac.rdg.resc.edal.json.FeatureResource.FeatureMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -29,6 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
 public class DatasetResource extends ServerResource {
+	
+	private final Map<Class<?>,String> typeNames = ImmutableMap.of(
+			GridFeature.class, "Grid",
+			ProfileFeature.class, "Profile"
+			);
 
 	// cache with datasetId as key
 	private static Map<String,DatasetMetadata> datasetMetadataCache = new HashMap<>();
@@ -52,6 +55,12 @@ public class DatasetResource extends ServerResource {
 		DomainMetadata domainMeta = datasetMeta.getDomainMetadata();
 		BoundingBox bb = domainMeta.getBoundingBox();
 		
+		Map counts = new HashMap();
+		for (Class<?> type : datasetMeta.getFeatureTypes()) {
+			String name = typeNames.getOrDefault(type, "[UNKNOWN] " + type.getSimpleName());
+			counts.put(name, datasetMeta.getFeatureCount(type));
+		}
+		
 		Builder b = ImmutableMap.builder()
 				// TODO how to get URL of other static Application?
 				.put("@context", "/static/dataset.jsonld")
@@ -60,6 +69,7 @@ public class DatasetResource extends ServerResource {
 				.put("title", "TODO: where to get this from EDAL?")
 				.put("parameters", jsonParams)
 				.put("features", datasetUrl + "/features")
+				.put("featureCounts", counts)
 				// TODO CRS if non-default
 				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()));
 		if (domainMeta.getVerticalExtent() != null) {
@@ -87,23 +97,8 @@ public class DatasetResource extends ServerResource {
 	 */
 	public static DatasetMetadata getDatasetMetadata(String datasetId) throws IOException, EdalException {
 		DatasetMetadata datasetMeta = DatasetResource.datasetMetadataCache.get(datasetId);
-		// TODO calculate spatiotemporal extent of the dataset
 		if (datasetMeta == null) {
-			Dataset dataset = Utils.getDataset(datasetId);
-			
-			Map<String,FeatureMetadata> featureMetadata = new HashMap<>();
-			for (String featureId : dataset.getFeatureIds()) {
-				Feature<?> feature = dataset.readFeature(featureId);
-				if (!(feature instanceof DiscreteFeature)) {
-					continue;
-				}
-				featureMetadata.put(featureId, new FeatureMetadata(
-							datasetId,
-							feature));
-			}
-			List<DomainMetadata> domainMetadatas = Utils.mapList(featureMetadata.values(), m -> m.domainMeta);
-			DomainMetadata domainMetadata = new DomainMetadata(domainMetadatas);
-			datasetMeta = new DatasetMetadata(datasetId, featureMetadata, domainMetadata);
+			datasetMeta = new DatasetMetadata(datasetId);
 			DatasetResource.datasetMetadataCache.put(datasetId, datasetMeta);
 		}
 		return datasetMeta;
