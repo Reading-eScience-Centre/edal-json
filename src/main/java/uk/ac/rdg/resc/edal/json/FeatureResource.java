@@ -1,11 +1,13 @@
 package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -47,6 +49,8 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeatureResource extends ServerResource {
@@ -243,10 +247,29 @@ public class FeatureResource extends ServerResource {
 			return IntStream.of(0);
 		}
 		List<Double> v = ax.getCoordinateValues();
-		// FIXME implement subset.verticalTarget subsetting
+		
 		IntStream axIndices = IntStream.range(0, v.size())
 			.filter(i -> subset.verticalExtent.contains(v.get(i)));
-		return axIndices;
+		
+		if (subset.verticalTarget == null) {
+			return axIndices;
+		}
+		
+		// find vertical value closest to target and return its index
+		double target = subset.verticalTarget;
+		List<Integer> indices = Ints.asList(axIndices.toArray());
+		List<Double> distances = Utils.mapList(indices, i -> Math.abs(v.get(i) - target));
+		double minDistance = Double.POSITIVE_INFINITY;
+		int minIdx = 0;
+		int i = 0;
+		for (double distance : distances) {
+			if (distance < minDistance) {
+				minDistance = distance;
+				minIdx = i;
+			}
+			++i;
+		}		
+		return IntStream.of(indices.get(minIdx));
 	}
 	
 	private static IntStream getTimeAxisIndices(TimeAxis ax, Constraint subset) {

@@ -7,9 +7,6 @@ import msgpack from 'msgpack'
 import * as utils from 'app/utils'
 import * as controls from 'app/controls'
 
-// TODO should a dataset be required to have a bounding box and time/vertical extent?
-//  -> possibly even per Parameter?
-//  -> then it would be easier to display UI elements for filtering etc.
 
 // TODO needs filtering by time/depth range and target depth
 

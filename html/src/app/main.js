@@ -4,7 +4,6 @@ import './css/style.css!'
 import $ from 'jquery'
 import 'jquery-ajax-native'
 import ndarray from 'ndarray'
-// import * as ops from 'ndarray-ops'
 import * as opsnull from 'app/ndarray-ops-null'
 import msgpack from 'msgpack'
 import L from 'leaflet'
@@ -63,56 +62,43 @@ controls.paletteSwitcher(palettes, defaultPalette).addTo(map)
 controls.paletteRangeAdjuster().addTo(map)
 controls.interpolationSwitcher(interpolationMethods, defaultInterpolation).addTo(map)
 
-// the following assumes a rectilinear data grid
 
-var supportedCrs = {
-  'http://www.opengis.net/def/crs/OGC/1.3/CRS84': {}
+var supportedCrs = new Set([
+  'http://www.opengis.net/def/crs/OGC/1.3/CRS84'
+  ])
+
+function initFeature(feature) {
+  var result = feature.result
+  if (!supportedCrs.has(result.domain.crs))) {
+    window.alert('Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: ' + result.domain.crs)
+    throw result.domain.crs
+  }
+  result.domain.x = new Float64Array(result.domain.x)
+  result.domain.y = new Float64Array(result.domain.y)
+  // TODO why did we need to do that again?
+  utils.wrapLongitudes(result.domain)
 }
 
-
-
-
-
-
-
-// TODO add support for adding feature collections as single layer (for profiles)
-//  -> this makes most sense when server-side filtering can be done on feature types
-//      e.g. &type=Profile
-function addFeature (url) {
-  $.getJSON(url, function (featureData) {
-    var result = featureData.result
-    if (!(result.domain.crs in supportedCrs)) {
-      window.alert('Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: ' + result.domain.crs)
-      return
-    }
-    result.domain.x = new Float64Array(result.domain.x)
-    result.domain.y = new Float64Array(result.domain.y)
-    utils.wrapLongitudes(result.domain)
+function addGridFeature (url) {
+  $.getJSON(url, function (feature) {
+    initFeature(feature)
     // create a canvas layer for each parameter
-    for (let paramId in result.rangeType) {
-      let rangeType = result.rangeType[paramId]
-      let clazz = getCoverageClass(result.domain.type)
-      if (clazz === null) continue
-      let layer = new clazz(result, paramId)
-      lc.addOverlay(layer, rangeType.title)
+    for (let paramId in feature.result.rangeType) {
+      addGridFeatureParam(feature.result, paramId)
     }
   })
 }
 
-function addFeatureParam (result, paramId) {
-  if (!(result.domain.crs in supportedCrs)) {
-    window.alert('Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: ' + result.domain.crs)
-    return
-  }
-  result.domain.x = new Float64Array(result.domain.x)
-  result.domain.y = new Float64Array(result.domain.y)
-  utils.wrapLongitudes(result.domain)
-
+function addGridFeatureParam (result, paramId) {
   let rangeType = result.rangeType[paramId]
-  let clazz = getCoverageClass(result.domain.type)
-  if (clazz === null) throw result.domain.type
-  let layer = new clazz(result, paramId)
+  let layer = new GridCoverageLayer(result, paramId)
   lc.addOverlay(layer, rangeType.title)
+}
+
+function addProfileFeatures(dataset, paramId) {
+  let param = dataset.parameters.find(p => p.id === paramId)
+  let layer = new ProfileCoverage(dataset, param)
+  lc.addOverlay(layer, param.title)
 }
 
 /**
@@ -144,9 +130,7 @@ function addDataset (datasetUrl) {
       // We assume that all profiles in this dataset belong together.
       // For each parameter a layer is created.
       for (let param of dataset.parameters) {
-        let paramId = param.id
-        // TODO create me dynamic layer
-        
+        addProfileFeatures(dataset, param.id)
       }
     }
     
@@ -156,8 +140,9 @@ function addDataset (datasetUrl) {
       let gridFeaturesUrl = dataset.features + '?filter=type=Grid&details=domain,rangeMetadata'
       $.getJSON(gridFeaturesUrl, features => {
         for (let feature of features.features) {
+          initFeature(feature)
           for (let paramId of Object.keys(feature.result.range)) {
-            addFeatureParam(feature.result, paramId)
+            addGridFeatureParam(feature.result, paramId)
           }
         }
       })
@@ -165,27 +150,13 @@ function addDataset (datasetUrl) {
   })
 }
 
-function getCoverageClass(domainType) {
-  if (domainType === 'RegularGrid' || domainType == 'RectilinearGrid') {
-    return GridCoverageLayer
-  } else if (domainType === 'Profile') {
-    return 
-  } else {
-    console.log(domainType + ' not supported!')
-  }
-  return null;
-}
-
-
-
 
 /*
-addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/ICEC')
-addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/TMP')
-addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/SALTY')
-addFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/M')
-addFeature('http://localhost:8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst')
-addFeature('http://localhost:8182/api/datasets/en3_test_data.nc/features/0:7880')
+addGridFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/ICEC')
+addGridFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/TMP')
+addGridFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/SALTY')
+addGridFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc/features/M')
+addGridFeature('http://localhost:8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst')
 */
 
 addDataset('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc')
