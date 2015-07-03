@@ -22,6 +22,12 @@ public final class Constraint {
 	private Double verticalStart, verticalEnd;
 	public Extent<Double> verticalExtent;
 	public Set<String> params;
+	
+	/**
+	 * type is only usable for filtering.
+	 */
+	public Class<?> type;
+	
 	/**
 	 * verticalTarget is only usable for subsetting.
 	 * If given, it restrict the vertical axis to exactly the element
@@ -52,6 +58,7 @@ public final class Constraint {
 			case "verticalEnd": verticalEnd = Double.parseDouble(val); break;
 			case "verticalTarget": verticalTarget = Double.parseDouble(val); break;
 			case "params": params = Sets.newHashSet(val.split(",")); break;
+			case "type": type = FeatureTypes.getType(val); break;
 			}
 		}
 		timeExtent = Extents.newExtent(timeStart, timeEnd);

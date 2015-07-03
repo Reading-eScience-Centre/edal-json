@@ -49,6 +49,10 @@ public class FeaturesResource extends ServerResource {
 			DomainMetadata domainMeta = meta.domainMeta;
 			RangeMetadata rangeMeta = meta.rangeMeta;
 			
+			if (filter.type != null) {
+				if (!filter.type.isAssignableFrom(meta.type)) continue;
+			}
+			
 			if (filter.params != null) {
 				Set<String> params = new HashSet<>(rangeMeta.getParameterIds());
 				params.retainAll(filter.params);

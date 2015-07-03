@@ -16,8 +16,6 @@ import org.restlet.resource.ServerResource;
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.feature.GridFeature;
-import uk.ac.rdg.resc.edal.feature.ProfileFeature;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 
@@ -28,11 +26,6 @@ import com.google.common.collect.ImmutableMap.Builder;
 
 public class DatasetResource extends ServerResource {
 	
-	private final Map<Class<?>,String> typeNames = ImmutableMap.of(
-			GridFeature.class, "Grid",
-			ProfileFeature.class, "Profile"
-			);
-
 	// cache with datasetId as key
 	private static Map<String,DatasetMetadata> datasetMetadataCache = new HashMap<>();
 
@@ -57,7 +50,7 @@ public class DatasetResource extends ServerResource {
 		
 		Map counts = new HashMap();
 		for (Class<?> type : datasetMeta.getFeatureTypes()) {
-			String name = typeNames.getOrDefault(type, "[UNKNOWN] " + type.getSimpleName());
+			String name = FeatureTypes.getName(type);
 			counts.put(name, datasetMeta.getFeatureCount(type));
 		}
 		
