@@ -1,5 +1,25 @@
+import $ from 'jquery'
+import 'jquery-ajax-native'
+import msgpack from 'msgpack'
 import ndarray from 'ndarray'
 import * as opsnull from 'app/ndarray-ops-null'
+
+export function loadBinaryJson(url, callback) {
+  return $.ajax({
+    url: url,
+    dataType: 'native',
+    accepts: {
+      'native': 'application/x-msgpack'
+    },
+    xhrFields: {
+      responseType: 'arraybuffer'
+    },
+    success: raw => {
+       let data = msgpack.decode(raw)
+       callback(data)
+     }
+   })
+}
 
 export function indicesOfNearest (a, x) {
   // return the indices of the two neighbors closest to x

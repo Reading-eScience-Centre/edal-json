@@ -1,13 +1,12 @@
 package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.DoubleStream;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -49,7 +48,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -88,7 +86,7 @@ public class FeatureResource extends ServerResource {
 	}
 	
 	public static Map getFeatureJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
-			Details details, Constraint subset) throws EdalException {
+			Details details, SubsetConstraint subset) throws EdalException {
 		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
 				
 		Map j = new HashMap(ImmutableMap.of(
@@ -129,7 +127,7 @@ public class FeatureResource extends ServerResource {
 		String featureId = Reference.decode(getAttribute("featureId"));
 		Details fallback = new Details(true, true, false);
 		Details details = Details.from(getQueryValue("details"), fallback);
-		Constraint subset = new Constraint(getQueryValue("subset"));
+		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subset"));
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
@@ -226,7 +224,7 @@ public class FeatureResource extends ServerResource {
 		}
 	}
 	
-	private static Map getDomainJson(UniformFeature uniFeature, Constraint subset) {
+	private static Map getDomainJson(UniformFeature uniFeature, SubsetConstraint subset) {
 		Map domainJson = new HashMap();
 		
 		// no support for trajectories currently
@@ -242,23 +240,31 @@ public class FeatureResource extends ServerResource {
 		return domainJson;
 	}
 		
-	private static IntStream getVerticalAxisIndices(VerticalAxis ax, Constraint subset) {
+	private static IntStream getVerticalAxisIndices(VerticalAxis ax, SubsetConstraint subset) {
 		if (ax == null) {
 			return IntStream.of(0);
 		}
-		List<Double> v = ax.getCoordinateValues();
 		
-		IntStream axIndices = IntStream.range(0, v.size())
-			.filter(i -> subset.verticalExtent.contains(v.get(i)));
+		// FIXME bounds are wrong for EN3 dataset
+		// -> they should be single points but are calculated bounds which becomes a problem
+		//    e.g. if the only z coords are [ 0.0, 3022] then extent and bounds will cover a lot more
 		
-		if (subset.verticalTarget == null) {
+		List<Extent<Double>> bounds = IntStream.range(0, ax.size())
+				.mapToObj(ax::getCoordinateBounds)
+				.collect(Collectors.toList());
+		
+		IntStream axIndices = IntStream.range(0, ax.size())
+			.filter(i -> subset.verticalExtent.intersects(bounds.get(i)));
+		
+		if (!subset.verticalTarget.isPresent()) {
 			return axIndices;
 		}
 		
 		// find vertical value closest to target and return its index
-		double target = subset.verticalTarget;
+		List<Double> values = ax.getCoordinateValues();
+		double target = subset.verticalTarget.get();
 		List<Integer> indices = Ints.asList(axIndices.toArray());
-		List<Double> distances = Utils.mapList(indices, i -> Math.abs(v.get(i) - target));
+		List<Double> distances = Utils.mapList(indices, i -> Math.abs(values.get(i) - target));
 		double minDistance = Double.POSITIVE_INFINITY;
 		int minIdx = 0;
 		int i = 0;
@@ -276,9 +282,13 @@ public class FeatureResource extends ServerResource {
 		if (ax == null) {
 			return IntStream.of(0);
 		}
-		List<DateTime> v = ax.getCoordinateValues();		
-		IntStream axIndices = IntStream.range(0, v.size())
-			.filter(i -> subset.timeExtent.contains(v.get(i)));
+		// FIXME add overload in EDAL to get all coordinate bounds as List like the values
+		//  -> very similar to getDomainObjects but better semantics and List type
+		List<Extent<DateTime>> bounds = IntStream.range(0, ax.size())
+				.mapToObj(ax::getCoordinateBounds)
+				.collect(Collectors.toList());
+		IntStream axIndices = IntStream.range(0, ax.size())
+			.filter(i -> subset.timeExtent.intersects(bounds.get(i)));
 		return axIndices;
 	}
 	
@@ -286,10 +296,13 @@ public class FeatureResource extends ServerResource {
 	 * NOTE: supports rectilinear lon-lat grids only for now
 	 */
 	private static IntStream getXAxisIndices(ReferenceableAxis<Double> ax, Constraint subset) {
-		List<Double> v = ax.getCoordinateValues();
+		List<Extent<Double>> bounds = IntStream.range(0, ax.size())
+				.mapToObj(ax::getCoordinateBounds)
+				.collect(Collectors.toList());
 		// FIXME longitudes must be (un)wrapped the same way!!
-		IntStream axIndices = IntStream.range(0, v.size())
-			.filter(i -> subset.longitudeExtent.contains(v.get(i)));
+		//  -> are longitudes normalized in some way when read in EDAL?
+		IntStream axIndices = IntStream.range(0, ax.size())
+			.filter(i -> subset.longitudeExtent.intersects(bounds.get(i)));
 		return axIndices;
 	}
 
@@ -297,9 +310,11 @@ public class FeatureResource extends ServerResource {
 	 * NOTE: supports rectilinear lon-lat grids only for now
 	 */
 	private static IntStream getYAxisIndices(ReferenceableAxis<Double> ax, Constraint subset) {
-		List<Double> v = ax.getCoordinateValues();
-		IntStream axIndices = IntStream.range(0, v.size())
-			.filter(i -> subset.latitudeExtent.contains(v.get(i)));
+		List<Extent<Double>> bounds = IntStream.range(0, ax.size())
+				.mapToObj(ax::getCoordinateBounds)
+				.collect(Collectors.toList());
+		IntStream axIndices = IntStream.range(0, ax.size())
+			.filter(i -> subset.latitudeExtent.intersects(bounds.get(i)));
 		return axIndices;
 	}
 	
@@ -321,6 +336,9 @@ public class FeatureResource extends ServerResource {
 				"y", subsettedY.length == 1 ? subsettedY[0] : subsettedY
 				));
 		
+		// FIXME add bounds if not infinitesimal
+		//  -> how do we query that except checking if low==high?
+		
 		if (grid instanceof RegularGrid && (grid.getXSize() > 1 || grid.getYSize() > 1)) {
 			RegularGrid reggrid = (RegularGrid) grid;
 			domainJson.putAll(ImmutableMap.of(
@@ -332,14 +350,17 @@ public class FeatureResource extends ServerResource {
 		}
 	}
 	
-	private static void addVerticalAxis(VerticalAxis z, Constraint subset, Map domainJson) {
+	private static void addVerticalAxis(VerticalAxis z, SubsetConstraint subset, Map domainJson) {
 		if (z == null) {
 			return;
 		}
 		List<Double> heights = z.getCoordinateValues();
-		Stream<Double> subsettedHeights = getVerticalAxisIndices(z, subset).mapToObj(heights::get);
+		double[] subsettedHeights = getVerticalAxisIndices(z, subset).mapToDouble(heights::get).toArray();
 		
-		domainJson.put("vertical", subsettedHeights.toArray());
+		domainJson.put("vertical", subsettedHeights);
+		
+		// FIXME add bounds if not infinitesimal
+		//  -> how do we query that except checking if low==high?
 		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
 		
 		// TODO are there no standards for vertical CRS, with codes etc.?
@@ -357,8 +378,13 @@ public class FeatureResource extends ServerResource {
 			return;
 		}
 		List<DateTime> times = t.getCoordinateValues();
-		String[] subsettedTimes = getTimeAxisIndices(t, subset).mapToObj(i -> times.get(i).toString()).toArray(String[]::new);
+		String[] subsettedTimes = getTimeAxisIndices(t, subset)
+				.mapToObj(i -> times.get(i).toString())
+				.toArray(String[]::new);
 		domainJson.put("time", subsettedTimes.length == 1 ? subsettedTimes[0] : subsettedTimes);
+		
+		// FIXME add bounds if not infinitesimal
+		//  -> how do we query that except checking if low==high?
 		//domainJson.put("timeBounds", t.getDomainObjects().iterator());
 	}
 	
@@ -398,12 +424,15 @@ public class FeatureResource extends ServerResource {
 		return types.build();
 	}
 		
-	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, boolean includeValues,
-			Constraint subset, String rootUri) {
+	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 
+			boolean includeValues, SubsetConstraint subset, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId;
 		Builder values = ImmutableMap.builder();
 
 		for (String paramId : meta.rangeMeta.getParameterIds()) {
+			if (subset.params.isPresent() && !subset.params.get().contains(paramId)) {
+				continue;
+			}
 			Parameter param = meta.rangeMeta.getParameter(paramId);
 			Map rangeParam = ImmutableMap.of(
 					"id", root + "/features/" + meta.featureId + "/range/" + paramId,
@@ -427,11 +456,13 @@ public class FeatureResource extends ServerResource {
 		return values.build();
 	}
 
-	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, Constraint subset) {
+	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, 
+			SubsetConstraint subset) {
 		return getValues(valsArr, new UniformFeature(feature), subset);
 	}
 	
-	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, Constraint subset) {
+	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, 
+			SubsetConstraint subset) {
 		if (valsArr.size() > Integer.MAX_VALUE) {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
@@ -441,6 +472,8 @@ public class FeatureResource extends ServerResource {
 		int[] zIndices = getVerticalAxisIndices(uniFeature.z, subset).toArray();
 		int[] tIndices = getTimeAxisIndices(uniFeature.t, subset).toArray();
 		
+		// FIXME EN3 has 99999.0 as values which probably means missing
+		//  -> shouldn't this be detected by EDAL and returned as null instead?
 		
 //		valsArr.forEach(vals::add);
 		

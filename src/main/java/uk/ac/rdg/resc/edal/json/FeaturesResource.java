@@ -33,8 +33,8 @@ public class FeaturesResource extends ServerResource {
 		final String datasetId = Reference.decode(getAttribute("datasetId"));
 		Details fallback = new Details(false, false, false);
 		Details details = Details.from(getQueryValue("details"), fallback);
-		Constraint filter = new Constraint(getQueryValue("filter"));
-		Constraint subset = new Constraint(getQueryValue("subset"));
+		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subset"));
+		FilterConstraint filter = new FilterConstraint(getQueryValue("filter"), subset);
 		
 		DatasetMetadata datasetMeta = DatasetResource.getDatasetMetadata(datasetId);
 		
@@ -49,17 +49,17 @@ public class FeaturesResource extends ServerResource {
 			DomainMetadata domainMeta = meta.domainMeta;
 			RangeMetadata rangeMeta = meta.rangeMeta;
 			
-			if (filter.type != null) {
-				if (!filter.type.isAssignableFrom(meta.type)) continue;
+			if (filter.type.isPresent()) {
+				if (!filter.type.get().isAssignableFrom(meta.type)) continue;
 			}
 			
-			if (filter.params != null) {
+			if (filter.params.isPresent()) {
 				Set<String> params = new HashSet<>(rangeMeta.getParameterIds());
-				params.retainAll(filter.params);
+				params.retainAll(filter.params.get());
 				if (params.isEmpty()) continue;
 			}
 						
-			if (filter.bbox != null) {
+			if (filter.bbox.isPresent()) {
 				// TODO we cannot use GeographicBoundingBox here as
 				//  this cannot span the discontinuity...
 				BoundingBox bb = domainMeta.getBoundingBox();
@@ -68,7 +68,7 @@ public class FeaturesResource extends ServerResource {
 					throw new RuntimeException("only WGS84 supported currently");
 				}
 				DatelineBoundingBox geoBB = new DatelineBoundingBox(bb);
-				if (!geoBB.intersects(filter.bbox)) {
+				if (!geoBB.intersects(filter.bbox.get())) {
 					continue;
 				}
 			}

@@ -128,11 +128,15 @@ public class DomainMetadata {
 		}
 	}
 
+	/**
+	 * TODO is this the bbox of the bounds or the domain coordinates?
+	 */
 	public BoundingBox getBoundingBox() {
 		return bbox;
 	}
 
 	/**
+	 * The extent of the bounds of the time axis.
 	 * 
 	 * @return null if no time axis
 	 */
@@ -141,6 +145,7 @@ public class DomainMetadata {
 	}
 
 	/**
+	 * The extent of the bounds of the vertical axis.
 	 * 
 	 * @return null if no vertical axis
 	 */

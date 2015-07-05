@@ -60,7 +60,7 @@ map.interpolation = interpolationMethods[defaultInterpolation]
 
 controls.paletteSwitcher(palettes, defaultPalette).addTo(map)
 controls.paletteRangeAdjuster().addTo(map)
-controls.interpolationSwitcher(interpolationMethods, defaultInterpolation).addTo(map)
+//controls.interpolationSwitcher(interpolationMethods, defaultInterpolation).addTo(map)
 
 
 var supportedCrs = new Set([
@@ -69,8 +69,8 @@ var supportedCrs = new Set([
 
 function initFeature(feature) {
   var result = feature.result
-  if (!supportedCrs.has(result.domain.crs))) {
-    window.alert('Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: ' + result.domain.crs)
+  if (!supportedCrs.has(result.domain.crs)) {
+    //window.alert('Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: ' + result.domain.crs)
     throw result.domain.crs
   }
   result.domain.x = new Float64Array(result.domain.x)
@@ -97,7 +97,7 @@ function addGridFeatureParam (result, paramId) {
 
 function addProfileFeatures(dataset, paramId) {
   let param = dataset.parameters.find(p => p.id === paramId)
-  let layer = new ProfileCoverage(dataset, param)
+  let layer = new ProfileCoverageLayer(dataset, param)
   lc.addOverlay(layer, param.title)
 }
 

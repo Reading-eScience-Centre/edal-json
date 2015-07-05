@@ -16,6 +16,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   //  -> for semantic info like Station ID
   constructor(coverage, paramId) {
     super()
+    this.COVERAGE_LAYER = true
     this.coverage = coverage
     this.paramId = paramId
   }
@@ -29,26 +30,11 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
       addLegend(map, this, rangeType, paramRange)
       super.onAdd(map)
     } else {
-      console.time('loadRange')
-      $.ajax({
-        dataType: 'native',
-        accepts: {
-          'native': 'application/x-msgpack'
-        },
-        url: paramRange.id,
-        xhrFields: {
-          responseType: 'arraybuffer'
-        },
-        success: raw => {
-          console.timeEnd('loadRange')
-          console.time('decodeRange')
-          var range = msgpack.decode(raw)
-          console.timeEnd('decodeRange')
-          this.coverage.range[this.paramId] = range
-          calculateExtent(range)
-          addLegend(map, this, rangeType, range)
-          super.onAdd(map)
-        }
+      utils.loadBinaryJson(paramRange.id, range => {
+        this.coverage.range[this.paramId] = range
+        calculateExtent(range)
+        addLegend(map, this, rangeType, range)
+        super.onAdd(map)
       })
     }
   }
@@ -57,6 +43,32 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
     map.removeControl(this.legend)
     super.onRemove(map)
     delete this._map
+  }
+  
+  set paletteRange (type) {
+    var range = this.coverage.range[this.paramId]
+    if (type === 'global') {
+      range.paletteMin = range.min
+      range.paletteMax = range.max
+    } else if (type === 'fov') {
+      // first, get current bounding box
+      var bounds = this._map.getBounds()
+      var result = this.coverage
+
+      var paramRange4D = utils.getParameterRange4D(result.domain, range.values, this.paramId)
+      var subset = utils.horizontalSubset(result.domain, paramRange4D, bounds).range
+
+      // TODO how is time/vertical dimension handled?
+      var extent = utils.minMax(subset)
+
+      range.paletteMin = extent.min
+      range.paletteMax = extent.max
+    }
+  }
+  
+  get paletteRange () {
+    var range = this.coverage.range[this.paramId]
+    return [range.paletteMin, range.paletteMax]
   }
   
   drawTile (canvas, tilePoint, zoom) {

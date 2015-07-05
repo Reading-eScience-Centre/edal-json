@@ -28,7 +28,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("featureId"));
 		String parameterId = Reference.decode(getAttribute("parameterId"));
-		Constraint subset = new Constraint(getQueryValue("subset"));
+		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subset"));
 		
 		FeatureMetadata meta = DatasetResource.getDatasetMetadata(datasetId).getFeatureMetadata(featureId);
 		Dataset dataset = Utils.getDataset(datasetId);

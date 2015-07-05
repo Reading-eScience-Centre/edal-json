@@ -24,3 +24,16 @@ html, body { height: 98%; }
 .button-active {
 	font-weight: bold;
 }
+
+.leaflet-top {
+  /* put the layer switcher in front of the palettes */
+  z-index: 1001;
+}
+
+.time-slider {
+	width: 500px;
+}
+
+.vertical-slider {
+	width: 500px;
+}

@@ -3,7 +3,9 @@ package uk.ac.rdg.resc.edal.json;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -18,8 +20,14 @@ import uk.ac.rdg.resc.edal.dataset.cdm.CdmGridDatasetFactory;
 import uk.ac.rdg.resc.edal.dataset.cdm.En3DatasetFactory;
 
 public final class Utils {
+	// TODO probably not the right place
+	private static Map<String,Dataset> datasetCache = new HashMap<>();
+	
 	public static Dataset getDataset(String datasetId) {
-
+		return datasetCache.computeIfAbsent(datasetId, Utils::doGetDataset);
+	}
+	
+	private static Dataset doGetDataset(String datasetId) {
 		URL resource = Utils.class.getResource("/" + datasetId);
 		Dataset dataset;
 		DatasetFactory datasetFactory = new CdmGridDatasetFactory();

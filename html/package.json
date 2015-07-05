@@ -29,6 +29,8 @@
       "cwise-compiler": "npm:cwise-compiler@^1.1.0",
       "jquery": "github:components/jquery@^2.1.4",
       "jquery-ajax-native": "github:acigna/jquery-ajax-native@^1.0.1",
+      "jquery-mousewheel": "github:jquery/jquery-mousewheel@^3.1.12",
+      "jquery-ui": "github:components/jqueryui@^1.11.4",
       "leaflet": "github:Leaflet/Leaflet@^0.7.3",
       "leaflet-providers": "github:leaflet-extras/leaflet-providers@1.1.1",
       "msgpack": "github:creationix/msgpack-js-browser@^0.1.4",
