@@ -1,6 +1,7 @@
 import 'leaflet/dist/leaflet.css!'
 import './css/style.css!'
 
+import 'core-js/es6' // imports all ES6 shims
 import $ from 'jquery'
 import 'jquery-ajax-native'
 import ndarray from 'ndarray'
