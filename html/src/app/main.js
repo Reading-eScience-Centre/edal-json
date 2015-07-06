@@ -8,6 +8,8 @@ import * as opsnull from 'app/ndarray-ops-null'
 import msgpack from 'msgpack'
 import L from 'leaflet'
 import 'leaflet-providers'
+import 'leaflet-fullscreen'
+import 'leaflet-fullscreen/Control.FullScreen.css!'
 import interpolationMethods from 'app/interpolation'
 import * as palettes from 'app/palettes'
 import * as controls from 'app/controls'
@@ -15,7 +17,14 @@ import * as utils from 'app/utils'
 import GridCoverageLayer from 'app/TileLayer.GridCoverage'
 import ProfileCoverageLayer from 'app/ProfileCoverage'
 
-var map = L.map('map').setView([10, 0], 2)
+var map = L.map('map', {
+  center: [10, 0],
+  zoom: 2,
+  fullscreenControl: true,
+  fullscreenControlOptions: {
+    position: 'topleft'
+  }
+})
 
 var baseLayers = {
   'Esri.WorldImagery': 'Esri Satellite',
