@@ -36,9 +36,17 @@ var baseLayers = {
   'Stamen.Watercolor': 'Stamen Watercolor',
   'NASAGIBS.ViirsEarthAtNight2012': 'VIIRS City Lights 2012'
 }
+// see https://github.com/Leaflet/Leaflet/issues/3599#issuecomment-118918936
+var supportsHiDpi = new Set([
+   'Esri.WorldImagery',
+   'Esri.WorldShadedRelief',
+   'Stamen.Watercolor'
+   //'NASAGIBS.ViirsEarthAtNight2012' // bug https://github.com/leaflet-extras/leaflet-providers/issues/169
+   ])
 var layerControl = {}
 Object.keys(baseLayers).forEach(function (id) {
-  var layer = L.tileLayer.provider(id)
+  let opt = supportsHiDpi.has(id) ? {detectRetina: true} : {}
+  let layer = L.tileLayer.provider(id, opt)
   layerControl[baseLayers[id]] = layer
 })
 layerControl[baseLayers['Esri.WorldImagery']].addTo(map)
