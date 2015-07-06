@@ -168,7 +168,8 @@ addGridFeature('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc
 addGridFeature('http://localhost:8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc/features/analysed_sst')
 */
 
-addDataset('http://localhost:8182/api/datasets/foam_one_degree-2011-01-01.nc')
-addDataset('http://localhost:8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc')
-addDataset('http://localhost:8182/api/datasets/01_nemo_test_data.nc')
-addDataset('http://localhost:8182/api/datasets/en3_test_data.nc')
+var host = location.hostname
+addDataset('http://' + host + ':8182/api/datasets/foam_one_degree-2011-01-01.nc')
+addDataset('http://' + host + ':8182/api/datasets/20100715-UKMO-L4HRfnd-GLOB-v01-fv02-OSTIA.nc')
+addDataset('http://' + host + ':8182/api/datasets/01_nemo_test_data.nc')
+addDataset('http://' + host + ':8182/api/datasets/en3_test_data.nc')

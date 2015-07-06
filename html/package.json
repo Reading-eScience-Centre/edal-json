@@ -2,7 +2,7 @@
   "name": "edal-json-web",
   "version": "0.1.0",
   "scripts": {
-    "serveit": "browser-sync start --files '**/*.html,**/*.css,**/*.js' --server src",
+    "serveit": "http-server src -o",
     "test": "standard",
     "buildMode": "jspm bundle app/main --inject",
     "buildSafeMode": "jspm bundle-sfx app/main safe-bundle.js",
@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^3.1.18",
-    "browser-sync": "^2.7.1",
+    "http-server": "^0.8.0",
     "jspm": "^0.15.6",
     "standard": "^4.3.2"
   },
@@ -41,7 +41,7 @@
     "devDependencies": {
       "babel": "npm:babel-core@^5.1.13",
       "babel-runtime": "npm:babel-runtime@^5.1.13",
-      "core-js": "npm:core-js@^0.9.4"
+      "core-js": "npm:core-js@^0.9.18"
     }
   }
 }
