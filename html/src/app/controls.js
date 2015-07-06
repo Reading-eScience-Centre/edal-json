@@ -26,6 +26,7 @@ export function paletteSwitcher (palettes, defaultPaletteKey) {
 	control.onAdd = function (map) {
 	  var div = document.importNode($('#template-palettes')[0].content, true)
 	  div = $('.palettes', div)[0]
+	  L.DomEvent.disableClickPropagation(div)
 	  $(".palette-button[data-palette='" + defaultPaletteKey + "']", div).addClass('button-active')
 	  $('.palette-button', div).click(function () {
 	    map.palette = palettes.palettes[$(this).data('palette')]
@@ -46,6 +47,7 @@ export function paletteRangeAdjuster () {
 	control.onAdd = function (map) {
 	  var div = document.importNode($('#template-palette-range')[0].content, true)
 	  div = $('.palette-range', div)[0]
+	  L.DomEvent.disableClickPropagation(div)
 	  $('.palette-range-button', div).click(function () {
 	    var action = $(this).data('palette-range')
 	    map.eachLayer(function (layer) {
@@ -72,6 +74,7 @@ export function interpolationSwitcher (interpolationMethods, defaultInterpolatio
 	control.onAdd = function (map) {
 	  var div = document.importNode($('#template-interpolation')[0].content, true)
 	  div = $('.interpolation', div)[0]
+	  L.DomEvent.disableClickPropagation(div)
 	  $(".interpolation-button[data-interpolation='" + defaultInterpolationKey + "']", div).addClass('button-active')
 	  $('.interpolation-button', div).click(function () {
 	    map.interpolation = interpolationMethods[$(this).data('interpolation')]
