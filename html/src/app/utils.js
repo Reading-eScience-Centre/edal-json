@@ -103,14 +103,16 @@ export function horizontalSubset (domain, paramRange4D, bounds) {
   var iLatEnd = indexOfNearest(domainLat, northEast.lat)
 
   // subset
+  // FIXME polyfill TypedArray.prototype.slice missing! -> breaks Chrome
+  //  -> see https://github.com/zloirock/core-js/issues/90
   domainLon = domainLon.slice(iLonStart, iLonEnd + 1) // could use ndarray here as well
   domainLat = domainLat.slice(iLatStart, iLatEnd + 1)
   paramRange4D = paramRange4D.hi(null, null, iLatEnd + 1, iLonEnd + 1)
                              .lo(null, null, iLatStart, iLonStart)
 
   return {
-    x: domainLat,
-    y: domainLon,
+    x: domainLon,
+    y: domainLat,
     range: paramRange4D
   }
 }

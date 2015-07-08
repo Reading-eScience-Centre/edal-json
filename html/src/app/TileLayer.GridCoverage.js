@@ -110,8 +110,8 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
       var tileBottomRightGeo = map.unproject(L.point(startX + tileSize, startY + tileSize))
       var bounds = L.latLngBounds([tileTopLeftGeo, tileBottomRightGeo])
       var subset = utils.horizontalSubset(result.domain, paramRange4D, bounds)
-      domainLon = subset.y
-      domainLat = subset.x
+      domainLon = subset.x
+      domainLat = subset.y
       paramRange4D = subset.range
     }
 
