@@ -77,6 +77,7 @@ System.config({
       "npm:core-js@0.9.18/modules/$.collection-weak",
       "npm:core-js@0.9.18/modules/es6.weak-set",
       "npm:core-js@0.9.18/modules/$.own-keys",
+      "app/polyfills",
       "github:components/jquery@2.1.4/jquery",
       "github:acigna/jquery-ajax-native@1.0.1/src/jquery-ajax-native",
       "npm:iota-array@1.0.0/iota",
