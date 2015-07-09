@@ -55,7 +55,7 @@ public class DatasetResource extends ServerResource {
 		
 		Builder b = ImmutableMap.builder()
 				// TODO how to get URL of other static Application?
-				.put("@context", "/static/dataset.jsonld")
+				.put("@context", "/static/contexts/dataset.jsonld")
 				.put("id", datasetUrl)
 				.put("type", ImmutableList.of("dcat:Dataset"))
 				.put("title", "TODO: where to get this from EDAL?")

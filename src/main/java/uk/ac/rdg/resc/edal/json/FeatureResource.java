@@ -132,7 +132,7 @@ public class FeatureResource extends ServerResource {
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
 		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset);
-		featureJson.put("@context", "/static/Feature.jsonld");
+		featureJson.put("@context", "/static/contexts/Feature.jsonld");
 		return featureJson;
 	}
 	

@@ -51,7 +51,7 @@ public class ParamResource extends ServerResource {
 		Parameter param = dataset.getVariableMetadata(paramId).getParameter();
 		
 		Map j = getParamJson(dataset, param, getRootRef().toString());
-		j.put("@context", "/static/Dataset.jsonld");
+		j.put("@context", "/static/contexts/Dataset.jsonld");
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {
