@@ -123,7 +123,7 @@ public class FeaturesResource extends ServerResource {
 	}
 	
 	 
-	@Get("json")
+	@Get("covjson")
 	public Representation json() throws IOException, EdalException {
 		Map j = getFeaturesJson();
 		
@@ -134,10 +134,22 @@ public class FeaturesResource extends ServerResource {
 		return r;
 	}
 	
-	@Get("msgpack")
+	@Get("covjsonb|msgpack")
 	public Representation msgpack() throws IOException, EdalException {
 		return new MessagePackRepresentation(getFeaturesJson());
 	}
 
-
+	// TODO implement
+	/*
+	@Get("geojson")
+	public Representation geojson() throws IOException, EdalException {
+		Map j = getFeaturesGeoJson();
+		
+		JacksonRepresentation r = new JacksonRepresentation(j);
+		if (!App.acceptsJSON(getClientInfo())) {
+			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		}
+		return r;
+	}
+*/
 }

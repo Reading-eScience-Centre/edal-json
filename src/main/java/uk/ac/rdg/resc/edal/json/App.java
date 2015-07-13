@@ -48,8 +48,21 @@ public class App extends Application {
         // Note that this doesn't influence content negotiation, it is
         // just for serving JSON by default if no matching Accept headers are given.
         getMetadataService().clearExtensions();
-        getMetadataService().addExtension("json", MediaType.APPLICATION_JSON);
-        getMetadataService().addExtension("msgpack", MessagePackRepresentation.APPLICATION_MSGPACK);
+        MediaType jsonLd = new MediaType("application/ld+json");
+        MediaType covjson = new MediaType("application/cov+json");
+        MediaType covjsonMsgpack = new MediaType("application/cov+json;encoding=msgpack");
+        MediaType covjsonCBOR = new MediaType("application/cov+json;encoding=cbor");
+        MediaType geojson = new MediaType("application/vnd.geo+json");
+        
+        // GeoJSON is the default for resources that support it (features)
+        // Otherwise JSON-LD, then CoverageJSON.
+        // Binary CoverageJSON will only be delivered if explicitly requested.
+        getMetadataService().addExtension("geojson", geojson);
+        getMetadataService().addExtension("jsonld", jsonLd);
+        getMetadataService().addExtension("covjson", covjson);
+        getMetadataService().addExtension("covjsonb", covjsonMsgpack); // TODO switch to CBOR later
+        getMetadataService().addExtension("msgpack", covjsonMsgpack);
+        getMetadataService().addExtension("cbor", covjsonCBOR);        
 		
 		Router router = new Router();
 		router.attach("/datasets/{datasetId}/features/{featureId}/range/{parameterId}",

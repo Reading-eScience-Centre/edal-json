@@ -31,7 +31,7 @@ public class DatasetResource extends ServerResource {
 	private static Map<String,DatasetMetadata> datasetMetadataCache = new HashMap<>();
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Get("json")
+	@Get("jsonld")
 	public Representation json() throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		Dataset dataset = Utils.getDataset(datasetId);
@@ -58,7 +58,7 @@ public class DatasetResource extends ServerResource {
 				.put("@context", "/static/contexts/dataset.jsonld")
 				.put("id", datasetUrl)
 				.put("type", ImmutableList.of("dcat:Dataset"))
-				.put("title", "TODO: where to get this from EDAL?")
+				.put("title", "N/A (datasets in EDAL don't have a title, only at WMS level)")
 				.put("parameters", jsonParams)
 				.put("features", datasetUrl + "/features")
 				.put("featureCount", count)

@@ -136,7 +136,7 @@ public class FeatureResource extends ServerResource {
 		return featureJson;
 	}
 	
-	@Get("json")
+	@Get("covjson")
 	public Representation json() throws IOException, EdalException {
 		Map featureJson = getFeatureJson();
 		JacksonRepresentation r = new JacksonRepresentation(featureJson);
@@ -146,7 +146,7 @@ public class FeatureResource extends ServerResource {
 		return r;
 	}
 	
-	@Get("msgpack")
+	@Get("covjsonb|msgpack")
 	public Representation msgpack() throws IOException, EdalException {
 		return new MessagePackRepresentation(getFeatureJson());
 	}

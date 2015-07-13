@@ -43,7 +43,7 @@ public class ParamResource extends ServerResource {
 		return j;
 	}
 
-	@Get("json")
+	@Get("jsonld")
 	public Representation json() throws VariableNotFoundException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String paramId = Reference.decode(getAttribute("paramId"));

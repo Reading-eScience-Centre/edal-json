@@ -54,7 +54,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		return j;
 	}
 
-	@Get("json")
+	@Get("covjson")
 	public Representation json() throws IOException, EdalException {
 		
 		Map j = rangeData();
@@ -71,7 +71,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		return r;
 	}
 	
-	@Get("msgpack")
+	@Get("covjsonb|msgpack")
 	public Representation msgpack() throws IOException, EdalException {
 		long t0 = System.currentTimeMillis();
 		Map j = rangeData();
