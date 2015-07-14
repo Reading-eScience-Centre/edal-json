@@ -25,11 +25,12 @@ import uk.ac.rdg.resc.edal.util.GISUtils;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeaturesResource extends ServerResource {
 	
-	private Map getFeaturesJson() throws IOException, EdalException {
+	private Builder getFeaturesJson(boolean asGeojson) throws IOException, EdalException {
 		final String datasetId = Reference.decode(getAttribute("datasetId"));
 		Details fallback = new Details(false, false, false);
 		Details details = Details.from(getQueryValue("details"), fallback);
@@ -109,23 +110,35 @@ public class FeaturesResource extends ServerResource {
 				}
 			}
 			
-			jsonFeatures.add(FeatureResource.getFeatureJson(dataset, meta, getRootRef().toString(), 
-					details, subset));
+			Map feature;
+			if (asGeojson) {
+				 feature = FeatureResource.getFeatureGeoJson(dataset, meta, getRootRef().toString(), 
+						details, subset).build();
+			} else {
+				feature = FeatureResource.getFeatureCovJson(dataset, meta, getRootRef().toString(), 
+						details, subset).build();
+			}
+			jsonFeatures.add(feature);
 		}
 		
-		Map j = ImmutableMap.of(
-				"@context", "/static/contexts/FeatureCollection.jsonld",
-				"id", datasetUrl + "/features",
-				"type", "oml:ObservationCollectionTODO",
-				"features", jsonFeatures
-				);
+		Builder j = ImmutableMap.builder();
+		if (asGeojson) {
+			j.put("type", "FeatureCollection")
+			 .put("features", jsonFeatures);	
+		} else {
+			j.put("@context", "/static/contexts/FeatureCollection.jsonld")
+			 .put("id", datasetUrl + "/features")
+			 .put("type", "oml:ObservationCollectionTODO")
+			 .put("features", jsonFeatures);
+		}
+		
 		return j;
 	}
 	
 	 
 	@Get("covjson")
-	public Representation json() throws IOException, EdalException {
-		Map j = getFeaturesJson();
+	public Representation covjson() throws IOException, EdalException {
+		Map j = getFeaturesJson(false).build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {
@@ -136,14 +149,13 @@ public class FeaturesResource extends ServerResource {
 	
 	@Get("covjsonb|msgpack")
 	public Representation msgpack() throws IOException, EdalException {
-		return new MessagePackRepresentation(getFeaturesJson());
+		return new MessagePackRepresentation(getFeaturesJson(false).build());
 	}
 
-	// TODO implement
-	/*
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
-		Map j = getFeaturesGeoJson();
+		Map j = getFeaturesJson(true)
+				.put("@context", FeatureResource.GeoJSONLDContext).build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		if (!App.acceptsJSON(getClientInfo())) {
@@ -151,5 +163,5 @@ public class FeaturesResource extends ServerResource {
 		}
 		return r;
 	}
-*/
+
 }

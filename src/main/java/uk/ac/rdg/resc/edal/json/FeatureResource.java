@@ -53,6 +53,8 @@ import com.google.common.primitives.Ints;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class FeatureResource extends ServerResource {
 	
+	public static final String GeoJSONLDContext = "https://rawgit.com/geojson/geojson-ld/master/contexts/geojson-time.jsonld";
+	
 	static class FeatureMetadata {
 		public final DomainMetadata domainMeta;
 		public final RangeMetadata rangeMeta;
@@ -85,19 +87,87 @@ public class FeatureResource extends ServerResource {
 		}
 	}
 	
-	public static Map getFeatureJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
+	public static Builder getFeatureGeoJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
+			Details details, SubsetConstraint subset) throws EdalException {
+		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
+		
+		// TODO possibly have to convert to WGS84
+		BoundingBox bb = meta.domainMeta.getBoundingBox();
+		
+		List<String> paramTitles = meta.rangeMeta.getParameters().stream().map(p -> p.getTitle()).collect(Collectors.toList());
+		Map props = ImmutableMap.of(
+				"title", meta.name,
+				"parameters", paramTitles
+				);
+		
+		Map geometry;
+		// Profile -> Point
+		// Grid -> Bbox Polygon (could have actual outline, but for now just bbox)
+		// Trajectory -> LineString (not supported in EDAL yet)
+		if (meta.type.isAssignableFrom(ProfileFeature.class)) {
+			geometry = ImmutableMap.of(
+					"type", "Point",
+					"coordinates", ImmutableList.of(bb.getMinX(), bb.getMinY())
+					);
+		} else if (meta.type.isAssignableFrom(GridFeature.class)) {
+			geometry = ImmutableMap.of(
+					"type", "Polygon",
+					"coordinates", ImmutableList.of(ImmutableList.of(
+							// counter-clockwise as recommended in https://tools.ietf.org/html/draft-butler-geojson-05
+							// to improve dateline handling
+							ImmutableList.of(bb.getMinX(), bb.getMinY()),
+							ImmutableList.of(bb.getMaxX(), bb.getMinY()),
+							ImmutableList.of(bb.getMaxX(), bb.getMaxY()),
+							ImmutableList.of(bb.getMinX(), bb.getMaxY()),
+							ImmutableList.of(bb.getMinX(), bb.getMinY())
+							))
+					);
+		} else {
+			throw new IllegalStateException(meta.type.getName() + " not supported");
+		}
+		
+		Builder j = ImmutableMap.builder()
+				.put("type", "Feature")
+				.put("id", featureUrl)
+				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()))
+				.put("properties", props)
+				.put("geometry", geometry);
+				
+		Extent<DateTime> dt = meta.domainMeta.getTimeExtent();
+		if (dt != null) {
+			Map jsonTime;
+			if (dt.getLow() == dt.getHigh()) {
+				jsonTime = ImmutableMap.of(
+						"type", "Instant",
+						"datetime", dt.getLow().toString()
+						);
+			} else {
+				jsonTime = ImmutableMap.of(
+						"type", "Interval",
+						"start", dt.getLow().toString(),
+						"stop", dt.getHigh().toString()
+						);
+			}
+			j.put("when", jsonTime);
+		}
+		
+		// TODO include vertical extent here?
+		
+		return j;
+	}
+	
+	public static Builder getFeatureCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
 			Details details, SubsetConstraint subset) throws EdalException {
 		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
 				
-		Map j = new HashMap(ImmutableMap.of(
-				"type", "oml:Observation",
-				"id", featureUrl,
-				"title", meta.name
-				));
+		Builder j = ImmutableMap.builder()
+				.put("type", "oml:Observation")
+				.put("id", featureUrl)
+				.put("title", meta.name);
 				
 		if (details.domain || details.range || details.rangeMetadata) {
 
-			Map result = new HashMap();
+			Builder result = ImmutableMap.builder();
 			Supplier<UniformFeature> feature =
 					Suppliers.memoize(() -> new UniformFeature((DiscreteFeature)dataset.get().readFeature(meta.featureId)));
 
@@ -115,14 +185,14 @@ public class FeatureResource extends ServerResource {
 			} catch (UnsupportedDomainException e) {
 				result.put("domain", unsupportedDomain(e.domain, e.info));
 			}
-			j.put("result", result);
+			j.put("result", result.build());
 		}
 		addPhenomenonTime(j, meta.domainMeta);
 		
 		return j;
 	}
 	
-	private Map getFeatureJson() throws EdalException, IOException {
+	private Map getFeatureJson(boolean asGeoJson) throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("featureId"));
 		Details fallback = new Details(true, true, false);
@@ -130,15 +200,34 @@ public class FeatureResource extends ServerResource {
 		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subset"));
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
-		Map featureJson = getFeatureJson(meta.getLazyDataset(), 
-				meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset);
-		featureJson.put("@context", "/static/contexts/Feature.jsonld");
+		Map featureJson;
+		if (asGeoJson) {
+			featureJson = getFeatureGeoJson(meta.getLazyDataset(), 
+					meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset)
+					.put("@context", GeoJSONLDContext)
+					.build();
+		} else {
+			featureJson = getFeatureCovJson(meta.getLazyDataset(), 
+					meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset)
+					.put("@context", "/static/contexts/Feature.jsonld")
+					.build();	
+		}		
 		return featureJson;
+	}
+	
+	@Get("geojson")
+	public Representation geojson() throws IOException, EdalException {
+		Map featureJson = getFeatureJson(true);
+		JacksonRepresentation r = new JacksonRepresentation(featureJson);
+		if (!App.acceptsJSON(getClientInfo())) {
+			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		}
+		return r;
 	}
 	
 	@Get("covjson")
 	public Representation json() throws IOException, EdalException {
-		Map featureJson = getFeatureJson();
+		Map featureJson = getFeatureJson(false);
 		JacksonRepresentation r = new JacksonRepresentation(featureJson);
 		if (!App.acceptsJSON(getClientInfo())) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -148,10 +237,10 @@ public class FeatureResource extends ServerResource {
 	
 	@Get("covjsonb|msgpack")
 	public Representation msgpack() throws IOException, EdalException {
-		return new MessagePackRepresentation(getFeatureJson());
+		return new MessagePackRepresentation(getFeatureJson(false));
 	}
 	
-	private static void addPhenomenonTime(Map featureJson, DomainMetadata meta) {
+	private static void addPhenomenonTime(Builder featureJson, DomainMetadata meta) {
 		// a time range or a single point in time
 		Extent<DateTime> time = meta.getTimeExtent();
 		if (time == null) return;
@@ -225,7 +314,7 @@ public class FeatureResource extends ServerResource {
 	}
 	
 	private static Map getDomainJson(UniformFeature uniFeature, SubsetConstraint subset) {
-		Map domainJson = new HashMap();
+		Builder domainJson = ImmutableMap.builder();
 		
 		// no support for trajectories currently
 		// we support everything which is a subtype of a rectilinear grid (includes profiles)
@@ -237,7 +326,7 @@ public class FeatureResource extends ServerResource {
 		addTimeAxis(uniFeature.t, subset, domainJson);
 		domainJson.put("type", uniFeature.type);
 		
-		return domainJson;
+		return domainJson.build();
 	}
 		
 	private static IntStream getVerticalAxisIndices(VerticalAxis ax, SubsetConstraint subset) {
@@ -321,7 +410,7 @@ public class FeatureResource extends ServerResource {
 	/**
 	 * NOTE: supports rectilinear lon-lat grids only for now
 	 */
-	private static void addHorizontalGrid(RectilinearGrid grid, Constraint subset, Map domainJson) {
+	private static void addHorizontalGrid(RectilinearGrid grid, Constraint subset, Builder domainJson) {
 		List<Double> x = grid.getXAxis().getCoordinateValues();
 		List<Double> y = grid.getYAxis().getCoordinateValues();
 		double[] subsettedX = getXAxisIndices(grid.getXAxis(), subset).mapToDouble(x::get).toArray();
@@ -350,7 +439,7 @@ public class FeatureResource extends ServerResource {
 		}
 	}
 	
-	private static void addVerticalAxis(VerticalAxis z, SubsetConstraint subset, Map domainJson) {
+	private static void addVerticalAxis(VerticalAxis z, SubsetConstraint subset, Builder domainJson) {
 		if (z == null) {
 			return;
 		}
@@ -373,7 +462,7 @@ public class FeatureResource extends ServerResource {
 		
 	}
 		
-	private static void addTimeAxis(TimeAxis t, Constraint subset, Map domainJson) {
+	private static void addTimeAxis(TimeAxis t, Constraint subset, Builder domainJson) {
 		if (t == null) {
 			return;
 		}
