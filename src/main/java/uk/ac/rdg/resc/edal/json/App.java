@@ -1,19 +1,31 @@
 package uk.ac.rdg.resc.edal.json;
 
+import java.util.List;
+
 import org.restlet.Application;
 import org.restlet.Component;
 import org.restlet.Restlet;
 import org.restlet.data.ClientInfo;
+import org.restlet.data.Header;
 import org.restlet.data.MediaType;
 import org.restlet.data.Preference;
 import org.restlet.data.Protocol;
 import org.restlet.resource.Directory;
+import org.restlet.resource.Resource;
 import org.restlet.routing.Router;
 import org.restlet.service.CorsService;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 public class App extends Application {
+	
+    static MediaType JSONLD = new MediaType("application/ld+json");
+    static MediaType CovJSON = new MediaType("application/cov+json");
+    static MediaType CovJSONMsgpack = new MediaType("application/cov+json;encoding=msgpack");
+    static MediaType CovJSONCBOR = new MediaType("application/cov+json;encoding=cbor");
+    static MediaType GeoJSON = new MediaType("application/vnd.geo+json");
+	
 	public static void main(String[] args) throws Exception {
 		Component component = new Component();
 		component.getServers().add(Protocol.HTTP, 8182);
@@ -48,21 +60,16 @@ public class App extends Application {
         // Note that this doesn't influence content negotiation, it is
         // just for serving JSON by default if no matching Accept headers are given.
         getMetadataService().clearExtensions();
-        MediaType jsonLd = new MediaType("application/ld+json");
-        MediaType covjson = new MediaType("application/cov+json");
-        MediaType covjsonMsgpack = new MediaType("application/cov+json;encoding=msgpack");
-        MediaType covjsonCBOR = new MediaType("application/cov+json;encoding=cbor");
-        MediaType geojson = new MediaType("application/vnd.geo+json");
         
         // GeoJSON is the default for resources that support it (features)
         // Otherwise JSON-LD, then CoverageJSON.
         // Binary CoverageJSON will only be delivered if explicitly requested.
-        getMetadataService().addExtension("geojson", geojson);
-        getMetadataService().addExtension("jsonld", jsonLd);
-        getMetadataService().addExtension("covjson", covjson);
-        getMetadataService().addExtension("covjsonb", covjsonMsgpack); // TODO switch to CBOR later
-        getMetadataService().addExtension("msgpack", covjsonMsgpack);
-        getMetadataService().addExtension("cbor", covjsonCBOR);        
+        getMetadataService().addExtension("geojson", GeoJSON);
+        getMetadataService().addExtension("jsonld", JSONLD);
+        getMetadataService().addExtension("covjson", CovJSON);
+        getMetadataService().addExtension("covjsonb", CovJSONMsgpack); // TODO switch to CBOR later
+        getMetadataService().addExtension("msgpack", CovJSONMsgpack);
+        getMetadataService().addExtension("cbor", CovJSONCBOR);        
 		
 		Router router = new Router();
 		router.attach("/datasets/{datasetId}/features/{featureId}/range/{parameterId}",
@@ -79,10 +86,21 @@ public class App extends Application {
 		return router;
 	}
 	
-	public static boolean acceptsJSON(ClientInfo info) {
+	static List<MediaType> jsonTypes = ImmutableList.of(
+			CovJSON, JSONLD, GeoJSON, MediaType.APPLICATION_JSON
+			);
+			
+	
+	public static boolean acceptsJSON(Resource resource) {
+		ClientInfo info = resource.getClientInfo();
+		Header accept = resource.getRequest().getHeaders().getFirst("Accept");
 		for (Preference<MediaType> pref : info.getAcceptedMediaTypes()) {
-			if (pref.getMetadata().equals(MediaType.APPLICATION_JSON)) {
-				return true;
+			if (jsonTypes.contains(pref.getMetadata())) {
+				// when requested by extension, then Restlet modifies the accepted media types
+				// but we want to know if the client actually sent the header or not
+				if (accept.getValue().contains(pref.getMetadata().getName())) {
+					return true;
+				}				
 			}
 		}
 		return false;

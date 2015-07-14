@@ -20,7 +20,7 @@ public class MessagePackRepresentation extends StreamRepresentation {
 		
     public MessagePackRepresentation(Object o) {
     	super(APPLICATION_MSGPACK);
-        this.o = o;        
+        this.o = o;
     }
 
     @Override

@@ -42,7 +42,7 @@ public class DatasetResource extends ServerResource {
 		List jsonParams = new LinkedList();
 		for (String paramId : dataset.getVariableIds()) {
 			Parameter param = dataset.getVariableMetadata(paramId).getParameter();
-			Map m = ParamResource.getParamJson(dataset, param, getRootRef().toString());
+			Map m = ParamResource.getParamJson(dataset, param, getRootRef().toString()).build();
 			jsonParams.add(m);
 		}
 		
@@ -86,7 +86,8 @@ public class DatasetResource extends ServerResource {
 		Map j = b.build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
-		if (!App.acceptsJSON(getClientInfo())) {
+		r.setMediaType(App.JSONLD);
+		if (!App.acceptsJSON(this)) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;

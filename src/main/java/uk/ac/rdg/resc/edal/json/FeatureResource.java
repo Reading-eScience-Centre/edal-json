@@ -94,22 +94,19 @@ public class FeatureResource extends ServerResource {
 		// TODO possibly have to convert to WGS84
 		BoundingBox bb = meta.domainMeta.getBoundingBox();
 		
-		List<String> paramTitles = meta.rangeMeta.getParameters().stream().map(p -> p.getTitle()).collect(Collectors.toList());
-		Map props = ImmutableMap.of(
-				"title", meta.name,
-				"parameters", paramTitles
-				);
-		
 		Map geometry;
 		// Profile -> Point
 		// Grid -> Bbox Polygon (could have actual outline, but for now just bbox)
 		// Trajectory -> LineString (not supported in EDAL yet)
+		String type;
 		if (meta.type.isAssignableFrom(ProfileFeature.class)) {
+			type = "Profile";
 			geometry = ImmutableMap.of(
 					"type", "Point",
 					"coordinates", ImmutableList.of(bb.getMinX(), bb.getMinY())
 					);
 		} else if (meta.type.isAssignableFrom(GridFeature.class)) {
+			type = "Grid";
 			geometry = ImmutableMap.of(
 					"type", "Polygon",
 					"coordinates", ImmutableList.of(ImmutableList.of(
@@ -126,11 +123,34 @@ public class FeatureResource extends ServerResource {
 			throw new IllegalStateException(meta.type.getName() + " not supported");
 		}
 		
+		List<String> paramTitles = meta.rangeMeta.getParameters().stream().map(p -> p.getTitle()).collect(Collectors.toList());
+
+		Builder props = ImmutableMap.builder()
+				.put("type", type) // TODO can we use type for that?
+				.put("title", meta.name)
+				.put("parameters", paramTitles);
+		/*
+		 * Vertical extent is included in properties in a lax way.
+		 * It is not on the same level as "bbox" and "when" because
+		 * the bbox already includes altitude if it is in meters above WGS84.
+		 * We don't want to duplicate or extend this concept and claim some
+		 * general format here. Therefore the extent lives in properties
+		 * as informal additional information.
+		 * TODO If the vertical CRS is height above WGS84 then the bbox
+		 *      should be used instead. 
+		 */
+		Extent<Double> v = meta.domainMeta.getVerticalExtent();
+		if (v != null) {
+			// TODO ambiguous if increases downwards (negate value?)
+			props.put("verticalExtent", ImmutableList.of(v.getLow(), v.getHigh()))
+			     .put("verticalUnits", meta.domainMeta.getVerticalCrs().getUnits());
+		}
+		
 		Builder j = ImmutableMap.builder()
 				.put("type", "Feature")
 				.put("id", featureUrl)
 				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()))
-				.put("properties", props)
+				.put("properties", props.build())
 				.put("geometry", geometry);
 				
 		Extent<DateTime> dt = meta.domainMeta.getTimeExtent();
@@ -150,8 +170,6 @@ public class FeatureResource extends ServerResource {
 			}
 			j.put("when", jsonTime);
 		}
-		
-		// TODO include vertical extent here?
 		
 		return j;
 	}
@@ -219,7 +237,8 @@ public class FeatureResource extends ServerResource {
 	public Representation geojson() throws IOException, EdalException {
 		Map featureJson = getFeatureJson(true);
 		JacksonRepresentation r = new JacksonRepresentation(featureJson);
-		if (!App.acceptsJSON(getClientInfo())) {
+		r.setMediaType(App.GeoJSON);
+		if (!App.acceptsJSON(this)) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;
@@ -229,7 +248,8 @@ public class FeatureResource extends ServerResource {
 	public Representation json() throws IOException, EdalException {
 		Map featureJson = getFeatureJson(false);
 		JacksonRepresentation r = new JacksonRepresentation(featureJson);
-		if (!App.acceptsJSON(getClientInfo())) {
+		r.setMediaType(App.CovJSON);
+		if (!App.acceptsJSON(this)) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;
@@ -237,7 +257,9 @@ public class FeatureResource extends ServerResource {
 	
 	@Get("covjsonb|msgpack")
 	public Representation msgpack() throws IOException, EdalException {
-		return new MessagePackRepresentation(getFeatureJson(false));
+		Representation r = new MessagePackRepresentation(getFeatureJson(false));
+		r.setMediaType(App.CovJSONMsgpack);
+		return r;
 	}
 	
 	private static void addPhenomenonTime(Builder featureJson, DomainMetadata meta) {

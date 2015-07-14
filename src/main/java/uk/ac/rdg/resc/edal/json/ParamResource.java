@@ -2,6 +2,7 @@ package uk.ac.rdg.resc.edal.json;
 
 import java.util.Map;
 
+import org.restlet.data.Disposition;
 import org.restlet.data.Reference;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
@@ -14,6 +15,7 @@ import uk.ac.rdg.resc.edal.metadata.Parameter;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class ParamResource extends ServerResource {
@@ -22,23 +24,19 @@ public class ParamResource extends ServerResource {
 		return rootUri + "/datasets/" + datasetId + "/params/" + variableId;
 	}
 	
-	public static Map getParamJson(Dataset dataset, Parameter param, String rootUri) {
+	public static Builder getParamJson(Dataset dataset, Parameter param, String rootUri) {
 		String paramUrl = getParamUrl(dataset.getId(), param.getVariableId(), rootUri);
-		Map j = ImmutableMap.builder()
+		Builder j = ImmutableMap.builder()
 				.put("id", paramUrl)
 				.put("type", "mel:Parameter")
 				.put("localId", param.getVariableId())
 				.put("title", param.getTitle())
 				.put("description", param.getDescription())
-				.put("uom", param.getUnits())
-				.build();
+				.put("uom", param.getUnits());
 			
 		if (param.getStandardName() != null) {
 			// TODO translate into URI
-			j = ImmutableMap.builder()
-					.putAll(j)
-				    .put("observedProperty", param.getStandardName())
-				    .build();
+			j.put("observedProperty", param.getStandardName());
 		}
 		return j;
 	}
@@ -50,11 +48,13 @@ public class ParamResource extends ServerResource {
 		Dataset dataset = Utils.getDataset(datasetId);
 		Parameter param = dataset.getVariableMetadata(paramId).getParameter();
 		
-		Map j = getParamJson(dataset, param, getRootRef().toString());
-		j.put("@context", "/static/contexts/Dataset.jsonld");
+		Map j = getParamJson(dataset, param, getRootRef().toString())
+					.put("@context", "/static/contexts/Dataset.jsonld")
+					.build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
-		if (!App.acceptsJSON(getClientInfo())) {
+		r.setMediaType(App.JSONLD);
+		if (!App.acceptsJSON(this)) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;

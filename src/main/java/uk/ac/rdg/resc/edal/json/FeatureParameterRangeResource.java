@@ -59,9 +59,9 @@ public class FeatureParameterRangeResource extends ServerResource {
 		
 		Map j = rangeData();
 		
-		
 		JacksonRepresentation r = new JacksonRepresentation(j);
-		if (!App.acceptsJSON(getClientInfo())) {
+		r.setMediaType(App.CovJSON);
+		if (!App.acceptsJSON(this)) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		
@@ -78,6 +78,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		System.out.println("build range data: " + String.valueOf(System.currentTimeMillis()-t0));
 		
 		Representation r = new MessagePackRepresentation(j);
+		r.setMediaType(App.CovJSONMsgpack);
 		
 		// TODO think about caching strategy
 		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());

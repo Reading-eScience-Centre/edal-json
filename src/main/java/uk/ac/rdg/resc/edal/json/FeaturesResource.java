@@ -139,9 +139,10 @@ public class FeaturesResource extends ServerResource {
 	@Get("covjson")
 	public Representation covjson() throws IOException, EdalException {
 		Map j = getFeaturesJson(false).build();
-		
+
 		JacksonRepresentation r = new JacksonRepresentation(j);
-		if (!App.acceptsJSON(getClientInfo())) {
+		r.setMediaType(App.CovJSON);
+		if (!App.acceptsJSON(this)) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;
@@ -149,7 +150,9 @@ public class FeaturesResource extends ServerResource {
 	
 	@Get("covjsonb|msgpack")
 	public Representation msgpack() throws IOException, EdalException {
-		return new MessagePackRepresentation(getFeaturesJson(false).build());
+		Representation r = new MessagePackRepresentation(getFeaturesJson(false).build());
+		r.setMediaType(App.CovJSONMsgpack);
+		return r;
 	}
 
 	@Get("geojson")
@@ -158,7 +161,8 @@ public class FeaturesResource extends ServerResource {
 				.put("@context", FeatureResource.GeoJSONLDContext).build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
-		if (!App.acceptsJSON(getClientInfo())) {
+		r.setMediaType(App.GeoJSON);
+		if (!App.acceptsJSON(this)) {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;
