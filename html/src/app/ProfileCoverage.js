@@ -2,6 +2,12 @@ import L from 'leaflet'
 import * as utils from 'app/utils'
 import * as controls from 'app/controls'
 
+/**
+ * A layer that represents all profiles of a dataset and is bound
+ * to a single parameter of the profiles.
+ * 
+ * Only a single global time/vertical is loaded at any point.
+ */
 export default class ProfileCoverageLayer {
 	
 	constructor(dataset, param) {
@@ -231,12 +237,12 @@ export default class ProfileCoverageLayer {
 	  if (this._layer) throw new Error('layer is already added')
 	  if (!this.data) throw new Error('no data loaded')
 	  
-	  let layer = this._createCoverageLayer(this.data.features, this.param.id)
+	  let layer = this._createCoverageLayer(this.data.features)
 	  this._layer = layer
 	  this._map.addLayer(layer)
 	}
 	
-	_createCoverageLayer (features, paramId) {
+	_createCoverageLayer (features) {
 	  let palette = this._map.palette
 	  var paletteRed = palette.allowedValues.red
 	  var paletteGreen = palette.allowedValues.green
@@ -255,7 +261,7 @@ export default class ProfileCoverageLayer {
 	    
 	    let zIdx = 0
 	    let z = coverage.domain.vertical[zIdx]
-	    let val = coverage.range[paramId].values[zIdx]
+	    let val = coverage.range[this.param.id].values[zIdx]
 	    
 	    if (val >= 99999.0 || val == 0) {
 	      // TODO temporary workaround until such values are masked server-side
@@ -281,10 +287,11 @@ export default class ProfileCoverageLayer {
 	                      Math.round(g*strokeBrightness) + ',' + 
 	                      Math.round(b*strokeBrightness) + ')'
 	    })
-	    marker.bindPopup(feature.title + '<br />' +
-	                     time + '<br />' +
-	                     z + ' ' + uomZ + '<br />' +
-	                     'Value:' + val + ' ' + uom)
+	    marker.bindPopup('<strong>' + feature.title + '</strong><br />' +
+	                     'Time: ' + time.slice(0, 10) + ' ' + time.slice(11, 19) + ' UTC<br />' +
+	                     'Depth: ' + z.toFixed(2) + ' ' + uomZ + '<br /><br />' +
+	                     'Parameter: ' + this.param.title + '<br />' + 
+	                     'Value: ' + val.toFixed(2) + ' ' + uom)
 	    markers.push(marker)
 	  }
 	  

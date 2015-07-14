@@ -157,14 +157,18 @@ function addDataset (datasetUrl) {
       // We load all Grid features (without their range) and construct the layers.
       // TODO this loads the domains as well which may be too much in this first step
       let gridFeaturesUrl = dataset.features + '?filter=type=Grid&details=domain,rangeMetadata'
-      $.getJSON(gridFeaturesUrl, features => {
-        for (let feature of features.features) {
-          initFeature(feature)
-          for (let paramId of Object.keys(feature.result.range)) {
-            addGridFeatureParam(feature.result, paramId)
-          }
-        }
-      })
+      $.ajax(gridFeaturesUrl, {
+    	  dataType: 'json',
+    	  accepts: { json: 'application/cov+json' },
+    	  success: features => {
+	        for (let feature of features.features) {
+	          initFeature(feature)
+	          for (let paramId of Object.keys(feature.result.range)) {
+	            addGridFeatureParam(feature.result, paramId)
+	          }
+	        }
+	      }
+    	 })
     }
   })
 }
