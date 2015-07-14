@@ -20,7 +20,7 @@ jspm install
 ```
 
 ## Serve It
-(i.e. starts browser-sync and serves the index.html in src directory to localhost:3000):
+(i.e. starts http-server and serves the index.html in src directory to localhost:8080):
 
 ```
 npm run serveit
