@@ -2,7 +2,7 @@
 
 "use strict"
 
-for (let TA of [Int8Array,Uint8Array,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array,Float64Array]) {
+for (var TA of [Int8Array,Uint8Array,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array,Float64Array]) {
   if (!TA.prototype.slice) {
     TA.prototype.slice = function (start, end) {
       var len = this.length
