@@ -13,17 +13,17 @@ import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
+
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.util.GISUtils;
-
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 public class DatasetResource extends ServerResource {
 	
@@ -57,13 +57,35 @@ public class DatasetResource extends ServerResource {
 		
 		Builder b = ImmutableMap.builder()
 				.put("id", datasetUrl)
-				.put("type", "dcat:Dataset")
+				.put("type", "Dataset")
 				.put("title", "N/A (datasets in EDAL don't have a title, only at WMS level)")
 				.put("license", "http://creativecommons.org/licenses/by/3.0/");
 		
+		// see GeoDCAT-AP for spatial and temporal spec
+		b.put("spatial", ImmutableMap.of(
+				"type", "Location",
+				"geometry", "POLYGON((" + 
+						bb.getMinX() + " " + bb.getMinY() + "," +
+						bb.getMaxX() + " " + bb.getMinY() + "," +
+						bb.getMaxX() + " " + bb.getMaxY() + "," +
+						bb.getMinX() + " " + bb.getMaxY() + "," +
+						bb.getMinX() + " " + bb.getMinY() + "))"
+				));
+		
+		if (domainMeta.getTimeExtent() != null) {
+			Extent<DateTime> ex = domainMeta.getTimeExtent();
+			// TODO CRS if non-default
+			//  -> does EDAL currently support other calendars etc.?
+			
+			// GeoDCAT
+			b.put("temporal", ImmutableMap.of(
+					"type", "Interval",
+					"start", ex.getLow().toString(),
+					"stop", ex.getHigh().toString()
+					));
+		}
+		
 		if (!skipDetails) {
-				b.put("parameters", jsonParams);
-
 				b.put("distributions", ImmutableList.of(ImmutableMap.of(
 							"url", datasetUrl + "/features.covjson",
 							"mediaType", "application/cov+json"
@@ -77,21 +99,16 @@ public class DatasetResource extends ServerResource {
 							"mediaType", "application/vnd.geo+json"
 							)));
 		}
+		
+		// non-standard metadata
+		
 		b.put("features", datasetUrl + "/features")
 		 .put("featureCount", count)
 		 .put("featureTypes", jsonFeatureTypes);
 		
-		// GeoDCAT
-		b.put("spatial", ImmutableMap.of(
-				"type", "Location",
-				"geometry", "POLYGON((" + 
-						bb.getMinX() + " " + bb.getMinY() + "," +
-						bb.getMaxX() + " " + bb.getMinY() + "," +
-						bb.getMaxX() + " " + bb.getMaxY() + "," +
-						bb.getMinX() + " " + bb.getMaxY() + "," +
-						bb.getMinX() + " " + bb.getMinY() + "))"
-				));
-		
+		if (!skipDetails) {
+			b.put("parameters", jsonParams);
+		}
 		/*
 		 * In addition to the GeoDCAT bounding box we include a direct array-based
 		 * bounding box as well for convenience of web clients.
@@ -110,18 +127,6 @@ public class DatasetResource extends ServerResource {
 			b.put("verticalCrs", "TODO vertical/crs/uri/");
 		}
 		
-		if (domainMeta.getTimeExtent() != null) {
-			Extent<DateTime> ex = domainMeta.getTimeExtent();
-			// TODO CRS if non-default
-			//  -> does EDAL currently support other calendars etc.?
-			
-			// GeoDCAT
-			b.put("temporal", ImmutableMap.of(
-					"type", "Interval",
-					"start", ex.getLow().toString(),
-					"stop", ex.getHigh().toString()
-					));
-		}	
 		return b;
 	}
 	

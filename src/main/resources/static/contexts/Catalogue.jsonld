@@ -22,6 +22,7 @@
     "Interval": "dct:PeriodOfTime",
     "license": { "@id": "dct:license", "@type": "@id" },
     "Catalogue": "dcat:Catalog",
+    "Dataset": "dcat:Dataset",
     "datasets": "dcat:dataset",
     "publisher": "dct:publisher",
     "Organisation": "foaf:Organisation",
