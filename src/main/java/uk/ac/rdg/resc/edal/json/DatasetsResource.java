@@ -80,9 +80,17 @@ public class DatasetsResource extends ServerResource {
 		
 		
 		Map j = ImmutableMap.builder()
-				.put("@context", "/static/contexts/Dataset.jsonld")
+				.put("@context", "/static/contexts/Catalogue.jsonld")
+				.put("type", "Catalogue")
 				.put("id", datasetsUrl)
-				.put("description", "this is my catalogue")
+				.put("title", "Catalogue 1")
+				.put("description", "This is my first catalogue.")
+				.put("publisher", ImmutableMap.of(
+						"type", "Organisation",
+						"name", "University of Reading"
+						))
+				.put("license", "http://creativecommons.org/licenses/by/3.0/")
+				.put("homepage", "http://rdg.ac.uk/demo/datasets")
 				.put("datasets", datasetsJson)
 				.build();		
 		

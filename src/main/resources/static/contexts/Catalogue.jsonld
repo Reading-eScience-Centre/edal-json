@@ -6,6 +6,7 @@
     "dct": "http://purl.org/dc/terms/",
     "locn": "http://www.w3.org/ns/locn#",
     "schema": "http://schema.org/",
+    "foaf":	"http://xmlns.com/foaf/0.1/",
     "oml": "http://def.seegrid.csiro.au/ontology/om/om-lite#",
     "mel": "http://melodiesproject.eu/ont/geo#",
     "gsp": "http://www.opengis.net/ont/geosparql#",
@@ -20,13 +21,11 @@
     "temporal": { "@id": "dct:temporal" },
     "Interval": "dct:PeriodOfTime",
     "license": { "@id": "dct:license", "@type": "@id" },
-    "distributions": { "@id": "dcat:distribution" },
-    "accessURL": { "@id": "dcat:accessURL", "@type": "@id" },
-    "downloadURL": { "@id": "dcat:downloadURL", "@type": "@id" },
-    "mediaType": { "@id": "dcat:mediaType" },
-    "distributions": "dcat:distribution",
-    "url: { "@id": "dcat:accessURL", "@type": "@id" },
-    "mediaType": "dcat:mediaType",
-    "parameters":  { "@id": "mel:hasParameter" }
+    "Catalogue": "dcat:Catalog",
+    "datasets": "dcat:dataset",
+    "publisher": "dct:publisher",
+    "Organisation": "foaf:Organisation",
+    "name": { "@id": "foaf:name" },
+    "homepage": { "@id": "foaf:homepage", "@type": "@id" }    
   }
 }
