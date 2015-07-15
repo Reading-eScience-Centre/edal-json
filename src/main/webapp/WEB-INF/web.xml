@@ -10,14 +10,14 @@
 		<servlet-name>MyRestlet</servlet-name>
 		<servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
 		<init-param>
-			<param-name>org.restlet.application</param-name>
-			<param-value>uk.ac.rdg.resc.edal.json.App</param-value>
+			<param-name>org.restlet.component</param-name>
+			<param-value>uk.ac.rdg.resc.edal.json.RestletComponent</param-value>
 		</init-param>
 	</servlet>
 
 	<servlet-mapping>
 		<servlet-name>MyRestlet</servlet-name>
-		<url-pattern>/api/*</url-pattern>
+		<url-pattern>/*</url-pattern>
 	</servlet-mapping>
 
 </web-app>

@@ -27,28 +27,8 @@ public class App extends Application {
     static MediaType GeoJSON = new MediaType("application/vnd.geo+json");
 	
 	public static void main(String[] args) throws Exception {
-		Component component = new Component();
+		Component component = new RestletComponent();
 		component.getServers().add(Protocol.HTTP, 8182);
-		
-		CorsService corsService = new CorsService();
-		corsService.setAllowedOrigins(ImmutableSet.of("*"));
-		corsService.setAllowedCredentials(true);
-		component.getServices().add(corsService);
-		
-		// our REST API
-		App app = new App();
-		app.getEncoderService().setEnabled(true); // gzip
-		component.getDefaultHost().attach("/api", app);
-		
-		// static files
-		component.getClients().add(Protocol.CLAP);
-		component.getDefaultHost().attach("/static", new Application() {  
-            @Override  
-            public Restlet createInboundRoot() {  
-                return new Directory(getContext(), "clap://class/static/");
-            }  
-        });
-		
 		component.start();
 	}
 
