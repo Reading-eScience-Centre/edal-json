@@ -23,12 +23,18 @@ public final class Utils {
 	// TODO probably not the right place
 	private static Map<String,Dataset> datasetCache = new HashMap<>();
 	
+	/**
+	 * Folder within classpath resources containing dataset files.
+	 * This is temporary to just make it work.
+	 */
+	public static String DATASETS_FOLDER = "/datasets/";
+	
 	public static Dataset getDataset(String datasetId) {
 		return datasetCache.computeIfAbsent(datasetId, Utils::doGetDataset);
 	}
 	
 	private static Dataset doGetDataset(String datasetId) {
-		URL resource = Utils.class.getResource("/" + datasetId);
+		URL resource = Utils.class.getResource(DATASETS_FOLDER + datasetId);
 		Dataset dataset;
 		DatasetFactory datasetFactory = new CdmGridDatasetFactory();
 		// TODO this should happen automatically in EDAL
