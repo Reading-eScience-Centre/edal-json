@@ -1,6 +1,7 @@
 package uk.ac.rdg.resc.edal.json;
 
 import java.util.List;
+import java.util.Map;
 
 import org.restlet.Application;
 import org.restlet.Component;
@@ -10,11 +11,14 @@ import org.restlet.data.Header;
 import org.restlet.data.MediaType;
 import org.restlet.data.Preference;
 import org.restlet.data.Protocol;
+import org.restlet.ext.jackson.JacksonRepresentation;
+import org.restlet.representation.Representation;
 import org.restlet.resource.Directory;
 import org.restlet.resource.Resource;
 import org.restlet.routing.Router;
 import org.restlet.service.CorsService;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -83,5 +87,24 @@ public class App extends Application {
 			}
 		}
 		return false;
+	}
+	
+	public static Representation getCovJsonRepresentation(Resource resource, Map<String,?> json) {
+		MediaType type = resource.getClientInfo().getAcceptedMediaTypes().get(0).getMetadata();
+		
+		if (type.equals(App.CovJSON)) {
+			JacksonRepresentation<Map<String,?>> r = new JacksonRepresentation<>(json);
+			r.setMediaType(App.CovJSON);
+			if (!App.acceptsJSON(resource)) {
+				r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+			}
+			return r;
+		} else if (type.equals(App.CovJSONMsgpack)) {
+			Representation r = new MessagePackRepresentation(json);
+			r.setMediaType(App.CovJSONMsgpack);
+			return r;
+		} else {
+			throw new IllegalArgumentException(type + " not supported yet");
+		}
 	}
 }

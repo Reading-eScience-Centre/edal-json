@@ -135,26 +135,12 @@ public class FeaturesResource extends ServerResource {
 		return j;
 	}
 	
-	 
 	@Get("covjson")
 	public Representation covjson() throws IOException, EdalException {
 		Map j = getFeaturesJson(false).build();
-
-		JacksonRepresentation r = new JacksonRepresentation(j);
-		r.setMediaType(App.CovJSON);
-		if (!App.acceptsJSON(this)) {
-			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-		}
-		return r;
+		return App.getCovJsonRepresentation(this, j);
 	}
 	
-	@Get("covjsonb|msgpack")
-	public Representation msgpack() throws IOException, EdalException {
-		Representation r = new MessagePackRepresentation(getFeaturesJson(false).build());
-		r.setMediaType(App.CovJSONMsgpack);
-		return r;
-	}
-
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
 		Map j = getFeaturesJson(true)

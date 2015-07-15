@@ -13,11 +13,13 @@ import java.util.stream.Stream;
 import org.joda.time.DateTime;
 import org.opengis.referencing.cs.CoordinateSystem;
 import org.opengis.referencing.cs.RangeMeaning;
+import org.restlet.data.MediaType;
 import org.restlet.data.Reference;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
+import org.restlet.util.Series;
 
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Domain;
@@ -244,22 +246,14 @@ public class FeatureResource extends ServerResource {
 		return r;
 	}
 	
+	/**
+	 * Note: restlet routing doesn't look at parameters, hence all
+	 * application/cov+json;* types lead to this method.	 * 
+	 */
 	@Get("covjson")
-	public Representation json() throws IOException, EdalException {
+	public Representation covjson() throws IOException, EdalException {
 		Map featureJson = getFeatureJson(false);
-		JacksonRepresentation r = new JacksonRepresentation(featureJson);
-		r.setMediaType(App.CovJSON);
-		if (!App.acceptsJSON(this)) {
-			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-		}
-		return r;
-	}
-	
-	@Get("covjsonb|msgpack")
-	public Representation msgpack() throws IOException, EdalException {
-		Representation r = new MessagePackRepresentation(getFeatureJson(false));
-		r.setMediaType(App.CovJSONMsgpack);
-		return r;
+		return App.getCovJsonRepresentation(this, featureJson);
 	}
 	
 	private static void addPhenomenonTime(Builder featureJson, DomainMetadata meta) {
