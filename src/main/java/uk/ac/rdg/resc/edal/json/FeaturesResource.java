@@ -128,7 +128,7 @@ public class FeaturesResource extends ServerResource {
 		} else {
 			j.put("@context", "/static/contexts/FeatureCollection.jsonld")
 			 .put("id", datasetUrl + "/features")
-			 .put("type", "oml:ObservationCollectionTODO")
+			 .put("type", "FeatureCollection")
 			 .put("features", jsonFeatures);
 		}
 		

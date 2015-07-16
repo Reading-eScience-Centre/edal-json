@@ -181,7 +181,7 @@ public class FeatureResource extends ServerResource {
 		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
 				
 		Builder j = ImmutableMap.builder()
-				.put("type", "oml:Observation")
+				.put("type", "Feature")
 				.put("id", featureUrl)
 				.put("title", meta.name);
 				

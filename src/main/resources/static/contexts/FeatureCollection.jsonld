@@ -7,6 +7,8 @@
     "oml": "http://def.seegrid.csiro.au/ontology/om/om-lite#",
     "mel": "http://melodiesproject.eu/ont/geo#",
     
+    "FeatureCollection": "oml:ObservationCollectionTODO",
+    "Feature": "oml:Observation",
     "title": "dct:title" ,
     "phenomenonTime": "oml:phenomenonTime",
     "Instant": "w3time:Instant",
