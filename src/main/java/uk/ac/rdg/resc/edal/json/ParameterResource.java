@@ -28,16 +28,25 @@ public class ParameterResource extends ServerResource {
 		String paramUrl = getParamUrl(dataset.getId(), param.getVariableId(), rootUri);
 		Builder j = ImmutableMap.builder()
 				.put("id", paramUrl)
-				.put("type", "mel:Parameter")
+				.put("type", "Parameter")
 				.put("localId", param.getVariableId())
-				.put("title", param.getTitle())
 				.put("description", param.getDescription())
-				.put("uom", param.getUnits());
+				// TODO translate EDAL units to qudt terms
+				.put("unit", ImmutableMap.of(
+						"id", "TODOhttp://qudt.org/vocab/unit#DegreeCelsius",
+						// TODO read unit label from qudt ontology
+						"label", param.getUnits()
+						));
 			
+		String observedPropertyUri = "";
 		if (param.getStandardName() != null) {
 			// TODO translate into URI
-			j.put("observedProperty", param.getStandardName());
-		}
+			observedPropertyUri = "http://foo/" + param.getStandardName();
+		}	
+		j.put("observedProperty", ImmutableMap.of(
+				"id", observedPropertyUri,
+				"label", param.getTitle()
+				));
 		return j;
 	}
 

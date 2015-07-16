@@ -2,14 +2,17 @@
   "@context": {
     "type": "@type",
     "id": "@id",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "dcat": "http://www.w3.org/ns/dcat#",
     "dct": "http://purl.org/dc/terms/",
     "locn": "http://www.w3.org/ns/locn#",
     "gsp": "http://www.opengis.net/ont/geosparql#",
     "schema": "http://schema.org/",
+    "qudt": "http://qudt.org/1.1/schema/qudt#",
     "mel": "http://melodiesproject.eu/ont/geo#",    
     
     "Dataset": "dcat:Dataset",
+    "label": "rdfs:label",
     "title": "dct:title",
     "description": "dct:description",
     "issued": { "@id": "dct:issued", "@type": "http://www.w3.org/2001/XMLSchema#dateTime" },
@@ -25,6 +28,7 @@
     "Interval": "dct:PeriodOfTime",
     "start": { "@id": "schema:startDate", "@type": "xsd:date" },
     "end": { "@id": "schema:endDate", "@type": "xsd:date" },
+    "unit": "qudt:unit",
     
     "parameters":  "mel:parameter",
     "Parameter": "mel:Parameter"

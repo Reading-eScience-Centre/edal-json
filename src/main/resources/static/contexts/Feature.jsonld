@@ -2,12 +2,15 @@
   "@context": {
     "type": "@type",
     "id": "@id",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "dct": "http://purl.org/dc/terms/",
     "w3time": "http://www.w3.org/2006/time#",
     "oml": "http://def.seegrid.csiro.au/ontology/om/om-lite#",
+    "qudt": "http://qudt.org/1.1/schema/qudt#",
     "mel": "http://melodiesproject.eu/ont/geo#",
 
 	"Feature": "oml:Observation",
+	"label": "rdfs:label",
     "title": "dct:title" ,
     "phenomenonTime": "oml:phenomenonTime",
     "Instant": "w3time:Instant",
@@ -18,6 +21,7 @@
     "observedProperty": { "@id": "oml:observedProperty", "@type": "@id" },
     "featureOfInterest": "oml:featureOfInterest",
     "result": "oml:result",
+    "unit": "qudt:unit"
     
     "RegularGrid": "mel:RegularGrid",
     "Parameter": "mel:Parameter",
