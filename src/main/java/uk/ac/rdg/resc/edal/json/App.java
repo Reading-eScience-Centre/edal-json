@@ -45,12 +45,11 @@ public class App extends Application {
         // just for serving JSON by default if no matching Accept headers are given.
         getMetadataService().clearExtensions();
         
-        // GeoJSON is the default for resources that support it (features)
-        // Otherwise JSON-LD, then CoverageJSON.
-        // Binary CoverageJSON will only be delivered if explicitly requested.
-        getMetadataService().addExtension("geojson", GeoJSON);
+        // CovJSON/JSON-LD is the default.
+        // GeoJSON and binary CoverageJSON will only be delivered if explicitly requested.
         getMetadataService().addExtension("jsonld", JSONLD);
         getMetadataService().addExtension("covjson", CovJSON);
+        getMetadataService().addExtension("geojson", GeoJSON);
         getMetadataService().addExtension("covjsonb", CovJSONMsgpack); // TODO switch to CBOR later
         getMetadataService().addExtension("msgpack", CovJSONMsgpack);
         getMetadataService().addExtension("cbor", CovJSONCBOR);        
