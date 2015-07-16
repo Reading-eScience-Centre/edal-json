@@ -1,0 +1,24 @@
+{
+  "main": "jQRangeSlider",
+  "shim": {
+    "jQRangeSlider": {
+      "deps": [
+        "jquery",
+        "jquery-ui",
+        "./css/iThing.css!",
+		"./jQRangeSliderMouseTouch",
+		"./jQRangeSliderDraggable",
+		"./jQRangeSliderHandle",
+		"./jQRangeSliderBar",
+		"./jQRangeSliderLabel",
+		"./jQDateRangeSlider",
+    	"./jQDateRangeSliderHandle"
+      ]
+    }
+  },
+  "dependencies": {
+    "jquery": "github:components/jquery",
+    "jquery-ui": "github:components/jqueryui",
+    "css": "github:systemjs/plugin-css"
+  }
+}
