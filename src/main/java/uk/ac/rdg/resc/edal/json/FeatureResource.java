@@ -268,11 +268,11 @@ public class FeatureResource extends ServerResource {
 					)
 			: ImmutableMap.of(
 					"type", "Interval",
-					"hasBeginning", ImmutableMap.of(
+					"start", ImmutableMap.of(
 							"type", "Instant",
 							"dateTime", time.getLow().toString()
 							),
-					"hasEnd", ImmutableMap.of(
+					"end", ImmutableMap.of(
 							"type", "Instant",
 							"dateTime", time.getHigh().toString()
 							)

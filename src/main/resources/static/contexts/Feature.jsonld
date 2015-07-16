@@ -5,23 +5,21 @@
     "dct": "http://purl.org/dc/terms/",
     "w3time": "http://www.w3.org/2006/time#",
     "oml": "http://def.seegrid.csiro.au/ontology/om/om-lite#",
-    "saml": "http://def.seegrid.csiro.au/ontology/om/sam-lite#",
     "mel": "http://melodiesproject.eu/ont/geo#",
-    "RegularGrid": "mel:RegularGrid",
-    "ParameterCollection": "mel:ParameterCollection",
-    "Parameter": "mel:Parameter",
+
     "title": "dct:title" ,
     "phenomenonTime": "oml:phenomenonTime",
-    "Interval": "w3time:ProperInterval",
     "Instant": "w3time:Instant",
     "dateTime": { "@id": "w3time:inXSDDateTime", "@type": "xsd:dateTime" },
+    "Interval": "w3time:ProperInterval",
+    "start": "w3time:hasBeginning",
+    "end": "w3time:hasEnd",
     "observedProperty": { "@id": "oml:observedProperty", "@type": "@id" },
     "featureOfInterest": "oml:featureOfInterest",
     "result": "oml:result",
-    "crs": { "@id": "mel:crs", "@type": "@id" },
-    "bbox": { "@id": "mel:bbox", "@container": "@list" },
-    "delta": { "@id": "mel:delta", "@container": "@list" },
-    "params": "mel:parameter",
-    "values": { "@id": "mel:values", "@container": "@list" }
+    
+    "RegularGrid": "mel:RegularGrid",
+    "Parameter": "mel:Parameter",
+    "parameters": "mel:parameter"
   }
 }

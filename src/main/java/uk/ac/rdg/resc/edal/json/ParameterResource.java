@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
-public class ParamResource extends ServerResource {
+public class ParameterResource extends ServerResource {
 	
 	public static String getParamUrl(String datasetId, String variableId, String rootUri) {
 		return rootUri + "/datasets/" + datasetId + "/params/" + variableId;
