@@ -117,7 +117,7 @@ function addGridFeatureParam (result, paramId) {
 function addProfileFeatures(dataset, paramId) {
   let param = dataset.parameters.find(p => p.id === paramId)
   let layer = new ProfileCoverageLayer(dataset, param)
-  lc.addOverlay(layer, param.title)
+  lc.addOverlay(layer, param.observedProperty.label)
 }
 
 /**

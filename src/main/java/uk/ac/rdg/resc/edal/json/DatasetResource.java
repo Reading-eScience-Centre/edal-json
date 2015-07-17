@@ -81,7 +81,7 @@ public class DatasetResource extends ServerResource {
 			b.put("temporal", ImmutableMap.of(
 					"type", "Interval",
 					"start", ex.getLow().toString(),
-					"stop", ex.getHigh().toString()
+					"end", ex.getHigh().toString()
 					));
 		}
 		

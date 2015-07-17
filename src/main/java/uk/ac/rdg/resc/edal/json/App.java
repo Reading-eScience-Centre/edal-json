@@ -91,19 +91,17 @@ public class App extends Application {
 	public static Representation getCovJsonRepresentation(Resource resource, Map<String,?> json) {
 		MediaType type = resource.getClientInfo().getAcceptedMediaTypes().get(0).getMetadata();
 		
-		if (type.equals(App.CovJSON)) {
+		if (type.equals(App.CovJSONMsgpack)) {
+			Representation r = new MessagePackRepresentation(json);
+			r.setMediaType(App.CovJSONMsgpack);
+			return r;
+		} else /*if (type.equals(App.CovJSON))*/ {
 			JacksonRepresentation<Map<String,?>> r = new JacksonRepresentation<>(json);
 			r.setMediaType(App.CovJSON);
 			if (!App.acceptsJSON(resource)) {
 				r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 			}
 			return r;
-		} else if (type.equals(App.CovJSONMsgpack)) {
-			Representation r = new MessagePackRepresentation(json);
-			r.setMediaType(App.CovJSONMsgpack);
-			return r;
-		} else {
-			throw new IllegalArgumentException(type + " not supported yet");
 		}
 	}
 }

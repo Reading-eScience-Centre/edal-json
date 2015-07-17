@@ -38,8 +38,8 @@ export default class ProfileCoverageLayer {
 		const zDefaultWidth = 200
 		
 		// time axis
-		this.tTotalExtent = [new Date(this.dataset.timeExtent[0]),
-		                     new Date(this.dataset.timeExtent[1])]
+		this.tTotalExtent = [new Date(this.dataset.temporal.start),
+		                     new Date(this.dataset.temporal.end)]
 		const [,tHigh] = this.tTotalExtent
 		this.tCurrentExtent = [new Date(tHigh - tDefaultWidth), tHigh]
 		
@@ -198,8 +198,9 @@ export default class ProfileCoverageLayer {
 	
 	_addControls () {
 	  // TODO display value of profile over which mouse hovers in legend
-	  let legend = controls.legend(this._map.palette, this.param.title,
-	      this.paletteMin.toFixed(2), this.paletteMax.toFixed(2), this.param.uom)
+	  let unit = this.param.unit ? this.param.unit.label : '';
+	  let legend = controls.legend(this._map.palette, this.param.observedProperty.label,
+	      this.paletteMin.toFixed(2), this.paletteMax.toFixed(2), this.param.unit.label)
 	  this.legend = legend
 	  this._map.addControl(legend)
 	  

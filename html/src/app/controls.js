@@ -1,11 +1,11 @@
 import $ from 'jquery'
 import L from 'leaflet'
-//import 'jquery-ui'
-//import 'jquery-mousewheel'
 // jqrangeslider not yet on JSPM registry
-//import 'app/jqrangeslider/jQAllRangeSliders-min'
-//import 'app/jqrangeslider/iThing-min.css!'
-import 'jQRangeSlider'
+import 'jquery-ui'
+import 'jquery-mousewheel'
+import 'app/jqrangeslider/jQAllRangeSliders-min'
+import 'app/jqrangeslider/iThing-min.css!'
+//import 'jQRangeSlider'
 import * as utils from 'app/utils'
 
 function redrawLayers (map, tilesOnly=false) {
