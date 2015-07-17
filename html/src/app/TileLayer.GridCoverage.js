@@ -30,11 +30,14 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
       addLegend(map, this, rangeType, paramRange)
       super.onAdd(map)
     } else {
+      map.fire('dataloading')
       utils.loadBinaryJson(paramRange.id, range => {
         this.coverage.range[this.paramId] = range
         calculateExtent(range)
         addLegend(map, this, rangeType, range)
         super.onAdd(map)
+      }, () => {
+        map.fire('dataload')
       })
     }
   }
