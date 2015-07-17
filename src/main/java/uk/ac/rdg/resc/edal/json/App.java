@@ -32,7 +32,7 @@ public class App extends Application {
 	
 	public static void main(String[] args) throws Exception {
 		Component component = new RestletComponent();
-		component.getServers().add(Protocol.HTTP, 8182);
+		component.getServers().add(Protocol.HTTP, 8080);
 		component.start();
 	}
 

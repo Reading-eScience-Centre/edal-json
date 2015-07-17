@@ -2,7 +2,7 @@
   "name": "edal-json-web",
   "version": "0.1.0",
   "scripts": {
-    "serveit": "http-server src -o",
+    "serveit": "http-server src -p 8081 -o",
     "test": "standard",
     "buildMode": "jspm bundle app/main --inject",
     "buildSafeMode": "jspm bundle-sfx app/main safe-bundle.js",
