@@ -189,10 +189,13 @@ export default class ProfileCoverageLayer {
 	                     ';verticalTarget=' + this.zCurrentTarget +
 	                     ';params=' + this.param.localId +
 	              '&details=domain,range'
+	  this._map.fire('dataloading')
     this.xhr = utils.loadBinaryJson(url, data => {
       delete this.xhr
       this.data = data
       callback(true)
+    }, () => {
+      this._map.fire('dataload')
     })
 	}
 	

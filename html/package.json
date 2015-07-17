@@ -35,6 +35,7 @@
       "jquery-ui": "github:components/jqueryui@^1.11.4",
       "leaflet": "github:Leaflet/Leaflet@^0.7.3",
       "leaflet-fullscreen": "github:brunob/leaflet.fullscreen@^1.1.4",
+      "leaflet-loading": "github:ebrelsford/Leaflet.loading@^0.1.16",
       "leaflet-providers": "github:leaflet-extras/leaflet-providers@1.1.1",
       "msgpack": "github:creationix/msgpack-js-browser@^0.1.4",
       "ndarray": "npm:ndarray@^1.0.18",

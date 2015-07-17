@@ -12,6 +12,8 @@ import L from 'leaflet'
 import 'leaflet-providers'
 import 'leaflet-fullscreen'
 import 'leaflet-fullscreen/Control.FullScreen.css!'
+import 'leaflet-loading'
+import 'leaflet-loading/src/Control.Loading.css!'
 import interpolationMethods from 'app/interpolation'
 import * as palettes from 'app/palettes'
 import * as controls from 'app/controls'
@@ -25,7 +27,8 @@ var map = L.map('map', {
   fullscreenControl: true,
   fullscreenControlOptions: {
     position: 'topleft'
-  }
+  },
+  loadingControl: true
 })
 
 var baseLayers = {
@@ -99,7 +102,7 @@ function initFeature(feature) {
 }
 
 function addGridFeature (url) {
-  $.getJSON(url, function (feature) {
+  $.getJSON(url, feature => {
     initFeature(feature)
     // create a canvas layer for each parameter
     for (let paramId in feature.result.rangeType) {
@@ -141,36 +144,48 @@ function addProfileFeatures(dataset, paramId) {
  * 
  */
 function addDataset (datasetUrl) {
-  $.getJSON(datasetUrl, dataset => {
-    // we need to determine what layers we should add based on the dataset metadata
-    let featureTypes = new Set(dataset.featureTypes)
-    
-    if (featureTypes.has('Profile')) {
-      // We assume that all profiles in this dataset belong together.
-      // For each parameter a layer is created.
-      for (let param of dataset.parameters) {
-        addProfileFeatures(dataset, param.id)
+  map.fire('dataloading')
+  $.ajax(datasetUrl, {
+    dataType: 'json',
+    success: dataset => {
+      // we need to determine what layers we should add based on the dataset metadata
+      let featureTypes = new Set(dataset.featureTypes)
+      
+      if (featureTypes.has('Profile')) {
+        // We assume that all profiles in this dataset belong together.
+        // For each parameter a layer is created.
+        for (let param of dataset.parameters) {
+          addProfileFeatures(dataset, param.id)
+        }
       }
-    }
-    
-    if (featureTypes.has('Grid')) {
-      // We load all Grid features (without their range) and construct the layers.
-      // TODO this loads the domains as well which may be too much in this first step
-      let gridFeaturesUrl = dataset.features + '?filter=type=Grid&details=domain,rangeMetadata'
-      $.ajax(gridFeaturesUrl, {
-    	  dataType: 'json',
-    	  accepts: { json: 'application/cov+json' },
-    	  success: features => {
-	        for (let feature of features.features) {
-	          initFeature(feature)
-	          for (let paramId of Object.keys(feature.result.range)) {
-	            addGridFeatureParam(feature.result, paramId)
-	          }
-	        }
-	      }
-    	 })
+      
+      if (featureTypes.has('Grid')) {
+        // We load all Grid features (without their range) and construct the layers.
+        // TODO this loads the domains as well which may be too much in this first step
+        map.fire('dataloading')
+        let gridFeaturesUrl = dataset.features + '?filter=type=Grid&details=domain,rangeMetadata'
+        $.ajax(gridFeaturesUrl, {
+          dataType: 'json',
+          accepts: { json: 'application/cov+json' },
+          success: features => {
+            for (let feature of features.features) {
+              initFeature(feature)
+              for (let paramId of Object.keys(feature.result.range)) {
+                addGridFeatureParam(feature.result, paramId)
+              }
+            }
+          },
+          complete: () => {
+            map.fire('dataload')
+          }
+         })
+      }
+    },
+    complete: () => {
+      map.fire('dataload')
     }
   })
+
 }
 
 

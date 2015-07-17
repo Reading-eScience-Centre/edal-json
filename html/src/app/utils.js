@@ -4,7 +4,7 @@ import msgpack from 'msgpack'
 import ndarray from 'ndarray'
 import * as opsnull from 'app/ndarray-ops-null'
 
-export function loadBinaryJson(url, callback) {
+export function loadBinaryJson(url, success, complete) {
   return $.ajax({
     url: url,
     dataType: 'native',
@@ -16,9 +16,12 @@ export function loadBinaryJson(url, callback) {
     },
     success: raw => {
        let data = msgpack.decode(raw)
-       callback(data)
-     }
-   })
+       success(data)
+    },
+    complete: () => {
+      if (complete) complete()
+    }
+  })
 }
 
 export function indicesOfNearest (a, x) {
