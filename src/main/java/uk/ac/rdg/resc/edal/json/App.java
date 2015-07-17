@@ -76,13 +76,17 @@ public class App extends Application {
 	public static boolean acceptsJSON(Resource resource) {
 		ClientInfo info = resource.getClientInfo();
 		Header accept = resource.getRequest().getHeaders().getFirst("Accept");
+		if (accept == null) {
+			System.err.println("accept header not found!");
+			return false;
+		}
 		for (Preference<MediaType> pref : info.getAcceptedMediaTypes()) {
 			if (jsonTypes.contains(pref.getMetadata())) {
 				// when requested by extension, then Restlet modifies the accepted media types
 				// but we want to know if the client actually sent the header or not
 				if (accept.getValue().contains(pref.getMetadata().getName())) {
 					return true;
-				}				
+				}	
 			}
 		}
 		return false;

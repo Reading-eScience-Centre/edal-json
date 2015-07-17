@@ -198,7 +198,7 @@ export default class ProfileCoverageLayer {
 	
 	_addControls () {
 	  // TODO display value of profile over which mouse hovers in legend
-	  let unit = this.param.unit ? this.param.unit.label : '';
+	  let unit = this.param.unit ? this.param.unit.label : ''
 	  let legend = controls.legend(this._map.palette, this.param.observedProperty.label,
 	      this.paletteMin.toFixed(2), this.paletteMax.toFixed(2), this.param.unit.label)
 	  this.legend = legend
@@ -250,7 +250,7 @@ export default class ProfileCoverageLayer {
 	  var paletteBlue = palette.allowedValues.blue
 	  
 	  const uomZ = 'm' // TODO derive that from verticalCrs
-	  const uom = this.param.uom
+	  const uom = this.param.unit ? this.param.unit.label : ''
 	  
 	  var markers = []
 	  for (let feature of features) {
@@ -291,7 +291,7 @@ export default class ProfileCoverageLayer {
 	    marker.bindPopup('<strong>' + feature.title + '</strong><br />' +
 	                     'Time: ' + time.slice(0, 10) + ' ' + time.slice(11, 19) + ' UTC<br />' +
 	                     'Depth: ' + z.toFixed(2) + ' ' + uomZ + '<br /><br />' +
-	                     'Parameter: ' + this.param.title + '<br />' + 
+	                     'Parameter: ' + this.param.observedProperty.label + '<br />' + 
 	                     'Value: ' + val.toFixed(2) + ' ' + uom)
 	    markers.push(marker)
 	  }
