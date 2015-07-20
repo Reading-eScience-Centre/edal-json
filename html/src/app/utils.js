@@ -77,23 +77,35 @@ export function wrapLongitudes (domain) {
   domain.lonDiscontinuity = domain.bbox[0]
 }
 
-export function horizontalSubset (domain, paramRange4D, bounds) {
-  // prepare bounding box
+/**
+ * Wraps bounds to the given longitude range.
+ * If longitude spans more than 360 degrees, then the
+ * resulting bounds are the full range.
+ */
+export function wrappedBounds (bounds, lonRange=[-180,180]) {
   var southWest = bounds.getSouthWest()
   var northEast = bounds.getNorthEast()
-  var lonRange = [domain.lonDiscontinuity, domain.lonDiscontinuity + 360]
   // if the map is zoomed out a lot it can span more than 360deg
   if (northEast.lng - southWest.lng > 360) {
-    southWest.lng = -180
-    northEast.lng = 180
+    southWest.lng = lonRange[0]
+    northEast.lng = lonRange[1]
   } else {
     southWest.lng = wrapLongitude(southWest.lng, lonRange)
     northEast.lng = wrapLongitude(northEast.lng, lonRange)
   }
   if (northEast.lng < southWest.lng) {
-    // unwrap lng after wrapping, so that both are in right order again
-    northEast.lng += 360
+    throw new Error('wrong longitude range given! resulting west lng would be > east lng; bounds=' 
+        + [southWest.lng, northEast.lng] + '; range=' + lonRange)
   }
+  return new L.latLngBounds(southWest, northEast)
+}
+
+export function horizontalSubset (domain, paramRange4D, bounds) {
+  // prepare bounding box
+  var lonRange = [domain.lonDiscontinuity, domain.lonDiscontinuity + 360]
+  bounds = wrappedBounds(bounds, lonRange)
+  var southWest = bounds.getSouthWest()
+  var northEast = bounds.getNorthEast()
 
   // we only support CRS84 here for now (lon-lat order)
   var domainLon = domain.x
@@ -106,8 +118,6 @@ export function horizontalSubset (domain, paramRange4D, bounds) {
   var iLatEnd = indexOfNearest(domainLat, northEast.lat)
 
   // subset
-  // FIXME polyfill TypedArray.prototype.slice missing! -> breaks Chrome
-  //  -> see https://github.com/zloirock/core-js/issues/90
   domainLon = domainLon.slice(iLonStart, iLonEnd + 1) // could use ndarray here as well
   domainLat = domainLat.slice(iLatStart, iLatEnd + 1)
   paramRange4D = paramRange4D.hi(null, null, iLatEnd + 1, iLonEnd + 1)

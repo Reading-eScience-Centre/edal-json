@@ -192,6 +192,7 @@ export default class ProfileCoverageLayer {
 	  this._map.fire('dataloading')
     this.xhr = utils.loadBinaryJson(url, data => {
       delete this.xhr
+      // FIXME longitudes should be wrapped to [-180,180] here
       this.data = data
       callback(true)
     }, () => {
@@ -293,6 +294,8 @@ export default class ProfileCoverageLayer {
 	    })
 	    marker.bindPopup('<strong>' + feature.title + '</strong><br />' +
 	                     'Time: ' + time.slice(0, 10) + ' ' + time.slice(11, 19) + ' UTC<br />' +
+	                     'Longitude: ' + lon.toFixed(4) + '<br />' +
+	                     'Latitude: ' + lat.toFixed(4) + '<br />' +
 	                     'Depth: ' + z.toFixed(2) + ' ' + uomZ + '<br /><br />' +
 	                     'Parameter: ' + this.param.observedProperty.label + '<br />' + 
 	                     'Value: ' + val.toFixed(2) + ' ' + uom)
@@ -333,15 +336,19 @@ export default class ProfileCoverageLayer {
 	  const paramId = this.param.id
 	  if (type === 'global') {
 	    // TODO temporary workaround until 99999.0 and 0 are properly masked server-side
-      let vals = this.data.features.map(f => f.result.range[paramId].values[0])
+      var vals = this.data.features.map(f => f.result.range[paramId].values[0])
                                    .filter(v => v < 99999.0 && v != 0)
-      this.paletteMin = Math.min.apply(Math, vals)
-      
-      vals = this.data.features.map(f => f.result.range[paramId].values[0])
-                               .filter(v => v < 99999.0 && v != 0)
-      this.paletteMax = Math.max.apply(Math, vals)
 	  } else if (type === 'fov') {
-	    // TODO
+	    // TODO could be optimized with kdtree indexing
+	    let bounds = utils.wrappedBounds(this._map.getBounds())
+	    let profilesInFov = this.data.features.filter(f => bounds.contains([f.result.domain.y, f.result.domain.x]))
+	    console.log(profilesInFov)
+	    var vals = profilesInFov.map(f => f.result.range[paramId].values[0])
+	                            .filter(v => v < 99999.0 && v != 0)
+	  }
+	  if (vals.length > 0) {
+      this.paletteMin = Math.min.apply(Math, vals)
+      this.paletteMax = Math.max.apply(Math, vals)
 	  }
 	}
 	
