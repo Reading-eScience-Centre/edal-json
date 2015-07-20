@@ -40,11 +40,14 @@ public class App extends Application {
 	public Restlet createInboundRoot() {
         getTunnelService().setExtensionsTunnel(true);
         
+        // answer 406 if the Accept header matches none of the available variants
+        getConnegService().setStrict(true);
+        
         // clear common extensions so that we can define ours in preferred order
         // Note that this doesn't influence content negotiation, it is
-        // just for serving JSON by default if no matching Accept headers are given.
+        // just for serving JSON first for cases where */* was given as Accept.
         getMetadataService().clearExtensions();
-        
+                
         // CovJSON/JSON-LD is the default.
         // GeoJSON and binary CoverageJSON will only be delivered if explicitly requested.
         getMetadataService().addExtension("jsonld", JSONLD);

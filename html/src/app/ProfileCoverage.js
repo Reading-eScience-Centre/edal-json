@@ -335,17 +335,15 @@ export default class ProfileCoverageLayer {
 	set paletteRange (type) {
 	  const paramId = this.param.id
 	  if (type === 'global') {
-	    // TODO temporary workaround until 99999.0 and 0 are properly masked server-side
       var vals = this.data.features.map(f => f.result.range[paramId].values[0])
-                                   .filter(v => v < 99999.0 && v != 0)
 	  } else if (type === 'fov') {
 	    // TODO could be optimized with kdtree indexing
 	    let bounds = utils.wrappedBounds(this._map.getBounds())
 	    let profilesInFov = this.data.features.filter(f => bounds.contains([f.result.domain.y, f.result.domain.x]))
-	    console.log(profilesInFov)
 	    var vals = profilesInFov.map(f => f.result.range[paramId].values[0])
-	                            .filter(v => v < 99999.0 && v != 0)
 	  }
+	  // TODO temporary workaround until 99999.0 and 0 are properly masked server-side
+	  vals = vals.filter(v => v < 99999.0 && v != 0)
 	  if (vals.length > 0) {
       this.paletteMin = Math.min.apply(Math, vals)
       this.paletteMax = Math.max.apply(Math, vals)
