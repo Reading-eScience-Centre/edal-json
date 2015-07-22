@@ -24,17 +24,17 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   onAdd(map) {
     this._map = map
     var paramRange = this.coverage.range[this.paramId]
-    var rangeType = this.coverage.rangeType[this.paramId]
+    var parameter = this.coverage.parameters[this.paramId]
     if ('values' in paramRange) {
       calculateExtent(paramRange)
-      addLegend(map, this, rangeType, paramRange)
+      addLegend(map, this, parameter, paramRange)
       super.onAdd(map)
     } else {
       map.fire('dataloading')
       utils.loadBinaryJson(paramRange.id, range => {
         this.coverage.range[this.paramId] = range
         calculateExtent(range)
-        addLegend(map, this, rangeType, range)
+        addLegend(map, this, parameter, range)
         super.onAdd(map)
       }, () => {
         map.fire('dataload')
@@ -245,10 +245,10 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
 }
 
 //TODO refactor this, put palette info somewhere else
-function addLegend (map, layer, rangeType, range) {
+function addLegend (map, layer, parameter, range) {
   // add legend to map
-  var legend = controls.legend(map.palette, rangeType.observedProperty.label,
-    range.paletteMin.toFixed(2), range.paletteMax.toFixed(2), rangeType.unit.label)
+  var legend = controls.legend(map.palette, parameter.observedProperty.label,
+    range.paletteMin.toFixed(2), range.paletteMax.toFixed(2), parameter.unit.label)
   legend.addTo(map)
   layer.legend = legend
 }
