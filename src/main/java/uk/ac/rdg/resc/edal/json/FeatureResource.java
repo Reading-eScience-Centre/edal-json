@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -514,15 +515,14 @@ public class FeatureResource extends ServerResource {
 				);
 	}
 		
-	private static Map getParameterTypesJson(FeatureMetadata meta, String rootUri) {
+	private static List getParameterTypesJson(FeatureMetadata meta, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId + "/params/";
 		
-		Builder types = ImmutableMap.builder();
+		List<Map> params = new LinkedList<>();
 		for (Parameter param : meta.rangeMeta.getParameters()) {
-			types.put(root + param.getVariableId(), 
-					ParameterResource.getParamJson(meta.datasetId, param, rootUri).build());
+			params.add(ParameterResource.getParamJson(meta.datasetId, param, rootUri).build());
 		}
-		return types.build();
+		return params;
 	}
 		
 	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 

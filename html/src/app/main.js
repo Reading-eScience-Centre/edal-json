@@ -105,16 +105,16 @@ function addGridFeature (url) {
   $.getJSON(url, feature => {
     initFeature(feature)
     // create a canvas layer for each parameter
-    for (let paramId in feature.result.rangeType) {
-      addGridFeatureParam(feature.result, paramId)
+    for (let param of feature.result.parameters) {
+      addGridFeatureParam(feature.result, param.id)
     }
   })
 }
 
 function addGridFeatureParam (result, paramId) {
-  let rangeType = result.rangeType[paramId]
+  let param = result.parameters.find(p => p.id === paramId)
   let layer = new GridCoverageLayer(result, paramId)
-  lc.addOverlay(layer, rangeType.title)
+  lc.addOverlay(layer, param.observedProperty.label)
 }
 
 function addProfileFeatures(dataset, paramId) {
