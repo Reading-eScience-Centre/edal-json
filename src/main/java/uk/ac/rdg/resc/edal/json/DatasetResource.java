@@ -43,7 +43,7 @@ public class DatasetResource extends ServerResource {
 		if (!skipDetails) {
 			for (String paramId : dataset.getVariableIds()) {
 				Parameter param = dataset.getVariableMetadata(paramId).getParameter();
-				Map m = ParameterResource.getParamJson(dataset, param, rootUri).build();
+				Map m = ParameterResource.getParamJson(dataset.getId(), param, rootUri).build();
 				jsonParams.add(m);
 			}
 		}

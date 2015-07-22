@@ -24,8 +24,8 @@ public class ParameterResource extends ServerResource {
 		return rootUri + "/datasets/" + datasetId + "/params/" + variableId;
 	}
 	
-	public static Builder getParamJson(Dataset dataset, Parameter param, String rootUri) {
-		String paramUrl = getParamUrl(dataset.getId(), param.getVariableId(), rootUri);
+	public static Builder getParamJson(String datasetId, Parameter param, String rootUri) {
+		String paramUrl = getParamUrl(datasetId, param.getVariableId(), rootUri);
 		Builder j = ImmutableMap.builder()
 				.put("id", paramUrl)
 				.put("type", "Parameter")
@@ -57,7 +57,7 @@ public class ParameterResource extends ServerResource {
 		Dataset dataset = Utils.getDataset(datasetId);
 		Parameter param = dataset.getVariableMetadata(paramId).getParameter();
 		
-		Map j = getParamJson(dataset, param, getRootRef().toString())
+		Map j = getParamJson(dataset.getId(), param, getRootRef().toString())
 					.put("@context", "/static/contexts/Dataset.jsonld")
 					.build();
 		

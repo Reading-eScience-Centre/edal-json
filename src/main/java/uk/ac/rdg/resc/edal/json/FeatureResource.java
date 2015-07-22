@@ -519,12 +519,8 @@ public class FeatureResource extends ServerResource {
 		
 		Builder types = ImmutableMap.builder();
 		for (Parameter param : meta.rangeMeta.getParameters()) {
-			types.put(root + param.getVariableId(), ImmutableMap.of(
-					"title", param.getTitle(),
-					"description", param.getDescription(),
-					"observedProperty", param.getStandardName() == null ? "UNKNOWN" : param.getStandardName(),
-					"uom", param.getUnits()
-					));
+			types.put(root + param.getVariableId(), 
+					ParameterResource.getParamJson(meta.datasetId, param, rootUri).build());
 		}
 		return types.build();
 	}
