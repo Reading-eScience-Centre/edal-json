@@ -247,8 +247,9 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
 //TODO refactor this, put palette info somewhere else
 function addLegend (map, layer, parameter, range) {
   // add legend to map
+  let unit = this.param.unit ? (this.param.unit.symbol ? this.param.unit.symbol : this.param.unit.label) : ''
   var legend = controls.legend(map.palette, parameter.observedProperty.label,
-    range.paletteMin.toFixed(2), range.paletteMax.toFixed(2), parameter.unit.label)
+    range.paletteMin.toFixed(2), range.paletteMax.toFixed(2), unit)
   legend.addTo(map)
   layer.legend = legend
 }

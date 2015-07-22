@@ -23,6 +23,7 @@
     "featureOfInterest": "oml:featureOfInterest",
     "result": "oml:result",
     "unit": "qudt:unit",
+    "symbol": "qudt:symbol",
 
     "RegularGrid": "mel:RegularGrid",
     "Parameter": "mel:Parameter",

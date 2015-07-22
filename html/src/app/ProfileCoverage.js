@@ -202,9 +202,9 @@ export default class ProfileCoverageLayer {
 	
 	_addControls () {
 	  // TODO display value of profile over which mouse hovers in legend
-	  let unit = this.param.unit ? this.param.unit.label : ''
+	  let unit = this.param.unit ? (this.param.unit.symbol ? this.param.unit.symbol : this.param.unit.label) : ''
 	  let legend = controls.legend(this._map.palette, this.param.observedProperty.label,
-	      this.paletteMin.toFixed(2), this.paletteMax.toFixed(2), this.param.unit.label)
+	      this.paletteMin.toFixed(2), this.paletteMax.toFixed(2), unit)
 	  this.legend = legend
 	  this._map.addControl(legend)
 	  

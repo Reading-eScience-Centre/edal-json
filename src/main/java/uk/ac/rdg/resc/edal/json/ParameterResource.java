@@ -35,7 +35,7 @@ public class ParameterResource extends ServerResource {
 				.put("unit", ImmutableMap.of(
 						"id", "TODOhttp://qudt.org/vocab/unit#DegreeCelsius",
 						// TODO read unit label from qudt ontology
-						"label", param.getUnits()
+						"symbol", param.getUnits()
 						));
 			
 		String observedPropertyUri = "";

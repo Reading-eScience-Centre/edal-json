@@ -9,6 +9,7 @@
     "gsp": "http://www.opengis.net/ont/geosparql#",
     "schema": "http://schema.org/",
     "qudt": "http://qudt.org/1.1/schema/qudt#",
+    "oml": "http://def.seegrid.csiro.au/ontology/om/om-lite#",
     "mel": "http://melodiesproject.eu/ont/geo#",    
     
     "Dataset": "dcat:Dataset",
@@ -29,8 +30,10 @@
     "start": { "@id": "schema:startDate", "@type": "xsd:date" },
     "end": { "@id": "schema:endDate", "@type": "xsd:date" },
     "unit": "qudt:unit",
+    "symbol": "qudt:symbol",
     
     "parameters":  "mel:parameter",
-    "Parameter": "mel:Parameter"
+    "Parameter": "mel:Parameter",
+    "features": { "@id": "oml:observationCollectionTODO", "@type": "@id" }
   }
 }
