@@ -535,20 +535,21 @@ public class FeatureResource extends ServerResource {
 				continue;
 			}
 			Parameter param = meta.rangeMeta.getParameter(paramId);
-			Map rangeParam = ImmutableMap.of(
-					"id", root + "/features/" + meta.featureId + "/range/" + paramId,
-					"min", meta.rangeMeta.getMinValue(param),
-					"max", meta.rangeMeta.getMaxValue(param)
-					);
+			String rangeUrl = root + "/features/" + meta.featureId + "/range/" + paramId;
+			Object rangeParam;
 			
 			if (includeValues) {
 				// TODO how do we know which axis order the array has?!
 				UniformFeature uniFeature = uniFeatureFn.get();
 				
 				rangeParam = ImmutableMap.builder()
-						.putAll(rangeParam)
+						.put("id", rangeUrl)
+						.put("min", meta.rangeMeta.getMinValue(param))
+						.put("max", meta.rangeMeta.getMaxValue(param))
 						.put("values", getValues(uniFeature.feature.getValues(paramId), uniFeature, subset))
 						.build();
+			} else {
+				rangeParam = rangeUrl;
 			}
 			
 			values.put(root + "/params/" + paramId, rangeParam);

@@ -18,27 +18,26 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
     super()
     this.COVERAGE_LAYER = true
     this.coverage = coverage
-    this.paramId = paramId
+    this.param = coverage.parameters.find(p => p.id === paramId)
   }
   
   onAdd(map) {
     this._map = map
-    var paramRange = this.coverage.range[this.paramId]
-    var parameter = this.coverage.parameters[this.paramId]
-    if ('values' in paramRange) {
-      calculateExtent(paramRange)
-      addLegend(map, this, parameter, paramRange)
-      super.onAdd(map)
-    } else {
+    var paramRange = this.coverage.range[this.param.id]
+    if (typeof paramRange === 'string') {
       map.fire('dataloading')
-      utils.loadBinaryJson(paramRange.id, range => {
-        this.coverage.range[this.paramId] = range
+      utils.loadBinaryJson(paramRange, range => {
+        this.coverage.range[this.param.id] = range
         calculateExtent(range)
-        addLegend(map, this, parameter, range)
+        addLegend(map, this, this.param, range)
         super.onAdd(map)
       }, () => {
         map.fire('dataload')
       })
+    } else {
+      calculateExtent(paramRange)
+      addLegend(map, this, this.param, paramRange)
+      super.onAdd(map)
     }
   }
   
@@ -49,7 +48,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   }
   
   set paletteRange (type) {
-    var range = this.coverage.range[this.paramId]
+    var range = this.coverage.range[this.param.id]
     if (type === 'global') {
       range.paletteMin = range.min
       range.paletteMax = range.max
@@ -58,7 +57,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
       var bounds = this._map.getBounds()
       var result = this.coverage
 
-      var paramRange4D = utils.getParameterRange4D(result.domain, range.values, this.paramId)
+      var paramRange4D = utils.getParameterRange4D(result.domain, range.values, this.param.id)
       var subset = utils.horizontalSubset(result.domain, paramRange4D, bounds).range
 
       // TODO how is time/vertical dimension handled?
@@ -70,7 +69,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   }
   
   get paletteRange () {
-    var range = this.coverage.range[this.paramId]
+    var range = this.coverage.range[this.param.id]
     return [range.paletteMin, range.paletteMax]
   }
   
@@ -80,7 +79,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
     var tileSize = this.options.tileSize
     var result = this.coverage // our own little cache
 
-    var param = result.range[this.paramId]
+    var param = result.range[this.param.id]
 
     // projection coordinates of top left tile pixel
     var start = tilePoint.multiplyBy(tileSize)
@@ -245,10 +244,10 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
 }
 
 //TODO refactor this, put palette info somewhere else
-function addLegend (map, layer, parameter, range) {
+function addLegend (map, layer, param, range) {
   // add legend to map
-  let unit = this.param.unit ? (this.param.unit.symbol ? this.param.unit.symbol : this.param.unit.label) : ''
-  var legend = controls.legend(map.palette, parameter.observedProperty.label,
+  let unit = param.unit ? (param.unit.symbol ? param.unit.symbol : param.unit.label) : ''
+  var legend = controls.legend(map.palette, param.observedProperty.label,
     range.paletteMin.toFixed(2), range.paletteMax.toFixed(2), unit)
   legend.addTo(map)
   layer.legend = legend
