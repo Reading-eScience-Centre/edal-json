@@ -25,9 +25,9 @@ import com.google.common.collect.ImmutableSet;
 public class App extends Application {
 	
     static MediaType JSONLD = new MediaType("application/ld+json");
-    static MediaType CovJSON = new MediaType("application/cov+json");
-    static MediaType CovJSONMsgpack = new MediaType("application/cov+json;encoding=msgpack");
-    static MediaType CovJSONCBOR = new MediaType("application/cov+json;encoding=cbor");
+    static MediaType CovJSON = new MediaType("application/prs.coverage+json");
+    static MediaType CovJSONMsgpack = new MediaType("application/prs.coverage+msgpack");
+    static MediaType CovJSONCBOR = new MediaType("application/prs.coverage+cbor");
     static MediaType GeoJSON = new MediaType("application/vnd.geo+json");
 	
 	public static void main(String[] args) throws Exception {
@@ -53,9 +53,9 @@ public class App extends Application {
         getMetadataService().addExtension("jsonld", JSONLD);
         getMetadataService().addExtension("covjson", CovJSON);
         getMetadataService().addExtension("geojson", GeoJSON);
-        getMetadataService().addExtension("covjsonb", CovJSONMsgpack); // TODO switch to CBOR later
-        getMetadataService().addExtension("msgpack", CovJSONMsgpack);
-        getMetadataService().addExtension("cbor", CovJSONCBOR);        
+        getMetadataService().addExtension("covcbor", CovJSONCBOR);
+        getMetadataService().addExtension("covmsgpack", CovJSONMsgpack);
+        getMetadataService().addExtension("cbor", CovJSONCBOR);
 		
 		Router router = new Router();
 		router.attach("/datasets/{datasetId}/features/{featureId}/range/{parameterId}",
@@ -102,6 +102,8 @@ public class App extends Application {
 			Representation r = new MessagePackRepresentation(json);
 			r.setMediaType(App.CovJSONMsgpack);
 			return r;
+		} else if (type.equals(App.CovJSONCBOR)) {
+			throw new UnsupportedOperationException();
 		} else /*if (type.equals(App.CovJSON))*/ {
 			JacksonRepresentation<Map<String,?>> r = new JacksonRepresentation<>(json);
 			r.setMediaType(App.CovJSON);

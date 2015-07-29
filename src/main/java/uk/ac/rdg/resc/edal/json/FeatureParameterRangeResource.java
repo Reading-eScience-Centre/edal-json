@@ -54,7 +54,7 @@ public class FeatureParameterRangeResource extends ServerResource {
 		return j;
 	}
 
-	@Get("covjson")
+	@Get("covjson|covcbor|covmsgpack")
 	public Representation json() throws IOException, EdalException {
 			
 		Map j = rangeData();

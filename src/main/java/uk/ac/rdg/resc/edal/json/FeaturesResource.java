@@ -157,12 +157,12 @@ public class FeaturesResource extends ServerResource {
 		return j;
 	}
 	
-	@Get("covjson")
+	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
 		Map j = getFeaturesJson(false).build();
 		return App.getCovJsonRepresentation(this, j);
 	}
-	
+		
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
 		Map j = getFeaturesJson(true)

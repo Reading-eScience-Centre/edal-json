@@ -265,7 +265,7 @@ public class FeatureResource extends ServerResource {
 	 * Note: restlet routing doesn't look at parameters, hence all
 	 * application/cov+json;* types lead to this method.	 * 
 	 */
-	@Get("covjson")
+	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
 		Map featureJson = getFeatureJson(false);
 		return App.getCovJsonRepresentation(this, featureJson);
