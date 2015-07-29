@@ -14,6 +14,7 @@ import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
@@ -24,12 +25,10 @@ public class ParameterResource extends ServerResource {
 		return rootUri + "/datasets/" + datasetId + "/params/" + variableId;
 	}
 	
-	public static Builder getParamJson(String datasetId, Parameter param, String rootUri) {
-		String paramUrl = getParamUrl(datasetId, param.getVariableId(), rootUri);
+	public static Builder getParamJson(String datasetId, Parameter param) {
 		Builder j = ImmutableMap.builder()
-				.put("id", paramUrl)
+				.put("id", param.getVariableId())
 				.put("type", "Parameter")
-				.put("localId", param.getVariableId())
 				.put("description", param.getDescription())
 				// TODO translate EDAL units to qudt terms
 				.put("unit", ImmutableMap.of(
@@ -57,8 +56,15 @@ public class ParameterResource extends ServerResource {
 		Dataset dataset = Utils.getDataset(datasetId);
 		Parameter param = dataset.getVariableMetadata(paramId).getParameter();
 		
-		Map j = getParamJson(dataset.getId(), param, getRootRef().toString())
-					.put("@context", "/static/contexts/Dataset.jsonld")
+		Map j = getParamJson(dataset.getId(), param)
+					.put("@context", ImmutableList.of(
+							"/static/contexts/Dataset.jsonld",
+							ImmutableMap.of(param.getVariableId(), ImmutableMap.of(
+									"@id", getParamUrl(datasetId, param.getVariableId(), getRootRef().toString()),
+									"@type", "@id"
+									))
+									
+							))
 					.build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);

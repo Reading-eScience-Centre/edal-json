@@ -7,8 +7,7 @@
     "locn": "http://www.w3.org/ns/locn#",
     "gsp": "http://www.opengis.net/ont/geosparql#",
     "schema": "http://schema.org/",
-    "foaf":	"http://xmlns.com/foaf/0.1/",
-    "mel": "http://melodiesproject.eu/ont/geo#",    
+    "foaf":	"http://xmlns.com/foaf/0.1/",   
     
     "Catalogue": "dcat:Catalog",
     "title": "dct:title",

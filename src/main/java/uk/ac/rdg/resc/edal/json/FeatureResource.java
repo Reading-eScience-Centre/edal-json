@@ -76,7 +76,7 @@ public class FeatureResource extends ServerResource {
 	}
 	
 	static class Details {
-		final boolean domain, rangeMetadata, range;
+		boolean domain, rangeMetadata, range;
 		static Details from(String details, Details fallback) {
 			if (details == null) return fallback;
 			List<String> parts = Arrays.asList(details.split(","));
@@ -182,32 +182,30 @@ public class FeatureResource extends ServerResource {
 		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
 				
 		Builder j = ImmutableMap.builder()
-				.put("type", "Feature")
+				.put("type", "Coverage")
 				.put("id", featureUrl)
 				.put("title", meta.name);
 				
-		if (details.domain || details.range || details.rangeMetadata) {
+		Supplier<UniformFeature> feature =
+				Suppliers.memoize(() -> new UniformFeature((DiscreteFeature)dataset.get().readFeature(meta.featureId)));
 
-			Builder result = ImmutableMap.builder();
-			Supplier<UniformFeature> feature =
-					Suppliers.memoize(() -> new UniformFeature((DiscreteFeature)dataset.get().readFeature(meta.featureId)));
-
-			try {
-				if (details.domain) {
-					Map domainJson = getDomainJson(feature.get(), subset);
-					result.put("domain", domainJson);
-				}
-				// parameter metadata is repeated so that a feature can be processed stand-alone
-				if (details.rangeMetadata) {
-					result.put("parameters", getParameterTypesJson(meta, rootUri));
-				}
-				result.put("range", getParameterValuesJson(meta, feature, details.range, subset, rootUri));
-			
-			} catch (UnsupportedDomainException e) {
-				result.put("domain", unsupportedDomain(e.domain, e.info));
+		try {
+			if (details.domain) {
+				Map domainJson = getDomainJson(feature.get(), subset);
+				j.put("domain", domainJson);
+			} else {
+				j.put("domain", "http://.../domain");
 			}
-			j.put("result", result.build());
+			// parameter metadata is repeated so that a feature can be processed stand-alone
+			if (details.rangeMetadata) {
+				j.put("parameters", getParameterTypesJson(meta, rootUri));
+			}
+			j.put("ranges", getParameterValuesJson(meta, feature, details.range, subset, rootUri));
+		
+		} catch (UnsupportedDomainException e) {
+			j.put("domain", unsupportedDomain(e.domain, e.info));
 		}
+
 		addPhenomenonTime(j, meta.domainMeta);
 		
 		return j;
@@ -218,6 +216,7 @@ public class FeatureResource extends ServerResource {
 		String featureId = Reference.decode(getAttribute("featureId"));
 		Details fallback = new Details(true, true, false);
 		Details details = Details.from(getQueryValue("details"), fallback);
+		details.rangeMetadata = true;
 		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subset"));
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
@@ -228,9 +227,24 @@ public class FeatureResource extends ServerResource {
 					.put("@context", GeoJSONLDContext)
 					.build();
 		} else {
+			FeatureMetadata featureMeta = meta.getFeatureMetadata(featureId);
+			
+			Builder ldContext = ImmutableMap.builder();
+			for (String paramId : featureMeta.rangeMeta.getParameterIds()) {
+				ldContext.put(paramId, ImmutableMap.of(
+						"@id", ParameterResource.getParamUrl(datasetId, paramId, getRootRef().toString()),
+						"@type", "@id"
+						));
+			}
+			
 			featureJson = getFeatureCovJson(meta.getLazyDataset(), 
 					meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset)
-					.put("@context", "/static/contexts/Feature.jsonld")
+					.put("@context", ImmutableList.of(
+							"https://rawgit.com/neothemachine/coveragejson/master/contexts/coveragejson-base.jsonld",
+							ldContext.put("unit", "qudt:unit")
+								.put("symbol", "qudt:symbol")
+								.build()
+							))
 					.build();	
 		}		
 		return featureJson;
@@ -288,9 +302,7 @@ public class FeatureResource extends ServerResource {
 		String type;
 		public UniformFeature(DiscreteFeature<?,?> feature) {
 			this.feature = feature;
-			
-			// TODO should we name the type "RegularGrid" even if z or t is irregular?
-			
+						
 			// FIXME feature types should be interfaces
 			
 			// the following piece of code checks and uniformizes different feature types 
@@ -302,7 +314,7 @@ public class FeatureResource extends ServerResource {
 				
 				if (grid.getHorizontalGrid() instanceof RectilinearGrid) {
 					rectgrid = (RectilinearGrid) grid.getHorizontalGrid();
-					type = rectgrid instanceof RegularGrid ? "RegularGrid" : "RectilinearGrid";
+					type = "Grid";
 				} else {
 					throw new UnsupportedDomainException(feature.getDomain(), grid.getHorizontalGrid().getClass().getName());
 				}
@@ -520,7 +532,7 @@ public class FeatureResource extends ServerResource {
 		
 		List<Map> params = new LinkedList<>();
 		for (Parameter param : meta.rangeMeta.getParameters()) {
-			params.add(ParameterResource.getParamJson(meta.datasetId, param, rootUri).build());
+			params.add(ParameterResource.getParamJson(meta.datasetId, param).build());
 		}
 		return params;
 	}
@@ -528,7 +540,8 @@ public class FeatureResource extends ServerResource {
 	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 
 			boolean includeValues, SubsetConstraint subset, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId;
-		Builder values = ImmutableMap.builder();
+		Builder values = ImmutableMap.builder()
+				.put("type", "RangeSet");
 
 		for (String paramId : meta.rangeMeta.getParameterIds()) {
 			if (subset.params.isPresent() && !subset.params.get().contains(paramId)) {
@@ -544,15 +557,15 @@ public class FeatureResource extends ServerResource {
 				
 				rangeParam = ImmutableMap.builder()
 						.put("id", rangeUrl)
-						.put("min", meta.rangeMeta.getMinValue(param))
-						.put("max", meta.rangeMeta.getMaxValue(param))
+						.put("validMin", meta.rangeMeta.getMinValue(param))
+						.put("validMax", meta.rangeMeta.getMaxValue(param))
 						.put("values", getValues(uniFeature.feature.getValues(paramId), uniFeature, subset))
 						.build();
 			} else {
 				rangeParam = rangeUrl;
 			}
 			
-			values.put(root + "/params/" + paramId, rangeParam);
+			values.put(paramId, rangeParam);
 		}
 		
 		return values.build();

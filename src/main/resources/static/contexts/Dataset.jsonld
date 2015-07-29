@@ -1,5 +1,7 @@
 {
-  "@context": {
+  "@context": [
+  	"https://rawgit.com/neothemachine/coveragejson/master/contexts/coveragejson-base.jsonld",
+  {
     "type": "@type",
     "id": "@id",
     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
@@ -10,7 +12,6 @@
     "schema": "http://schema.org/",
     "qudt": "http://qudt.org/1.1/schema/qudt#",
     "oml": "http://def.seegrid.csiro.au/ontology/om/om-lite#",
-    "mel": "http://melodiesproject.eu/ont/geo#",    
     
     "Dataset": "dcat:Dataset",
     "label": "rdfs:label",
@@ -30,10 +31,6 @@
     "start": { "@id": "schema:startDate", "@type": "xsd:date" },
     "end": { "@id": "schema:endDate", "@type": "xsd:date" },
     "unit": "qudt:unit",
-    "symbol": "qudt:symbol",
-    
-    "parameters":  "mel:parameter",
-    "Parameter": "mel:Parameter",
-    "features": { "@id": "oml:observationCollectionTODO", "@type": "@id" }
-  }
+    "symbol": "qudt:symbol"
+  }]
 }

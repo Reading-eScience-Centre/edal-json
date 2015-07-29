@@ -46,43 +46,24 @@ public class FeatureParameterRangeResource extends ServerResource {
 		// TODO remove duplication with FeatureResource
 		
 		Map j = ImmutableMap.of(
-				"id", parameterRangeUrl,
+				"type", "Range",
 				"values", FeatureResource.getValues(feature.getValues(param.getVariableId()), feature, subset),
-				"min", meta.rangeMeta.getMinValue(param),
-				"max", meta.rangeMeta.getMaxValue(param)
+				"validMin", meta.rangeMeta.getMinValue(param),
+				"validMax", meta.rangeMeta.getMaxValue(param)
 				);
 		return j;
 	}
 
 	@Get("covjson")
 	public Representation json() throws IOException, EdalException {
-		
+			
 		Map j = rangeData();
-		
-		JacksonRepresentation r = new JacksonRepresentation(j);
-		r.setMediaType(App.CovJSON);
-		if (!App.acceptsJSON(this)) {
-			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-		}
+		Representation r = App.getCovJsonRepresentation(this, j);
 		
 		// TODO think about caching strategy
 		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
 		r.setExpirationDate(exp);
-		return r;
-	}
-	
-	@Get("covjsonb|msgpack")
-	public Representation msgpack() throws IOException, EdalException {
-		long t0 = System.currentTimeMillis();
-		Map j = rangeData();
-		System.out.println("build range data: " + String.valueOf(System.currentTimeMillis()-t0));
 		
-		Representation r = new MessagePackRepresentation(j);
-		r.setMediaType(App.CovJSONMsgpack);
-		
-		// TODO think about caching strategy
-		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
-		r.setExpirationDate(exp);
 		return r;
 	}
 		

@@ -20,10 +20,12 @@ import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.json.FeatureResource.Details;
 import uk.ac.rdg.resc.edal.json.FeatureResource.FeatureMetadata;
+import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.util.GISUtils;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
@@ -126,10 +128,30 @@ public class FeaturesResource extends ServerResource {
 			j.put("type", "FeatureCollection")
 			 .put("features", jsonFeatures);	
 		} else {
-			j.put("@context", "/static/contexts/FeatureCollection.jsonld")
+			Builder ldContext = ImmutableMap.builder();
+			
+			Dataset dataset_ = dataset.get();
+			List jsonParams = new LinkedList();
+			for (String paramId : dataset_.getVariableIds()) {
+				Parameter param = dataset_.getVariableMetadata(paramId).getParameter();
+				Map m = ParameterResource.getParamJson(dataset_.getId(), param).build();
+				jsonParams.add(m);
+				ldContext.put(paramId, ImmutableMap.of(
+						"@id", ParameterResource.getParamUrl(datasetId, paramId, getRootRef().toString()),
+						"@type", "@id"
+						));
+			}
+			
+			j.put("@context", ImmutableList.of(
+					"https://rawgit.com/neothemachine/coveragejson/master/contexts/coveragejson-base.jsonld",
+					ldContext.put("unit", "qudt:unit")
+						.put("symbol", "qudt:symbol")
+						.build()
+					))
 			 .put("id", datasetUrl + "/features")
-			 .put("type", "FeatureCollection")
-			 .put("features", jsonFeatures);
+			 .put("type", "CoverageCollection")
+			 .put("parameters", jsonParams)
+			 .put("coverages", jsonFeatures);
 		}
 		
 		return j;
