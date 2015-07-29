@@ -180,14 +180,14 @@ export default class ProfileCoverageLayer {
 	    // slider quickly several times
 	    this.xhr.abort()
 	  }
-	  const url = this.dataset.features + 
+	  const url = this.dataset.coverages + 
 	              '?filter=type=Profile' +
 	              '&subset=timeStart=' + this.tCurrentExtent[0].toISOString() +
 	                     ';timeEnd=' + this.tCurrentExtent[1].toISOString() +
 	                     ';verticalStart=' + this.zCurrentExtent[0] +
 	                     ';verticalEnd=' + this.zCurrentExtent[1] +
 	                     ';verticalTarget=' + this.zCurrentTarget +
-	                     ';params=' + this.param.localId +
+	                     ';params=' + this.param.id +
 	              '&details=domain,range'
 	  this._map.fire('dataloading')
     this.xhr = utils.loadBinaryJson(url, data => {
@@ -242,7 +242,7 @@ export default class ProfileCoverageLayer {
 	  if (this._layer) throw new Error('layer is already added')
 	  if (!this.data) throw new Error('no data loaded')
 	  
-	  let layer = this._createCoverageLayer(this.data.features)
+	  let layer = this._createCoverageLayer(this.data.coverages)
 	  this._layer = layer
 	  this._map.addLayer(layer)
 	}
@@ -258,7 +258,7 @@ export default class ProfileCoverageLayer {
 	  
 	  var markers = []
 	  for (let feature of features) {
-	    let coverage = feature.result
+	    let coverage = feature
 	    // TODO reuse code from GridCoverage if possible
 	    let lon = coverage.domain.x
 	    let lat = coverage.domain.y
@@ -266,7 +266,7 @@ export default class ProfileCoverageLayer {
 	    
 	    let zIdx = 0
 	    let z = coverage.domain.vertical[zIdx]
-	    let val = coverage.range[this.param.id].values[zIdx]
+	    let val = coverage.ranges[this.param.id].values[zIdx]
 	    
 	    if (val >= 99999.0 || val == 0) {
 	      // TODO temporary workaround until such values are masked server-side
@@ -335,12 +335,12 @@ export default class ProfileCoverageLayer {
 	set paletteRange (type) {
 	  const paramId = this.param.id
 	  if (type === 'global') {
-      var vals = this.data.features.map(f => f.result.range[paramId].values[0])
+      var vals = this.data.coverages.map(f => f.ranges[paramId].values[0])
 	  } else if (type === 'fov') {
 	    // TODO could be optimized with kdtree indexing
 	    let bounds = utils.wrappedBounds(this._map.getBounds())
-	    let profilesInFov = this.data.features.filter(f => bounds.contains([f.result.domain.y, f.result.domain.x]))
-	    var vals = profilesInFov.map(f => f.result.range[paramId].values[0])
+	    let profilesInFov = this.data.coverages.filter(f => bounds.contains([f.domain.y, f.domain.x]))
+	    var vals = profilesInFov.map(f => f.ranges[paramId].values[0])
 	  }
 	  // TODO temporary workaround until 99999.0 and 0 are properly masked server-side
 	  vals = vals.filter(v => v < 99999.0 && v != 0)

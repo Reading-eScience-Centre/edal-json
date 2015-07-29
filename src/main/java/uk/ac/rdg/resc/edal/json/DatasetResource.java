@@ -88,11 +88,11 @@ public class DatasetResource extends ServerResource {
 		if (!skipDetails) {
 				b.put("distributions", ImmutableList.of(ImmutableMap.of(
 							"url", datasetUrl + "/features.covjson",
-							"mediaType", "application/cov+json"
+							"mediaType", "application/prs.coverage+json"
 							),
 					ImmutableMap.of(
-							"url", datasetUrl + "/features.covjsonb",
-							"mediaType", "application/cov+json;encoding=cbor"
+							"url", datasetUrl + "/features.covcbor",
+							"mediaType", "application/coverage+cbor"
 							),
 					ImmutableMap.of(
 							"url", datasetUrl + "/features.geojson",
@@ -102,9 +102,9 @@ public class DatasetResource extends ServerResource {
 		
 		// non-standard metadata
 		
-		b.put("features", datasetUrl + "/features")
-		 .put("featureCount", count)
-		 .put("featureTypes", jsonFeatureTypes);
+		b.put("coverages", datasetUrl + "/features")
+		 .put("coverageCount", count)
+		 .put("coverageTypes", jsonFeatureTypes);
 		
 		if (!skipDetails) {
 			b.put("parameters", jsonParams);

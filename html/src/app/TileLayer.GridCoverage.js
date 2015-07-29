@@ -23,11 +23,11 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   
   onAdd(map) {
     this._map = map
-    var paramRange = this.coverage.range[this.param.id]
+    var paramRange = this.coverage.ranges[this.param.id]
     if (typeof paramRange === 'string') {
       map.fire('dataloading')
       utils.loadBinaryJson(paramRange, range => {
-        this.coverage.range[this.param.id] = range
+        this.coverage.ranges[this.param.id] = range
         calculateExtent(range)
         addLegend(map, this, this.param, range)
         super.onAdd(map)
@@ -48,10 +48,10 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   }
   
   set paletteRange (type) {
-    var range = this.coverage.range[this.param.id]
+    var range = this.coverage.ranges[this.param.id]
     if (type === 'global') {
-      range.paletteMin = range.min
-      range.paletteMax = range.max
+      range.paletteMin = range.validMin
+      range.paletteMax = range.validMax
     } else if (type === 'fov') {
       // first, get current bounding box
       var bounds = this._map.getBounds()
@@ -69,7 +69,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   }
   
   get paletteRange () {
-    var range = this.coverage.range[this.param.id]
+    var range = this.coverage.ranges[this.param.id]
     return [range.paletteMin, range.paletteMax]
   }
   
@@ -79,7 +79,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
     var tileSize = this.options.tileSize
     var result = this.coverage // our own little cache
 
-    var param = result.range[this.param.id]
+    var param = result.ranges[this.param.id]
 
     // projection coordinates of top left tile pixel
     var start = tilePoint.multiplyBy(tileSize)
@@ -257,11 +257,11 @@ function calculateExtent (param) {
   // calculate and cache range extent if not provided
   if (!('min' in param)) {
     var extent = utils.minMax(param.values)
-    param.min = extent.min
-    param.max = extent.max
+    param.validMin = extent.min
+    param.validMax = extent.max
   }
   if (!('paletteMin' in param)) {
-    param.paletteMin = param.min
-    param.paletteMax = param.max
+    param.paletteMin = param.validMin
+    param.paletteMax = param.validMax
   }
 }

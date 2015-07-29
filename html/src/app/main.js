@@ -90,7 +90,7 @@ var supportedCrs = new Set([
   ])
 
 function initFeature(feature) {
-  var result = feature.result
+  var result = feature
   if (!supportedCrs.has(result.domain.crs)) {
     //window.alert('Sorry, only the CRS84 coordinate reference system is currently supported. Yours is: ' + result.domain.crs)
     throw result.domain.crs
@@ -105,15 +105,19 @@ function addGridFeature (url) {
   $.getJSON(url, feature => {
     initFeature(feature)
     // create a canvas layer for each parameter
-    for (let param of feature.result.parameters) {
-      addGridFeatureParam(feature.result, param.id)
+    for (let param of feature.parameters) {
+      addGridFeatureParam(feature, param.id)
     }
   })
 }
 
-function addGridFeatureParam (result, paramId) {
-  let param = result.parameters.find(p => p.id === paramId)
-  let layer = new GridCoverageLayer(result, paramId)
+function addGridFeatureParam (coverages, coverage, paramId) {
+  if (coverages.parameters) {
+    var param = coverages.parameters.find(p => p.id === paramId)
+  } else {
+    var param = coverage.parameters.find(p => p.id === paramId)
+  }  
+  let layer = new GridCoverageLayer(coverage, paramId)
   lc.addOverlay(layer, param.observedProperty.label)
 }
 
@@ -149,9 +153,9 @@ function addDataset (datasetUrl) {
     dataType: 'json',
     success: dataset => {
       // we need to determine what layers we should add based on the dataset metadata
-      let featureTypes = new Set(dataset.featureTypes)
+      let coverageTypes = new Set(dataset.coverageTypes)
       
-      if (featureTypes.has('Profile')) {
+      if (coverageTypes.has('Profile')) {
         // We assume that all profiles in this dataset belong together.
         // For each parameter a layer is created.
         for (let param of dataset.parameters) {
@@ -159,19 +163,19 @@ function addDataset (datasetUrl) {
         }
       }
       
-      if (featureTypes.has('Grid')) {
+      if (coverageTypes.has('Grid')) {
         // We load all Grid features (without their range) and construct the layers.
         // TODO this loads the domains as well which may be too much in this first step
         map.fire('dataloading')
-        let gridFeaturesUrl = dataset.features + '?filter=type=Grid&details=domain,rangeMetadata'
+        let gridFeaturesUrl = dataset.coverages + '?filter=type=Grid&details=domain,rangeMetadata'
         $.ajax(gridFeaturesUrl, {
           dataType: 'json',
-          accepts: { json: 'application/cov+json' },
-          success: features => {
-            for (let feature of features.features) {
-              initFeature(feature)
-              for (let paramId of Object.keys(feature.result.range)) {
-                addGridFeatureParam(feature.result, paramId)
+          accepts: { json: 'application/prs.coverage+json' },
+          success: coverages => {
+            for (let coverage of coverages.coverages) {
+              initFeature(coverage)
+              for (let paramId of Object.keys(coverage.ranges).filter(k => k !== 'type')) {
+                addGridFeatureParam(coverages, coverage, paramId)
               }
             }
           },

@@ -9,7 +9,7 @@ export function loadBinaryJson(url, success, complete) {
     url: url,
     dataType: 'native',
     accepts: {
-      'native': 'application/cov+json;encoding=msgpack'
+      'native': 'application/prs.coverage+msgpack'
     },
     xhrFields: {
       responseType: 'arraybuffer'
