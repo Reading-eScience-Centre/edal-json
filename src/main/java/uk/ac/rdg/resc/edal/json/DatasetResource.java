@@ -107,7 +107,7 @@ public class DatasetResource extends ServerResource {
 		 .put("coverageTypes", jsonFeatureTypes);
 		
 		if (!skipDetails) {
-			b.put("parameters", jsonParams);
+			b.put("parameters", jsonParams.build());
 		}
 		/*
 		 * In addition to the GeoDCAT bounding box we include a direct array-based
