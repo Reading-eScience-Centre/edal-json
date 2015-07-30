@@ -39,12 +39,12 @@ public class DatasetResource extends ServerResource {
 		Dataset dataset = Utils.getDataset(datasetId);
 		String datasetUrl = rootUri + "/datasets/" + dataset.getId();
 		
-		List jsonParams = new LinkedList();
+		Builder jsonParams = ImmutableMap.builder();
 		if (!skipDetails) {
 			for (String paramId : dataset.getVariableIds()) {
 				Parameter param = dataset.getVariableMetadata(paramId).getParameter();
-				Map m = ParameterResource.getParamJson(dataset.getId(), param).build();
-				jsonParams.add(m);
+				Map m = ParameterResource.getParamJson(dataset.getId(), param, rootUri).build();
+				jsonParams.put(paramId, m);
 			}
 		}
 		

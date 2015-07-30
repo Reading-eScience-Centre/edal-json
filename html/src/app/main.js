@@ -105,25 +105,25 @@ function addGridFeature (url) {
   $.getJSON(url, feature => {
     initFeature(feature)
     // create a canvas layer for each parameter
-    for (let param of feature.parameters) {
+    for (let paramKey of Object.keys(feature.parameters)) {
       addGridFeatureParam(feature, param.id)
     }
   })
 }
 
-function addGridFeatureParam (coverages, coverage, paramId) {
+function addGridFeatureParam (coverages, coverage, paramKey) {
   if (coverages.parameters) {
-    var param = coverages.parameters.find(p => p.id === paramId)
+    var param = coverages.parameters[paramKey]
   } else {
-    var param = coverage.parameters.find(p => p.id === paramId)
+    var param = coverage.parameters[paramKey]
   }  
-  let layer = new GridCoverageLayer(coverage, paramId)
+  let layer = new GridCoverageLayer(coverage, param, paramKey)
   lc.addOverlay(layer, param.observedProperty.label)
 }
 
-function addProfileFeatures(dataset, paramId) {
-  let param = dataset.parameters.find(p => p.id === paramId)
-  let layer = new ProfileCoverageLayer(dataset, param)
+function addProfileFeatures(dataset, paramKey) {
+  let param = dataset.parameters[paramKey]
+  let layer = new ProfileCoverageLayer(dataset, param, paramKey)
   lc.addOverlay(layer, param.observedProperty.label)
 }
 
@@ -158,8 +158,8 @@ function addDataset (datasetUrl) {
       if (coverageTypes.has('Profile')) {
         // We assume that all profiles in this dataset belong together.
         // For each parameter a layer is created.
-        for (let param of dataset.parameters) {
-          addProfileFeatures(dataset, param.id)
+        for (let paramKey of Object.keys(dataset.parameters)) {
+          addProfileFeatures(dataset, paramKey)
         }
       }
       
@@ -174,8 +174,8 @@ function addDataset (datasetUrl) {
           success: coverages => {
             for (let coverage of coverages.coverages) {
               initFeature(coverage)
-              for (let paramId of Object.keys(coverage.ranges).filter(k => k !== 'type')) {
-                addGridFeatureParam(coverages, coverage, paramId)
+              for (let paramKey of Object.keys(coverage.ranges).filter(k => k !== 'type')) {
+                addGridFeatureParam(coverages, coverage, paramKey)
               }
             }
           },

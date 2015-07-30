@@ -131,11 +131,11 @@ public class FeaturesResource extends ServerResource {
 			Builder ldContext = ImmutableMap.builder();
 			
 			Dataset dataset_ = dataset.get();
-			List jsonParams = new LinkedList();
+			Builder jsonParams = ImmutableMap.builder();
 			for (String paramId : dataset_.getVariableIds()) {
 				Parameter param = dataset_.getVariableMetadata(paramId).getParameter();
-				Map m = ParameterResource.getParamJson(dataset_.getId(), param).build();
-				jsonParams.add(m);
+				Map m = ParameterResource.getParamJson(dataset_.getId(), param, getRootRef().toString()).build();
+				jsonParams.put(paramId, m);
 				ldContext.put(paramId, ImmutableMap.of(
 						"@id", ParameterResource.getParamUrl(datasetId, paramId, getRootRef().toString()),
 						"@type", "@id"
@@ -152,7 +152,7 @@ public class FeaturesResource extends ServerResource {
 					))
 			 .put("id", datasetUrl + "/features")
 			 .put("type", "CoverageCollection")
-			 .put("parameters", jsonParams)
+			 .put("parameters", jsonParams.build())
 			 .put("coverages", jsonFeatures);
 		}
 		

@@ -14,20 +14,21 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   
   // TODO we need the surrounding object as well
   //  -> for semantic info like Station ID
-  constructor(coverage, paramId) {
+  constructor(coverage, param, paramKey) {
     super()
     this.COVERAGE_LAYER = true
     this.coverage = coverage
-    this.param = coverage.parameters.find(p => p.id === paramId)
+    this.param = param
+    this.paramKey = paramKey
   }
   
   onAdd(map) {
     this._map = map
-    var paramRange = this.coverage.ranges[this.param.id]
+    var paramRange = this.coverage.ranges[this.paramKey]
     if (typeof paramRange === 'string') {
       map.fire('dataloading')
       utils.loadBinaryJson(paramRange, range => {
-        this.coverage.ranges[this.param.id] = range
+        this.coverage.ranges[this.paramKey] = range
         calculateExtent(range)
         addLegend(map, this, this.param, range)
         super.onAdd(map)
@@ -48,7 +49,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   }
   
   set paletteRange (type) {
-    var range = this.coverage.ranges[this.param.id]
+    var range = this.coverage.ranges[this.paramKey]
     if (type === 'global') {
       range.paletteMin = range.validMin
       range.paletteMax = range.validMax
@@ -57,7 +58,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
       var bounds = this._map.getBounds()
       var result = this.coverage
 
-      var paramRange4D = utils.getParameterRange4D(result.domain, range.values, this.param.id)
+      var paramRange4D = utils.getParameterRange4D(result.domain, range.values)
       var subset = utils.horizontalSubset(result.domain, paramRange4D, bounds).range
 
       // TODO how is time/vertical dimension handled?
@@ -69,7 +70,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
   }
   
   get paletteRange () {
-    var range = this.coverage.ranges[this.param.id]
+    var range = this.coverage.ranges[this.paramKey]
     return [range.paletteMin, range.paletteMax]
   }
   
@@ -79,7 +80,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
     var tileSize = this.options.tileSize
     var result = this.coverage // our own little cache
 
-    var param = result.ranges[this.param.id]
+    var param = result.ranges[this.paramKey]
 
     // projection coordinates of top left tile pixel
     var start = tilePoint.multiplyBy(tileSize)

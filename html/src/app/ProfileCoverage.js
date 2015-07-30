@@ -10,9 +10,10 @@ import * as controls from 'app/controls'
  */
 export default class ProfileCoverageLayer {
 	
-	constructor(dataset, param) {
+	constructor(dataset, param, paramKey) {
 	  this.COVERAGE_LAYER = true
 		this.dataset = dataset
+		this.paramKey = paramKey
 		this.param = param
 		this._initAxes()
 	}
@@ -187,7 +188,7 @@ export default class ProfileCoverageLayer {
 	                     ';verticalStart=' + this.zCurrentExtent[0] +
 	                     ';verticalEnd=' + this.zCurrentExtent[1] +
 	                     ';verticalTarget=' + this.zCurrentTarget +
-	                     ';params=' + this.param.id +
+	                     ';params=' + this.paramKey +
 	              '&details=domain,range'
 	  this._map.fire('dataloading')
     this.xhr = utils.loadBinaryJson(url, data => {
@@ -266,7 +267,7 @@ export default class ProfileCoverageLayer {
 	    
 	    let zIdx = 0
 	    let z = coverage.domain.z[zIdx]
-	    let val = coverage.ranges[this.param.id].values[zIdx]
+	    let val = coverage.ranges[this.paramKey].values[zIdx]
 	    
 	    if (val >= 99999.0 || val == 0) {
 	      // TODO temporary workaround until such values are masked server-side
@@ -333,14 +334,14 @@ export default class ProfileCoverageLayer {
 	}
 	
 	set paletteRange (type) {
-	  const paramId = this.param.id
+	  const paramKey = this.paramKey
 	  if (type === 'global') {
-      var vals = this.data.coverages.map(f => f.ranges[paramId].values[0])
+      var vals = this.data.coverages.map(f => f.ranges[paramKey].values[0])
 	  } else if (type === 'fov') {
 	    // TODO could be optimized with kdtree indexing
 	    let bounds = utils.wrappedBounds(this._map.getBounds())
 	    let profilesInFov = this.data.coverages.filter(f => bounds.contains([f.domain.y, f.domain.x]))
-	    var vals = profilesInFov.map(f => f.ranges[paramId].values[0])
+	    var vals = profilesInFov.map(f => f.ranges[paramKey].values[0])
 	  }
 	  // TODO temporary workaround until 99999.0 and 0 are properly masked server-side
 	  vals = vals.filter(v => v < 99999.0 && v != 0)

@@ -25,9 +25,9 @@ public class ParameterResource extends ServerResource {
 		return rootUri + "/datasets/" + datasetId + "/params/" + variableId;
 	}
 	
-	public static Builder getParamJson(String datasetId, Parameter param) {
+	public static Builder getParamJson(String datasetId, Parameter param, String rootUri) {
 		Builder j = ImmutableMap.builder()
-				.put("id", param.getVariableId())
+				.put("id", getParamUrl(datasetId, param.getVariableId(), rootUri))
 				.put("type", "Parameter")
 				.put("description", param.getDescription())
 				// TODO translate EDAL units to qudt terms
@@ -56,7 +56,7 @@ public class ParameterResource extends ServerResource {
 		Dataset dataset = Utils.getDataset(datasetId);
 		Parameter param = dataset.getVariableMetadata(paramId).getParameter();
 		
-		Map j = getParamJson(dataset.getId(), param)
+		Map j = getParamJson(dataset.getId(), param, getRootRef().toString())
 					.put("@context", ImmutableList.of(
 							"/static/contexts/Dataset.jsonld",
 							ImmutableMap.of(param.getVariableId(), ImmutableMap.of(

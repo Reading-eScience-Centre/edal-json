@@ -529,14 +529,14 @@ public class FeatureResource extends ServerResource {
 				);
 	}
 		
-	private static List getParameterTypesJson(FeatureMetadata meta, String rootUri) {
+	private static Map getParameterTypesJson(FeatureMetadata meta, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId + "/params/";
 		
-		List<Map> params = new LinkedList<>();
+		Builder params = ImmutableMap.builder();
 		for (Parameter param : meta.rangeMeta.getParameters()) {
-			params.add(ParameterResource.getParamJson(meta.datasetId, param).build());
+			params.put(param.getVariableId(), ParameterResource.getParamJson(meta.datasetId, param, rootUri).build());
 		}
-		return params;
+		return params.build();
 	}
 		
 	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 
