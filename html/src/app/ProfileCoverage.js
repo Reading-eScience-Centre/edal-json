@@ -262,10 +262,10 @@ export default class ProfileCoverageLayer {
 	    // TODO reuse code from GridCoverage if possible
 	    let lon = coverage.domain.x
 	    let lat = coverage.domain.y
-	    let time = coverage.domain.time
+	    let time = coverage.domain.t
 	    
 	    let zIdx = 0
-	    let z = coverage.domain.vertical[zIdx]
+	    let z = coverage.domain.z[zIdx]
 	    let val = coverage.ranges[this.param.id].values[zIdx]
 	    
 	    if (val >= 99999.0 || val == 0) {

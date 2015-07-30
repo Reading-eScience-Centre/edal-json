@@ -241,7 +241,9 @@ public class FeatureResource extends ServerResource {
 					meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset)
 					.put("@context", ImmutableList.of(
 							"https://rawgit.com/neothemachine/coveragejson/master/contexts/coveragejson-base.jsonld",
-							ldContext.put("unit", "qudt:unit")
+							ldContext
+								.put("qudt", "http://qudt.org/1.1/schema/qudt#")
+								.put("unit", "qudt:unit")
 								.put("symbol", "qudt:symbol")
 								.build()
 							))
@@ -475,14 +477,14 @@ public class FeatureResource extends ServerResource {
 		List<Double> heights = z.getCoordinateValues();
 		double[] subsettedHeights = getVerticalAxisIndices(z, subset).mapToDouble(heights::get).toArray();
 		
-		domainJson.put("vertical", subsettedHeights);
+		domainJson.put("z", subsettedHeights);
 		
 		// FIXME add bounds if not infinitesimal
 		//  -> how do we query that except checking if low==high?
 		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
 		
 		// TODO are there no standards for vertical CRS, with codes etc.?
-		domainJson.put("verticalCrs", ImmutableMap.of(
+		domainJson.put("zCrs", ImmutableMap.of(
 				"uom", z.getVerticalCrs().getUnits(),
 				"positiveUpwards", z.getVerticalCrs().isPositiveUpwards(),
 				"dimensionless", z.getVerticalCrs().isDimensionless(),
@@ -499,7 +501,7 @@ public class FeatureResource extends ServerResource {
 		String[] subsettedTimes = getTimeAxisIndices(t, subset)
 				.mapToObj(i -> times.get(i).toString())
 				.toArray(String[]::new);
-		domainJson.put("time", subsettedTimes.length == 1 ? subsettedTimes[0] : subsettedTimes);
+		domainJson.put("t", subsettedTimes.length == 1 ? subsettedTimes[0] : subsettedTimes);
 		
 		// FIXME add bounds if not infinitesimal
 		//  -> how do we query that except checking if low==high?

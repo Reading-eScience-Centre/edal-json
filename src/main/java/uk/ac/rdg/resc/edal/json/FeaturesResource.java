@@ -144,7 +144,9 @@ public class FeaturesResource extends ServerResource {
 			
 			j.put("@context", ImmutableList.of(
 					"https://rawgit.com/neothemachine/coveragejson/master/contexts/coveragejson-base.jsonld",
-					ldContext.put("unit", "qudt:unit")
+					ldContext
+						.put("qudt", "http://qudt.org/1.1/schema/qudt#")
+						.put("unit", "qudt:unit")
 						.put("symbol", "qudt:symbol")
 						.build()
 					))
