@@ -92,7 +92,7 @@ public class DatasetResource extends ServerResource {
 							),
 					ImmutableMap.of(
 							"url", datasetUrl + "/features.covcbor",
-							"mediaType", "application/coverage+cbor"
+							"mediaType", "application/prs.coverage+cbor"
 							),
 					ImmutableMap.of(
 							"url", datasetUrl + "/features.geojson",
