@@ -134,17 +134,11 @@ public class DatasetResource extends ServerResource {
 	@Get("jsonld")
 	public Representation json() throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
-		Dataset dataset = Utils.getDataset(datasetId);
-		
-		Builder ldContext = ImmutableMap.builder();
-		for (String paramId : dataset.getVariableIds()) {
-			ldContext.put(paramId, ParameterResource.getParamUrl(datasetId, paramId, getRootRef().toString()));
-		}
-		
+
 		String rootUri = getRootRef().toString();
 		Map j = getDatasetJson(datasetId, rootUri)
 					// TODO how to get URL of other static Application?
-					.put("@context", ImmutableList.of("/static/contexts/Dataset.jsonld", ldContext.build()))
+					.put("@context", "/static/contexts/Dataset.jsonld")
 					.build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
