@@ -127,7 +127,7 @@ export default class GridCoverageLayer extends L.TileLayer.Canvas {
 
     function setPixel (tileY, tileX, val) {
       // map value to color using a palette
-      // scale val to [0,255] using the range extent
+      // scale val to [0,255] using the palette extent
       // (IDL bytscl formula: http://www.exelisvis.com/docs/BYTSCL.html)
       var valScaled = Math.trunc((255 + 0.9999) * (val - param.paletteMin) / (param.paletteMax - param.paletteMin))
 
