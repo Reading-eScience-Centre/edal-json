@@ -32,7 +32,7 @@ public class App extends Application {
 	
 	public static void main(String[] args) throws Exception {
 		Component component = new RestletComponent();
-		component.getServers().add(Protocol.HTTP, 8080);
+		component.getServers().add(Protocol.HTTP, 8081);
 		component.start();
 	}
 
@@ -102,9 +102,9 @@ public class App extends Application {
 			Representation r = new MessagePackRepresentation(json);
 			r.setMediaType(App.CovJSONMsgpack);
 			return r;
-		} else if (type.equals(App.CovJSONCBOR)) {
-			throw new UnsupportedOperationException();
-		} else /*if (type.equals(App.CovJSON))*/ {
+		} /*else if (type.equals(App.CovJSONCBOR)) {
+			
+		}*/ else /*if (type.equals(App.CovJSON))*/ {
 			JacksonRepresentation<Map<String,?>> r = new JacksonRepresentation<>(json);
 			r.setMediaType(App.CovJSON);
 			if (!App.acceptsJSON(resource)) {
