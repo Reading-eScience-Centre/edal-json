@@ -29,7 +29,7 @@ public class ParameterResource extends ServerResource {
 		Builder j = ImmutableMap.builder()
 				.put("id", getParamUrl(datasetId, param.getVariableId(), rootUri))
 				.put("type", "Parameter")
-				.put("description", param.getDescription())
+				.put("description", ImmutableMap.of("en", param.getDescription()))
 				// TODO translate EDAL units to qudt terms
 				.put("unit", ImmutableMap.of(
 						"id", "TODOhttp://qudt.org/vocab/unit#DegreeCelsius",
@@ -44,7 +44,7 @@ public class ParameterResource extends ServerResource {
 		}	
 		j.put("observedProperty", ImmutableMap.of(
 				"id", observedPropertyUri,
-				"label", param.getTitle()
+				"label", ImmutableMap.of("en", param.getTitle())
 				));
 		return j;
 	}

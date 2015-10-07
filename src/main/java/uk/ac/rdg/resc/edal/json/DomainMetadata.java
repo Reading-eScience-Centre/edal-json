@@ -27,6 +27,7 @@ import uk.ac.rdg.resc.edal.util.Extents;
  *
  */
 public class DomainMetadata {
+	private String type;
 	private BoundingBox bbox;
 	private Extent<DateTime> timeExtent;
 	private Extent<Double> verticalExtent;
@@ -104,6 +105,7 @@ public class DomainMetadata {
 
 	private void extractMetadata(Feature<?> feature) {
 		if (feature instanceof GridFeature) {
+			type = "Grid"; // TODO duplication with UniformFeature.type
 			GridFeature feat = (GridFeature) feature;
 			GridDomain domain = feat.getDomain();
 			bbox = domain.getHorizontalGrid().getBoundingBox();
@@ -114,6 +116,7 @@ public class DomainMetadata {
 			verticalCrs = domain.getVerticalAxis() == null ? null :
 				          domain.getVerticalAxis().getVerticalCrs();
 		} else if (feature instanceof ProfileFeature) {
+			type = "Profile";
 			ProfileFeature feat = (ProfileFeature) feature;
 			HorizontalPosition pos = feat.getHorizontalPosition();
 			bbox = new BoundingBoxImpl(pos.getX(), pos.getY(), pos.getX(),
@@ -155,6 +158,10 @@ public class DomainMetadata {
 	
 	public VerticalCrs getVerticalCrs() {
 		return verticalCrs;
+	}
+	
+	public String getType() {
+		return type;
 	}
 
 }

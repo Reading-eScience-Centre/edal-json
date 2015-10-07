@@ -130,7 +130,7 @@ public class FeatureResource extends ServerResource {
 
 		Builder props = ImmutableMap.builder()
 				.put("type", type) // TODO can we use type for that?
-				.put("title", meta.name)
+				.put("title", ImmutableMap.of("en", meta.name))
 				.put("parameters", paramTitles);
 		/*
 		 * Vertical extent is included in properties in a lax way.
@@ -180,9 +180,9 @@ public class FeatureResource extends ServerResource {
 	public static Builder getFeatureCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
 			Details details, SubsetConstraint subset) throws EdalException {
 		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
-				
+		
 		Builder j = ImmutableMap.builder()
-				.put("type", "Coverage")
+				.put("type", meta.domainMeta.getType() + "Coverage")
 				.put("id", featureUrl)
 				.put("title", meta.name);
 				
