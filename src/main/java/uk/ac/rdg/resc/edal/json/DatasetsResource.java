@@ -75,7 +75,7 @@ public class DatasetsResource extends ServerResource {
 				}
 			}
 			
-			datasetsJson.add(DatasetResource.getDatasetJson(datasetId, rootUri, false).build());			
+			datasetsJson.add(DatasetResource.getDatasetJson(datasetId, rootUri).build());			
 		}
 		
 		

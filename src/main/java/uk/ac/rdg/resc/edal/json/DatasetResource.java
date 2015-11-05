@@ -23,30 +23,16 @@ import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
-import uk.ac.rdg.resc.edal.util.GISUtils;
 
 public class DatasetResource extends ServerResource {
 	
 	// cache with datasetId as key
 	private static Map<String,DatasetMetadata> datasetMetadataCache = new HashMap<>();
-
-	public static Builder getDatasetJson(String datasetId, String rootUri) throws IOException {
-		return getDatasetJson(datasetId, rootUri, false);
-	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static Builder getDatasetJson(String datasetId, String rootUri, boolean skipDetails) throws IOException {
+	public static Builder getDatasetJson(String datasetId, String rootUri) throws IOException {
 		Dataset dataset = Utils.getDataset(datasetId);
 		String datasetUrl = rootUri + "/datasets/" + dataset.getId();
-		
-		List jsonParams = new LinkedList<>();
-		if (!skipDetails) {
-			for (String paramId : dataset.getVariableIds()) {
-				Parameter param = dataset.getVariableMetadata(paramId).getParameter();
-				Object m = ParameterResource.getParamJson(dataset.getId(), param, rootUri).build().get("observedProperty");
-				jsonParams.add(m);
-			}
-		}
 		
 		DatasetMetadata datasetMeta = DatasetResource.getDatasetMetadata(datasetId);
 		DomainMetadata domainMeta = datasetMeta.getDomainMetadata();
@@ -56,9 +42,10 @@ public class DatasetResource extends ServerResource {
 				.put("id", datasetUrl)
 				.put("type", "Dataset")
 				.put("title", "N/A (datasets in EDAL don't have a title, only at WMS level)")
-				.put("license", "http://creativecommons.org/licenses/by/3.0/");
+				.put("license", "http://creativecommons.org/licenses/by/4.0/");
 		
 		// see GeoDCAT-AP for spatial and temporal spec
+		// TODO should always be WGS84, convert if necessary
 		b.put("spatial", ImmutableMap.of(
 				"type", "Location",
 				"geometry", "POLYGON((" + 
@@ -82,27 +69,27 @@ public class DatasetResource extends ServerResource {
 					));
 		}
 		
-		if (!skipDetails) {
-				b.put("distributions", ImmutableList.of(ImmutableMap.of(
-							"accessURL", datasetUrl + "/coverages.covjson",
-							"mediaType", "application/prs.coverage+json"
-							),
-					ImmutableMap.of(
-							"accessURL", datasetUrl + "/coverages.covcbor",
-							"mediaType", "application/prs.coverage+cbor"
-							),
-					ImmutableMap.of(
-							"accessURL", datasetUrl + "/coverages.geojson",
-							"mediaType", "application/vnd.geo+json"
-							)));
-		}
+		b.put("distributions", ImmutableList.of(ImmutableMap.of(
+					"accessURL", datasetUrl + "/coverages",
+					"mediaType", "application/prs.coverage+json"
+					),
+			ImmutableMap.of(
+					"accessURL", datasetUrl + "/coverages",
+					"mediaType", "application/prs.coverage+cbor"
+					),
+			ImmutableMap.of(
+					"accessURL", datasetUrl + "/coverages",
+					"mediaType", "application/vnd.geo+json"
+					)));
 		
 		// non-standard metadata
-		
-		
-		if (!skipDetails) {
-			b.put("observedProperties", jsonParams);
+		List jsonParams = new LinkedList<>();
+		for (String paramId : dataset.getVariableIds()) {
+			Parameter param = dataset.getVariableMetadata(paramId).getParameter();
+			Object m = ParameterResource.getParamJson(dataset.getId(), param, rootUri).build().get("observedProperty");
+			jsonParams.add(m);
 		}
+		b.put("observedProperties", jsonParams);
 		
 		return b;
 	}
