@@ -136,8 +136,8 @@ public class CoverageResource extends ServerResource {
 		List<String> paramTitles = meta.rangeMeta.getParameters().stream().map(p -> p.getTitle()).collect(Collectors.toList());
 
 		Builder props = ImmutableMap.builder()
-				.put("type", type) // TODO can we use type for that?
-				.put("title", ImmutableMap.of("en", meta.name))
+				.put("domainType", type)
+				.put("title", meta.name)
 				.put("parameters", paramTitles);
 		/*
 		 * Vertical extent is included in properties in a lax way.

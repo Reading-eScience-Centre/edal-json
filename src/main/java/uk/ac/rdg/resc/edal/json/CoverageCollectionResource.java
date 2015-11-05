@@ -38,7 +38,7 @@ import com.google.common.collect.ImmutableMap.Builder;
 public class CoverageCollectionResource extends ServerResource {
 	
 	public static final int DEFAULT_COVERAGES_PER_PAGE = 100;
-	public static final int DEFAULT_GEOJSON_FEATURES_PER_PAGE = 1000;
+	public static final int DEFAULT_GEOJSON_FEATURES_PER_PAGE = 10000;
 	
 	// TODO this should depend on coverage size and whether range/domain is embedded or not
 	public static final int MAXIMUM_COVERAGES_PER_PAGE = 10000;
@@ -54,16 +54,23 @@ public class CoverageCollectionResource extends ServerResource {
 		int totalPages;
 		int beginOffset;
 		int endOffset;
+		
+		Reference redirect;
+		String previous;
+		String next;
+		String first;
+		String last;
+		
 		Paging(int defaultPerPage, int maximumPerPage) {
 			this.defaultElementsPerPage = defaultPerPage;
-			String page = CoverageCollectionResource.this.getQueryValue("page");
+			String page = getQueryValue("page");
 			if (page != null) {
 				this.currentPage = Integer.parseInt(page);
 				if (this.currentPage < 1) {
 					throw new IllegalArgumentException("page must be >= 1");
 				}
 			}
-			String perPage = CoverageCollectionResource.this.getQueryValue("num");
+			String perPage = getQueryValue("num");
 			if (perPage != null) {
 				this.elementsPerPage = Integer.parseInt(perPage);
 				if (this.elementsPerPage < 1) {
@@ -92,6 +99,46 @@ public class CoverageCollectionResource extends ServerResource {
 			if (this.endOffset > this.totalElements-1) {
 				this.endOffset = this.totalElements-1;
 			}
+			createURLs();
+			
+			if (this.totalPages > 1 && this.currentPage == 1 && getReference().getQueryAsForm().getFirstValue("page") == null) {
+				redirect = getReference().addQueryParameter("page", "1");
+			}
+		}
+		
+		private void createURLs() {
+			String datasetId = Reference.decode(getAttribute("datasetId"));
+			String baseUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
+			
+			Map<String,String> params = new HashMap<>();
+			if (this.defaultElementsPerPage != this.elementsPerPage) {
+				params.put("num", String.valueOf(this.elementsPerPage));
+			}
+								
+			if (this.currentPage < this.totalPages) {
+				params.put("page", String.valueOf(this.currentPage+1));
+				next = baseUrl + getQueryString(params);
+			} else if (this.currentPage > 1) {
+				if (this.currentPage != 2) {
+					params.put("page", String.valueOf(this.currentPage-1));
+				}
+				previous = baseUrl + getQueryString(params);
+			}
+			if (this.totalPages > 1) {
+				params.put("page", "1");
+				first = baseUrl + getQueryString(params);
+				
+				params.put("page", String.valueOf(this.totalPages));
+				last = baseUrl + getQueryString(params);
+			}
+		}
+		
+		private String getQueryString(Map<String,String> params) {
+			Form q = new Form(getQuery().getQueryString());
+			for (Entry<String,String> entry : params.entrySet()) {
+				q.set(entry.getKey(), entry.getValue());
+			}
+			return q.isEmpty() ? "" : "?" + q.getQueryString();
 		}
 	}
 	
@@ -202,8 +249,15 @@ public class CoverageCollectionResource extends ServerResource {
 		
 		Builder j = ImmutableMap.builder();
 		if (asGeojson) {
-			j.put("type", "FeatureCollection")
-			 .put("features", jsonFeatures);	
+			j.put("@context", ImmutableList.of(
+					"http://www.w3.org/ns/hydra/core",
+					CoverageResource.GeoJSONLDContext,
+					ImmutableMap.of(
+							"foaf", "http://xmlns.com/foaf/0.1/"
+							)
+					))
+			 .put("type", "FeatureCollection")
+			 .put("features", jsonFeatures);
 		} else {
 			Builder ldContext = ImmutableMap.builder();
 			
@@ -220,65 +274,72 @@ public class CoverageCollectionResource extends ServerResource {
 			}
 			
 			j.put("@context", ImmutableList.of(
+					// hydra comes first since it defines some generic terms like "title" under the hydra: ns
+					// but we want to use our own "title" definition from the coveragejson context (overriding hydra's)
+					"http://www.w3.org/ns/hydra/core",
 					"https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld",
 					ldContext
+						.put("foaf", "http://xmlns.com/foaf/0.1/")
 						.put("qudt", "http://qudt.org/1.1/schema/qudt#")
 						.put("unit", "qudt:unit")
 						.put("symbol", "qudt:symbol")
 						.build()
 					))
+			 // FIXME the URL has to include filter/subset parameters since it is not the same collection
 			 .put("id", datasetUrl + "/coverages")
 			 .put("type", "CoverageCollection")
 			 .put("parameters", jsonParams.build())
 			 .put("coverages", jsonFeatures);
 		}
 		
-		// TODO how to put metadata in non-default JSON-LD graph?
-		// see http://ruben.verborgh.org/blog/2015/10/06/turtles-all-the-way-down/
-		j.put("totalCount", totalCount);
-		j.put("perPage", paging.elementsPerPage);
+		if (paging.totalPages > 1) {
+			Builder pagination = ImmutableMap.builder()
+					.put("id", getReference().toString())
+					.put("type", "PartialCollectionView")
+					.put("totalItems", paging.totalElements)
+					.put("itemsPerPage", paging.elementsPerPage);
+			if (paging.first != null) {
+				pagination.put("first", paging.first);
+			}
+			if (paging.previous != null) {
+				pagination.put("previous", paging.previous);
+			}
+			if (paging.next != null) {
+				pagination.put("next", paging.next);
+			}
+			if (paging.last != null) {
+				pagination.put("last", paging.last);
+			}
+			
+			j.put("view", ImmutableMap.of(
+					"id", "#pagination",
+					"foaf:primaryTopic", "",
+					// cannot be made nicer currently
+					// see https://github.com/json-ld/json-ld.org/issues/398
+					"@graph", pagination.build()
+					));
+		}
 		
 		return j;
 	}
 	
-	String getQueryString(Map<String,String> params) {
-		Form q = new Form(getQuery().getQueryString());
-		for (Entry<String,String> entry : params.entrySet()) {
-			q.set(entry.getKey(), entry.getValue());
-		}
-		return q.isEmpty() ? "" : "?" + q.getQueryString();
-	}
-	
-	void setPagingHeaders(Paging paging) {
-		Series<Header> headers = this.getResponse().getHeaders();
-		
-		String datasetId = Reference.decode(getAttribute("datasetId"));
-		String baseUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
-		
-		Map<String,String> params = new HashMap<>();
-		if (paging.defaultElementsPerPage != paging.elementsPerPage) {
-			params.put("num", String.valueOf(paging.elementsPerPage));
-		}
-		
+	void setPagingHeaders(Paging paging) {		
 		Map<String,String> links = new HashMap<>();
 				
-		if (paging.currentPage < paging.totalPages) {
-			params.put("page", String.valueOf(paging.currentPage+1));
-			links.put("next", baseUrl + getQueryString(params));
-		} else if (paging.currentPage > 1) {
-			if (paging.currentPage != 2) {
-				params.put("page", String.valueOf(paging.currentPage-1));
-			}
-			links.put("prev", baseUrl + getQueryString(params));
+		if (paging.next != null) {
+			links.put("next", paging.next);
 		}
-		if (paging.totalPages > 1) {
-			params.put("page", "1");
-			links.put("first", baseUrl + getQueryString(params));
-			
-			params.put("page", String.valueOf(paging.totalPages));
-			links.put("last", baseUrl + getQueryString(params));
+		if (paging.previous != null) {
+			links.put("prev", paging.previous);
+		}
+		if (paging.first != null) {
+			links.put("first", paging.first);
+		}
+		if (paging.last != null) {
+			links.put("last", paging.last);
 		}
 		
+		Series<Header> headers = this.getResponse().getHeaders();
 		for (String rel : links.keySet()) {
 			String url = links.get(rel);
 			headers.add(new Header("Link", "<" + url + ">; rel=\"" + rel + "\""));
@@ -304,8 +365,8 @@ public class CoverageCollectionResource extends ServerResource {
 		Paging paging = new Paging(DEFAULT_COVERAGES_PER_PAGE, MAXIMUM_COVERAGES_PER_PAGE);
 		Map j = getFeaturesJson(false, paging).build();
 		
-		if (paging.totalPages > 1 && paging.currentPage == 1 && getReference().getQueryAsForm().getFirstValue("page") == null) {
-			getResponse().redirectPermanent(getReference().addQueryParameter("page", "1"));
+		if (paging.redirect != null) {
+			getResponse().redirectPermanent(paging.redirect);
 			return null;
 		} else {
 			// if paged, this would be type=PartialCollectionView or similar and not the CoverageCollection itself!
@@ -318,16 +379,23 @@ public class CoverageCollectionResource extends ServerResource {
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
 		Paging paging = new Paging(DEFAULT_GEOJSON_FEATURES_PER_PAGE, MAXIMUM_GEOJSON_FEATURES_PER_PAGE);
-		Map j = getFeaturesJson(true, paging)
-				.put("@context", CoverageResource.GeoJSONLDContext).build();
-		setPagingHeaders(paging);
+		Map j = getFeaturesJson(true, paging).build();
 		
-		JacksonRepresentation r = new JacksonRepresentation(j);
-		r.setMediaType(App.GeoJSON);
-		if (!App.acceptsJSON(this)) {
-			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+		if (paging.redirect != null) {
+			getResponse().redirectPermanent(paging.redirect);
+			return null;
+		} else {
+			// if paged, this would be type=PartialCollectionView or similar and not the CoverageCollection itself!
+			// therefore we skip the Link header and only include that information in the data itself
+			setPagingHeaders(paging);
+			
+			JacksonRepresentation r = new JacksonRepresentation(j);
+			r.setMediaType(App.GeoJSON);
+			if (!App.acceptsJSON(this)) {
+				r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+			}
+			return r;
 		}
-		return r;
 	}
 
 }
