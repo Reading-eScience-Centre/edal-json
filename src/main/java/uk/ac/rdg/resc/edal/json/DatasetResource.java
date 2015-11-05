@@ -39,21 +39,18 @@ public class DatasetResource extends ServerResource {
 		Dataset dataset = Utils.getDataset(datasetId);
 		String datasetUrl = rootUri + "/datasets/" + dataset.getId();
 		
-		Builder jsonParams = ImmutableMap.builder();
+		List jsonParams = new LinkedList<>();
 		if (!skipDetails) {
 			for (String paramId : dataset.getVariableIds()) {
 				Parameter param = dataset.getVariableMetadata(paramId).getParameter();
-				Map m = ParameterResource.getParamJson(dataset.getId(), param, rootUri).build();
-				jsonParams.put(paramId, m);
+				Object m = ParameterResource.getParamJson(dataset.getId(), param, rootUri).build().get("observedProperty");
+				jsonParams.add(m);
 			}
 		}
 		
 		DatasetMetadata datasetMeta = DatasetResource.getDatasetMetadata(datasetId);
 		DomainMetadata domainMeta = datasetMeta.getDomainMetadata();
 		BoundingBox bb = domainMeta.getBoundingBox();
-		
-		long count = datasetMeta.getFeatureTypes().stream().mapToLong(datasetMeta::getFeatureCount).sum();		
-		List<String> jsonFeatureTypes = Utils.mapList(datasetMeta.getFeatureTypes(), FeatureTypes::getName);
 		
 		Builder b = ImmutableMap.builder()
 				.put("id", datasetUrl)
@@ -87,44 +84,24 @@ public class DatasetResource extends ServerResource {
 		
 		if (!skipDetails) {
 				b.put("distributions", ImmutableList.of(ImmutableMap.of(
-							"url", datasetUrl + "/features.covjson",
+							"accessURL", datasetUrl + "/coverages.covjson",
 							"mediaType", "application/prs.coverage+json"
 							),
 					ImmutableMap.of(
-							"url", datasetUrl + "/features.covcbor",
+							"accessURL", datasetUrl + "/coverages.covcbor",
 							"mediaType", "application/prs.coverage+cbor"
 							),
 					ImmutableMap.of(
-							"url", datasetUrl + "/features.geojson",
+							"accessURL", datasetUrl + "/coverages.geojson",
 							"mediaType", "application/vnd.geo+json"
 							)));
 		}
 		
 		// non-standard metadata
 		
-		b.put("coverages", datasetUrl + "/features")
-		 .put("coverageCount", count)
-		 .put("coverageTypes", jsonFeatureTypes);
 		
 		if (!skipDetails) {
-			b.put("parameters", jsonParams.build());
-		}
-		/*
-		 * In addition to the GeoDCAT bounding box we include a direct array-based
-		 * bounding box as well for convenience of web clients.
-		 * This is not exposed as RDF.
-		 */
-		// TODO CRS if non-default
-		b.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()));
-		
-		if (!GISUtils.isWgs84LonLat(bb.getCoordinateReferenceSystem())) {
-			b.put("horizontalCrs", Utils.getCrsUri(bb.getCoordinateReferenceSystem()));
-		}
-		
-		if (domainMeta.getVerticalExtent() != null) {
-			Extent<Double> ex = domainMeta.getVerticalExtent();
-			b.put("verticalExtent", ImmutableList.of(ex.getLow(), ex.getHigh()));
-			b.put("verticalCrs", "TODO vertical/crs/uri/");
+			b.put("observedProperties", jsonParams);
 		}
 		
 		return b;
@@ -137,8 +114,7 @@ public class DatasetResource extends ServerResource {
 
 		String rootUri = getRootRef().toString();
 		Map j = getDatasetJson(datasetId, rootUri)
-					// TODO how to get URL of other static Application?
-					.put("@context", "/static/contexts/Dataset.jsonld")
+					.put("@context", "https://rawgit.com/ec-melodies/wp02-dcat/master/context.jsonld")
 					.build();
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);

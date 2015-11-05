@@ -23,6 +23,7 @@ public abstract class Constraint {
 	public Extent<Double> longitudeExtent, latitudeExtent;
 	public Extent<Double> verticalExtent;
 	public Optional<Set<String>> params;
+	public boolean isSubset = true;
 		
 	public Constraint(String urlParam) {
 		DateTime timeStart = null, timeEnd = null;
@@ -64,7 +65,10 @@ public abstract class Constraint {
 	
 	protected Map<String, String> getParams(String urlParam) {
 		Map<String, String> params = new HashMap<>();
-		if (urlParam == null) urlParam = "";
+		if (urlParam == null) {
+			urlParam = "";
+			isSubset = false;
+		}
 		String[] parts = urlParam.split(";");
 		for (String part : parts) {
 			String[] kv = part.split("=");

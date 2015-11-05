@@ -5,23 +5,26 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import uk.ac.rdg.resc.edal.dataset.Dataset;
-import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
-import uk.ac.rdg.resc.edal.feature.Feature;
-import uk.ac.rdg.resc.edal.json.FeatureResource.FeatureMetadata;
-import uk.ac.rdg.resc.edal.metadata.Parameter;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
+import uk.ac.rdg.resc.edal.dataset.Dataset;
+import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
+import uk.ac.rdg.resc.edal.feature.Feature;
+import uk.ac.rdg.resc.edal.json.CoverageResource.FeatureMetadata;
+import uk.ac.rdg.resc.edal.metadata.Parameter;
+
 class DatasetMetadata {
 	private final String datasetId;
-	private final Map<String,FeatureMetadata> featureMetadata = new HashMap<>();
+	// we use a SortedMap for paging purposes
+	private final SortedMap<String,FeatureMetadata> featureMetadata = new TreeMap<>();
 	private final Map<Class<?>, Integer> featureCounts = new HashMap<>();
 	private final Map<Class<?>, Set<Parameter>> featureParams = new HashMap<>();
 	private DomainMetadata domainMetadata;
-	
+		
 	public DatasetMetadata(String datasetId) {
 		this.datasetId = datasetId;
 		extractMetadata();

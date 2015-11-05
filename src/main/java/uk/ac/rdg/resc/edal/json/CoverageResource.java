@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import org.joda.time.DateTime;
 import org.opengis.referencing.cs.CoordinateSystem;
 import org.opengis.referencing.cs.RangeMeaning;
+import org.restlet.data.Header;
 import org.restlet.data.MediaType;
 import org.restlet.data.Reference;
 import org.restlet.ext.jackson.JacksonRepresentation;
@@ -54,9 +55,15 @@ import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.primitives.Ints;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-public class FeatureResource extends ServerResource {
+public class CoverageResource extends ServerResource {
 	
 	public static final String GeoJSONLDContext = "https://rawgit.com/geojson/geojson-ld/master/contexts/geojson-time.jsonld";
+	
+	public static final String CapabilityURI = "http://coverageapi.org/def#capability";
+	public static final String SubsetByIndexURI = "http://coverageapi.org/def#subsetByIndex";
+	public static final String SubsetByCoordinateURI = "http://coverageapi.org/def#subsetByCoordinate";
+	public static final String EmbedURI = "http://coverageapi.org/def#embed";
+	public static final String SubsetOfURI = "http://coverageapi.org/def#subsetOf";
 	
 	static class FeatureMetadata {
 		public final DomainMetadata domainMeta;
@@ -75,24 +82,24 @@ public class FeatureResource extends ServerResource {
 		}
 	}
 	
-	static class Details {
-		boolean domain, rangeMetadata, range;
-		static Details from(String details, Details fallback) {
-			if (details == null) return fallback;
+	static class Embed {
+		boolean domain, parameters, range;
+		static Embed from(String details, Embed merge) {
+			if (details == null) return merge;
 			List<String> parts = Arrays.asList(details.split(","));
-			return new Details(parts.contains("domain"), parts.contains("rangeMetadata"), 
-					parts.contains("range"));
+			return new Embed(parts.contains("domain") || merge.domain, parts.contains("parameters") || merge.parameters, 
+					parts.contains("range") || merge.range);
 		}
-		public Details(boolean domain, boolean rangeMetadata, boolean range) {
+		public Embed(boolean domain, boolean parameters, boolean range) {
 			this.domain = domain || range;
-			this.rangeMetadata = rangeMetadata;
+			this.parameters = parameters;
 			this.range = range;
 		}
 	}
 	
-	public static Builder getFeatureGeoJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
-			Details details, SubsetConstraint subset) throws EdalException {
-		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
+	public static Builder getCoverageGeoJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
+			Embed embed, SubsetConstraint subset) throws EdalException {
+		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
 		
 		// TODO possibly have to convert to WGS84
 		BoundingBox bb = meta.domainMeta.getBoundingBox();
@@ -151,7 +158,7 @@ public class FeatureResource extends ServerResource {
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", "Feature")
-				.put("id", featureUrl)
+				.put("id", coverageUrl)
 				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()))
 				.put("properties", props.build())
 				.put("geometry", geometry);
@@ -177,13 +184,13 @@ public class FeatureResource extends ServerResource {
 		return j;
 	}
 	
-	public static Builder getFeatureCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
-			Details details, SubsetConstraint subset) throws EdalException {
-		String featureUrl = rootUri + "/datasets/" + meta.datasetId + "/features/" + meta.featureId;
+	public static Builder getCoverageCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
+			Embed details, SubsetConstraint subset) throws EdalException {
+		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", meta.domainMeta.getType() + "Coverage")
-				.put("id", featureUrl)
+				.put("id", coverageUrl)
 				.put("title", meta.name);
 				
 		Supplier<UniformFeature> feature =
@@ -191,16 +198,16 @@ public class FeatureResource extends ServerResource {
 
 		try {
 			if (details.domain) {
-				Map domainJson = getDomainJson(feature.get(), subset);
+				Map domainJson = CoverageDomainResource.getDomainJson(feature.get(), subset);
 				j.put("domain", domainJson);
 			} else {
-				j.put("domain", "http://.../domain");
+				j.put("domain", coverageUrl + "/domain");
 			}
 			// parameter metadata is repeated so that a feature can be processed stand-alone
-			if (details.rangeMetadata) {
-				j.put("parameters", getParameterTypesJson(meta, rootUri));
+			if (details.parameters) {
+				j.put("parameters", getParametersJson(meta, rootUri));
 			}
-			j.put("ranges", getParameterValuesJson(meta, feature, details.range, subset, rootUri));
+			j.put("ranges", getRangesJson(meta, feature, details.range, subset, rootUri));
 		
 		} catch (UnsupportedDomainException e) {
 			j.put("domain", unsupportedDomain(e.domain, e.info));
@@ -211,23 +218,23 @@ public class FeatureResource extends ServerResource {
 		return j;
 	}
 	
-	private Map getFeatureJson(boolean asGeoJson) throws EdalException, IOException {
+	private Map getCoverageAsJson(boolean asGeoJson) throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
-		String featureId = Reference.decode(getAttribute("featureId"));
-		Details fallback = new Details(true, true, false);
-		Details details = Details.from(getQueryValue("details"), fallback);
-		details.rangeMetadata = true;
-		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subset"));
+		String coverageId = Reference.decode(getAttribute("coverageId"));
+		Embed defaultEmbed = new Embed(true, true, false);
+		Embed embed = Embed.from(getQueryValue("embed"), defaultEmbed);
+		embed.parameters = true;
+		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subsetByCoordinate"));
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
-		Map featureJson;
+		Map coverageJson;
 		if (asGeoJson) {
-			featureJson = getFeatureGeoJson(meta.getLazyDataset(), 
-					meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset)
+			coverageJson = getCoverageGeoJson(meta.getLazyDataset(), 
+					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset)
 					.put("@context", GeoJSONLDContext)
 					.build();
 		} else {
-			FeatureMetadata featureMeta = meta.getFeatureMetadata(featureId);
+			FeatureMetadata featureMeta = meta.getFeatureMetadata(coverageId);
 			
 			Builder ldContext = ImmutableMap.builder();
 			for (String paramId : featureMeta.rangeMeta.getParameterIds()) {
@@ -237,10 +244,10 @@ public class FeatureResource extends ServerResource {
 						));
 			}
 			
-			featureJson = getFeatureCovJson(meta.getLazyDataset(), 
-					meta.getFeatureMetadata(featureId), getRootRef().toString(), details, subset)
+			coverageJson = getCoverageCovJson(meta.getLazyDataset(), 
+					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset)
 					.put("@context", ImmutableList.of(
-							"https://rawgit.com/neothemachine/coveragejson/master/contexts/coveragejson-base.jsonld",
+							"https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld",
 							ldContext
 								.put("qudt", "http://qudt.org/1.1/schema/qudt#")
 								.put("unit", "qudt:unit")
@@ -249,12 +256,13 @@ public class FeatureResource extends ServerResource {
 							))
 					.build();	
 		}		
-		return featureJson;
+		return coverageJson;
 	}
 	
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
-		Map featureJson = getFeatureJson(true);
+		addLinkHeaders();
+		Map featureJson = getCoverageAsJson(true);
 		JacksonRepresentation r = new JacksonRepresentation(featureJson);
 		r.setMediaType(App.GeoJSON);
 		if (!App.acceptsJSON(this)) {
@@ -263,14 +271,39 @@ public class FeatureResource extends ServerResource {
 		return r;
 	}
 	
-	/**
-	 * Note: restlet routing doesn't look at parameters, hence all
-	 * application/cov+json;* types lead to this method.	 * 
-	 */
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
-		Map featureJson = getFeatureJson(false);
-		return App.getCovJsonRepresentation(this, featureJson);
+		addLinkHeaders();
+		Series<Header> headers = this.getResponse().getHeaders();
+		
+		// TODO add as soon as subsetting by index is supported
+		//headers.add(new Header("Link", "<" + SubsetByIndexURI + ">; rel=\"" + CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + SubsetByCoordinateURI + ">; rel=\"" + CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + EmbedURI + ">; rel=\"" + CapabilityURI + "\""));
+		
+		Map json = getCoverageAsJson(false);
+
+		headers.add(new Header("Link", "<http://coveragejson.org/def#Coverage>; rel=\"type\""));
+		headers.add(new Header("Link", "<http://coveragejson.org/def#" + json.get("type") + ">; rel=\"type\""));
+		
+		return App.getCovJsonRepresentation(this, json);
+	}
+	
+	void addLinkHeaders() {
+		Series<Header> headers = this.getResponse().getHeaders();
+		
+		String datasetId = Reference.decode(getAttribute("datasetId"));
+		String collectionUrl = getRootRef() + "/datasets/" + datasetId + "/coverages";
+		
+		// TODO hacky, refactor
+		boolean isSubset = new SubsetConstraint(getQueryValue("subsetByCoordinate")).isSubset;
+		if (isSubset) {
+			String coverageId = Reference.decode(getAttribute("coverageId"));
+			String coverageUrl = collectionUrl + "/" + coverageId;
+			headers.add(new Header("Link", "<" + coverageUrl + ">; rel=\"" + SubsetOfURI + "\""));
+		} else {
+			headers.add(new Header("Link", "<" + collectionUrl + ">; rel=\"collection\""));
+		}
 	}
 	
 	private static void addPhenomenonTime(Builder featureJson, DomainMetadata meta) {
@@ -344,170 +377,6 @@ public class FeatureResource extends ServerResource {
 		}
 	}
 	
-	private static Map getDomainJson(UniformFeature uniFeature, SubsetConstraint subset) {
-		Builder domainJson = ImmutableMap.builder();
-		
-		// no support for trajectories currently
-		// we support everything which is a subtype of a rectilinear grid (includes profiles)
-		
-		// TODO add shortcuts when no subsetting is requested
-		
-		addHorizontalGrid(uniFeature.rectgrid, subset, domainJson);
-		addVerticalAxis(uniFeature.z, subset, domainJson);
-		addTimeAxis(uniFeature.t, subset, domainJson);
-		domainJson.put("type", uniFeature.type);
-		
-		return domainJson.build();
-	}
-		
-	private static IntStream getVerticalAxisIndices(VerticalAxis ax, SubsetConstraint subset) {
-		if (ax == null) {
-			return IntStream.of(0);
-		}
-		
-		// FIXME bounds are wrong for EN3 dataset
-		// -> they should be single points but are calculated bounds which becomes a problem
-		//    e.g. if the only z coords are [ 0.0, 3022] then extent and bounds will cover a lot more
-		
-		List<Extent<Double>> bounds = IntStream.range(0, ax.size())
-				.mapToObj(ax::getCoordinateBounds)
-				.collect(Collectors.toList());
-		
-		IntStream axIndices = IntStream.range(0, ax.size())
-			.filter(i -> subset.verticalExtent.intersects(bounds.get(i)));
-		
-		if (!subset.verticalTarget.isPresent()) {
-			return axIndices;
-		}
-		
-		// find vertical value closest to target and return its index
-		List<Double> values = ax.getCoordinateValues();
-		double target = subset.verticalTarget.get();
-		List<Integer> indices = Ints.asList(axIndices.toArray());
-		List<Double> distances = Utils.mapList(indices, i -> Math.abs(values.get(i) - target));
-		double minDistance = Double.POSITIVE_INFINITY;
-		int minIdx = 0;
-		int i = 0;
-		for (double distance : distances) {
-			if (distance < minDistance) {
-				minDistance = distance;
-				minIdx = i;
-			}
-			++i;
-		}		
-		return IntStream.of(indices.get(minIdx));
-	}
-	
-	private static IntStream getTimeAxisIndices(TimeAxis ax, Constraint subset) {
-		if (ax == null) {
-			return IntStream.of(0);
-		}
-		// FIXME add overload in EDAL to get all coordinate bounds as List like the values
-		//  -> very similar to getDomainObjects but better semantics and List type
-		List<Extent<DateTime>> bounds = IntStream.range(0, ax.size())
-				.mapToObj(ax::getCoordinateBounds)
-				.collect(Collectors.toList());
-		IntStream axIndices = IntStream.range(0, ax.size())
-			.filter(i -> subset.timeExtent.intersects(bounds.get(i)));
-		return axIndices;
-	}
-	
-	/**
-	 * NOTE: supports rectilinear lon-lat grids only for now
-	 */
-	private static IntStream getXAxisIndices(ReferenceableAxis<Double> ax, Constraint subset) {
-		List<Extent<Double>> bounds = IntStream.range(0, ax.size())
-				.mapToObj(ax::getCoordinateBounds)
-				.collect(Collectors.toList());
-		// FIXME longitudes must be (un)wrapped the same way!!
-		//  -> are longitudes normalized in some way when read in EDAL?
-		IntStream axIndices = IntStream.range(0, ax.size())
-			.filter(i -> subset.longitudeExtent.intersects(bounds.get(i)));
-		return axIndices;
-	}
-
-	/**
-	 * NOTE: supports rectilinear lon-lat grids only for now
-	 */
-	private static IntStream getYAxisIndices(ReferenceableAxis<Double> ax, Constraint subset) {
-		List<Extent<Double>> bounds = IntStream.range(0, ax.size())
-				.mapToObj(ax::getCoordinateBounds)
-				.collect(Collectors.toList());
-		IntStream axIndices = IntStream.range(0, ax.size())
-			.filter(i -> subset.latitudeExtent.intersects(bounds.get(i)));
-		return axIndices;
-	}
-	
-	/**
-	 * NOTE: supports rectilinear lon-lat grids only for now
-	 */
-	private static void addHorizontalGrid(RectilinearGrid grid, Constraint subset, Builder domainJson) {
-		List<Double> x = grid.getXAxis().getCoordinateValues();
-		List<Double> y = grid.getYAxis().getCoordinateValues();
-		double[] subsettedX = getXAxisIndices(grid.getXAxis(), subset).mapToDouble(x::get).toArray();
-		double[] subsettedY = getYAxisIndices(grid.getYAxis(), subset).mapToDouble(y::get).toArray();
-				
-		BoundingBox bb = grid.getBoundingBox();
-		domainJson.putAll(ImmutableMap.of(
-			    "crs", Utils.getCrsUri(grid.getCoordinateReferenceSystem()),
-			    // FIXME have to subset bbox as well
-			    "bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()),
-			    "x", subsettedX.length == 1 ? subsettedX[0] : subsettedX,
-				"y", subsettedY.length == 1 ? subsettedY[0] : subsettedY
-				));
-		
-		// FIXME add bounds if not infinitesimal
-		//  -> how do we query that except checking if low==high?
-		
-		if (grid instanceof RegularGrid && (grid.getXSize() > 1 || grid.getYSize() > 1)) {
-			RegularGrid reggrid = (RegularGrid) grid;
-			domainJson.putAll(ImmutableMap.of(
-					"delta", ImmutableList.of(
-				    		reggrid.getXAxis().getCoordinateSpacing(),
-				    		reggrid.getYAxis().getCoordinateSpacing()
-				    		)
-				    ));
-		}
-	}
-	
-	private static void addVerticalAxis(VerticalAxis z, SubsetConstraint subset, Builder domainJson) {
-		if (z == null) {
-			return;
-		}
-		List<Double> heights = z.getCoordinateValues();
-		double[] subsettedHeights = getVerticalAxisIndices(z, subset).mapToDouble(heights::get).toArray();
-		
-		domainJson.put("z", subsettedHeights);
-		
-		// FIXME add bounds if not infinitesimal
-		//  -> how do we query that except checking if low==high?
-		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
-		
-		// TODO are there no standards for vertical CRS, with codes etc.?
-		domainJson.put("zCrs", ImmutableMap.of(
-				"uom", z.getVerticalCrs().getUnits(),
-				"positiveUpwards", z.getVerticalCrs().isPositiveUpwards(),
-				"dimensionless", z.getVerticalCrs().isDimensionless(),
-				"pressure", z.getVerticalCrs().isPressure()
-				));
-		
-	}
-		
-	private static void addTimeAxis(TimeAxis t, Constraint subset, Builder domainJson) {
-		if (t == null) {
-			return;
-		}
-		List<DateTime> times = t.getCoordinateValues();
-		String[] subsettedTimes = getTimeAxisIndices(t, subset)
-				.mapToObj(i -> times.get(i).toString())
-				.toArray(String[]::new);
-		domainJson.put("t", subsettedTimes.length == 1 ? subsettedTimes[0] : subsettedTimes);
-		
-		// FIXME add bounds if not infinitesimal
-		//  -> how do we query that except checking if low==high?
-		//domainJson.put("timeBounds", t.getDomainObjects().iterator());
-	}
-	
 	static class UnsupportedDomainException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		Domain<?> domain;
@@ -529,9 +398,7 @@ public class FeatureResource extends ServerResource {
 				);
 	}
 		
-	private static Map getParameterTypesJson(FeatureMetadata meta, String rootUri) {
-		String root = rootUri + "/datasets/" + meta.datasetId + "/params/";
-		
+	private static Map getParametersJson(FeatureMetadata meta, String rootUri) {		
 		Builder params = ImmutableMap.builder();
 		for (Parameter param : meta.rangeMeta.getParameters()) {
 			params.put(param.getVariableId(), ParameterResource.getParamJson(meta.datasetId, param, rootUri).build());
@@ -539,7 +406,7 @@ public class FeatureResource extends ServerResource {
 		return params.build();
 	}
 		
-	private static Map getParameterValuesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 
+	private static Map getRangesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 
 			boolean includeValues, SubsetConstraint subset, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId;
 		Builder values = ImmutableMap.builder()
@@ -550,7 +417,7 @@ public class FeatureResource extends ServerResource {
 				continue;
 			}
 			Parameter param = meta.rangeMeta.getParameter(paramId);
-			String rangeUrl = root + "/features/" + meta.featureId + "/range/" + paramId;
+			String rangeUrl = root + "/coverages/" + meta.featureId + "/range/" + paramId;
 			Object rangeParam;
 			
 			if (includeValues) {
@@ -561,7 +428,7 @@ public class FeatureResource extends ServerResource {
 						.put("id", rangeUrl)
 						.put("validMin", meta.rangeMeta.getMinValue(param))
 						.put("validMax", meta.rangeMeta.getMaxValue(param))
-						.put("values", getValues(uniFeature.feature.getValues(paramId), uniFeature, subset))
+						.put("values", CoverageRangeResource.getValues(uniFeature.feature.getValues(paramId), uniFeature, subset))
 						.build();
 			} else {
 				rangeParam = rangeUrl;
@@ -573,87 +440,6 @@ public class FeatureResource extends ServerResource {
 		return values.build();
 	}
 
-	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, 
-			SubsetConstraint subset) {
-		return getValues(valsArr, new UniformFeature(feature), subset);
-	}
-	
-	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, 
-			SubsetConstraint subset) {
-		if (valsArr.size() > Integer.MAX_VALUE) {
-			throw new RuntimeException("Array too big, consider subsetting!");
-		}
-		
-		int[] xIndices = getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset).toArray();
-		int[] yIndices = getYAxisIndices(uniFeature.rectgrid.getYAxis(), subset).toArray();
-		int[] zIndices = getVerticalAxisIndices(uniFeature.z, subset).toArray();
-		int[] tIndices = getTimeAxisIndices(uniFeature.t, subset).toArray();
-		
-		// FIXME EN3 has 99999.0 as values which probably means missing
-		//  -> shouldn't this be detected by EDAL and returned as null instead?
-		
-//		valsArr.forEach(vals::add);
-		
-				
-		Array4D<Number> vals4D;
-		
-		if (valsArr instanceof Array4D) {
-			vals4D = (Array4D<Number>) valsArr;
-		} else if (uniFeature.feature instanceof ProfileFeature) {
-			// Array1D varying over vertical axis
-			vals4D = new Array4D<Number>(1, zIndices.length, 1, 1) {
-				@Override
-				public Number get(int... coords) {
-					return valsArr.get(coords[1]);
-				}
-				@Override
-				public void set(Number value, int... coords) {
-					throw new UnsupportedOperationException();
-				}
-			};
-		} else {
-			throw new RuntimeException("not supported: " + valsArr.getClass().getName());
-		}
-		
 
-		
-		Number[] vals = new Number[xIndices.length * yIndices.length * 
-				zIndices.length * tIndices.length];
-		
-		int i = 0;
-		for (int t : tIndices) {
-			for (int z : zIndices) {
-				for (int y : yIndices) {
-					for (int x : xIndices) {
-						vals[i++] = vals4D.get(t, z, y, x);
-					}
-				}
-			}
-		}
-		
-		return Arrays.asList(vals);
-	}
-	
-	public static float[] getValues_(Array<Number> valsArr) {
-		if (valsArr.size() > Integer.MAX_VALUE) {
-			throw new RuntimeException("Array too big, consider subsetting!");
-		}
-		
-		// TODO make this more clever, depending on input data
-		float[] vals = new float[(int) valsArr.size()];
-		
-		Iterator<Number> it = valsArr.iterator();
-		int i = 0;
-		while (it.hasNext()) {
-			Number v = it.next();
-			if (v == null) {
-				vals[i] = Integer.MIN_VALUE;
-			} else {
-				vals[i] = v.intValue();
-			}
-			i++;
-		}
-		return vals;
-	}
 
 }

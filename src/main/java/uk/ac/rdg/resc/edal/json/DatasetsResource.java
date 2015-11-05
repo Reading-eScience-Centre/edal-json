@@ -75,13 +75,13 @@ public class DatasetsResource extends ServerResource {
 				}
 			}
 			
-			datasetsJson.add(DatasetResource.getDatasetJson(datasetId, rootUri, true).build());			
+			datasetsJson.add(DatasetResource.getDatasetJson(datasetId, rootUri, false).build());			
 		}
 		
 		
 		Map j = ImmutableMap.builder()
-				.put("@context", "/static/contexts/Catalogue.jsonld")
-				.put("type", "Catalogue")
+				.put("@context", "https://rawgit.com/ec-melodies/wp02-dcat/master/context.jsonld")
+				.put("type", "Catalog")
 				.put("id", datasetsUrl)
 				.put("title", "Catalogue 1")
 				.put("description", "This is my first catalogue.")
@@ -89,7 +89,7 @@ public class DatasetsResource extends ServerResource {
 						"type", "Organisation",
 						"name", "University of Reading"
 						))
-				.put("license", "http://creativecommons.org/licenses/by/3.0/")
+				.put("license", "http://creativecommons.org/licenses/by/4.0/")
 				.put("homepage", "http://rdg.ac.uk/demo/datasets")
 				.put("datasets", datasetsJson)
 				.build();		

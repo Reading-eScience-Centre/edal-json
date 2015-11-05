@@ -13,14 +13,11 @@ import org.restlet.data.Preference;
 import org.restlet.data.Protocol;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
-import org.restlet.resource.Directory;
 import org.restlet.resource.Resource;
 import org.restlet.routing.Router;
-import org.restlet.service.CorsService;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 public class App extends Application {
 	
@@ -58,12 +55,14 @@ public class App extends Application {
         getMetadataService().addExtension("cbor", CovJSONCBOR);
 		
 		Router router = new Router();
-		router.attach("/datasets/{datasetId}/features/{featureId}/range/{parameterId}",
-				FeatureParameterRangeResource.class);
-		router.attach("/datasets/{datasetId}/features/{featureId}",
-				FeatureResource.class);
-		router.attach("/datasets/{datasetId}/features",
-				FeaturesResource.class);
+		router.attach("/datasets/{datasetId}/coverages/{coverageId}/range/{parameterId}",
+				CoverageRangeResource.class);
+		router.attach("/datasets/{datasetId}/coverages/{coverageId}/domain",
+				CoverageDomainResource.class);
+		router.attach("/datasets/{datasetId}/coverages/{coverageId}",
+				CoverageResource.class);
+		router.attach("/datasets/{datasetId}/coverages",
+				CoverageCollectionResource.class);
 		router.attach("/datasets/{datasetId}/params/{paramId}",
 				ParameterResource.class);
 		router.attach("/datasets/{datasetId}", DatasetResource.class);

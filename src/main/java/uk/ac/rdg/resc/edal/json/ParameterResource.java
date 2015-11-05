@@ -37,15 +37,16 @@ public class ParameterResource extends ServerResource {
 						"symbol", param.getUnits()
 						));
 			
-		String observedPropertyUri = "";
+		String observedPropertyUri = null;
 		if (param.getStandardName() != null) {
-			// TODO translate into URI
-			observedPropertyUri = "http://foo/" + param.getStandardName();
+			observedPropertyUri = "http://vocab.nerc.ac.uk/standard_name/" + param.getStandardName();
 		}	
-		j.put("observedProperty", ImmutableMap.of(
-				"id", observedPropertyUri,
-				"label", ImmutableMap.of("en", param.getTitle())
-				));
+		Builder obsProp = ImmutableMap.builder()
+				.put("label", ImmutableMap.of("en", param.getTitle()));
+		if (observedPropertyUri != null) {
+			obsProp.put("id", observedPropertyUri);
+		}
+		j.put("observedProperty", obsProp.build());
 		return j;
 	}
 
