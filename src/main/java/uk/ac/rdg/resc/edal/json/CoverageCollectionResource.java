@@ -233,7 +233,7 @@ public class CoverageCollectionResource extends ServerResource {
 			 .put("coverages", jsonFeatures);
 		}
 		
-		// TODO how to put control metadata in non-default JSON-LD graph?
+		// TODO how to put metadata in non-default JSON-LD graph?
 		// see http://ruben.verborgh.org/blog/2015/10/06/turtles-all-the-way-down/
 		j.put("totalCount", totalCount);
 		j.put("perPage", paging.elementsPerPage);
@@ -245,9 +245,6 @@ public class CoverageCollectionResource extends ServerResource {
 		Form q = new Form(getQuery().getQueryString());
 		for (Entry<String,String> entry : params.entrySet()) {
 			q.set(entry.getKey(), entry.getValue());
-		}
-		if (!params.containsKey("page")) {
-			q.removeFirst("page");
 		}
 		return q.isEmpty() ? "" : "?" + q.getQueryString();
 	}
@@ -275,7 +272,7 @@ public class CoverageCollectionResource extends ServerResource {
 			links.put("prev", baseUrl + getQueryString(params));
 		}
 		if (paging.totalPages > 1) {
-			params.remove("page");
+			params.put("page", "1");
 			links.put("first", baseUrl + getQueryString(params));
 			
 			params.put("page", String.valueOf(paging.totalPages));
@@ -287,20 +284,35 @@ public class CoverageCollectionResource extends ServerResource {
 			headers.add(new Header("Link", "<" + url + ">; rel=\"" + rel + "\""));
 		}
 	}
-	
+		
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
+		/*
+		 * Note that type=CoverageCollection is not included as a Link header since this
+		 * is not easily possible with paged collections. A page /coverages?page=2 is a partial view
+		 * and not the collection itself (the "id" inside the JSON also refers to /coverages only).
+		 * Similarly, this applies to /coverages?num=30 where it is not clear what type this should be.
+		 * Both of those redirect to their ?page=n version.
+		 */		
+		
 		Series<Header> headers = this.getResponse().getHeaders();
-		headers.add(new Header("Link", "<http://coveragejson.org/def#CoverageCollection>; rel=\"type\""));
+		// FIXME check if this is semantically correct; use hydra IRITemplate in JSON and see if it matches
 		headers.add(new Header("Link", "<" + FilterByCoordinateURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
 		headers.add(new Header("Link", "<" + CoverageResource.SubsetByCoordinateURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
 		headers.add(new Header("Link", "<" + CoverageResource.EmbedURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
 		
 		Paging paging = new Paging(DEFAULT_COVERAGES_PER_PAGE, MAXIMUM_COVERAGES_PER_PAGE);
-		Map j = getFeaturesJson(false, paging).build();		
-		setPagingHeaders(paging);
+		Map j = getFeaturesJson(false, paging).build();
 		
-		return App.getCovJsonRepresentation(this, j);
+		if (paging.totalPages > 1 && paging.currentPage == 1 && getReference().getQueryAsForm().getFirstValue("page") == null) {
+			getResponse().redirectPermanent(getReference().addQueryParameter("page", "1"));
+			return null;
+		} else {
+			// if paged, this would be type=PartialCollectionView or similar and not the CoverageCollection itself!
+			// therefore we skip the Link header and only include that information in the data itself
+			setPagingHeaders(paging);
+			return App.getCovJsonRepresentation(this, j);
+		}
 	}
 		
 	@Get("geojson")
