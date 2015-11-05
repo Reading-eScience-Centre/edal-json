@@ -37,15 +37,6 @@ import com.google.common.collect.ImmutableMap.Builder;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageCollectionResource extends ServerResource {
 	
-	public static final int DEFAULT_COVERAGES_PER_PAGE = 100;
-	public static final int DEFAULT_GEOJSON_FEATURES_PER_PAGE = 10000;
-	
-	// TODO this should depend on coverage size and whether range/domain is embedded or not
-	public static final int MAXIMUM_COVERAGES_PER_PAGE = 10000;
-	public static final int MAXIMUM_GEOJSON_FEATURES_PER_PAGE = 100000;
-	
-	public static final String FilterByCoordinateURI = "http://coverageapi.org/def#filterByCoordinate";
-	
 	class Paging {
 		int currentPage = 1;
 		int defaultElementsPerPage;
@@ -250,8 +241,8 @@ public class CoverageCollectionResource extends ServerResource {
 		Builder j = ImmutableMap.builder();
 		if (asGeojson) {
 			j.put("@context", ImmutableList.of(
-					"http://www.w3.org/ns/hydra/core",
-					CoverageResource.GeoJSONLDContext,
+					Constants.HydraContext,
+					Constants.GeoJSONLDContext,
 					ImmutableMap.of(
 							"foaf", "http://xmlns.com/foaf/0.1/"
 							)
@@ -276,8 +267,8 @@ public class CoverageCollectionResource extends ServerResource {
 			j.put("@context", ImmutableList.of(
 					// hydra comes first since it defines some generic terms like "title" under the hydra: ns
 					// but we want to use our own "title" definition from the coveragejson context (overriding hydra's)
-					"http://www.w3.org/ns/hydra/core",
-					"https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld",
+					Constants.HydraContext,
+					Constants.CoverageJSONContext,
 					ldContext
 						.put("foaf", "http://xmlns.com/foaf/0.1/")
 						.put("qudt", "http://qudt.org/1.1/schema/qudt#")
@@ -358,11 +349,11 @@ public class CoverageCollectionResource extends ServerResource {
 		
 		Series<Header> headers = this.getResponse().getHeaders();
 		// FIXME check if this is semantically correct; use hydra IRITemplate in JSON and see if it matches
-		headers.add(new Header("Link", "<" + FilterByCoordinateURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + CoverageResource.SubsetByCoordinateURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + CoverageResource.EmbedURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.FilterByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.SubsetByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.EmbedURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
 		
-		Paging paging = new Paging(DEFAULT_COVERAGES_PER_PAGE, MAXIMUM_COVERAGES_PER_PAGE);
+		Paging paging = new Paging(Constants.DEFAULT_COVERAGES_PER_PAGE, Constants.MAXIMUM_COVERAGES_PER_PAGE);
 		Map j = getFeaturesJson(false, paging).build();
 		
 		if (paging.redirect != null) {
@@ -378,7 +369,7 @@ public class CoverageCollectionResource extends ServerResource {
 		
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
-		Paging paging = new Paging(DEFAULT_GEOJSON_FEATURES_PER_PAGE, MAXIMUM_GEOJSON_FEATURES_PER_PAGE);
+		Paging paging = new Paging(Constants.DEFAULT_GEOJSON_FEATURES_PER_PAGE, Constants.MAXIMUM_GEOJSON_FEATURES_PER_PAGE);
 		Map j = getFeaturesJson(true, paging).build();
 		
 		if (paging.redirect != null) {

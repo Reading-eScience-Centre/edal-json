@@ -2,26 +2,27 @@ package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.joda.time.DateTime;
 import org.opengis.referencing.cs.CoordinateSystem;
 import org.opengis.referencing.cs.RangeMeaning;
 import org.restlet.data.Header;
-import org.restlet.data.MediaType;
 import org.restlet.data.Reference;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import org.restlet.util.Series;
+
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Domain;
@@ -35,35 +36,15 @@ import uk.ac.rdg.resc.edal.feature.ProfileFeature;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.grid.RectilinearGridImpl;
-import uk.ac.rdg.resc.edal.grid.ReferenceableAxis;
 import uk.ac.rdg.resc.edal.grid.ReferenceableAxisImpl;
-import uk.ac.rdg.resc.edal.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
 import uk.ac.rdg.resc.edal.grid.TimeAxisImpl;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
-import uk.ac.rdg.resc.edal.util.Array;
-import uk.ac.rdg.resc.edal.util.Array4D;
-
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
-import com.google.common.primitives.Ints;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageResource extends ServerResource {
-	
-	public static final String GeoJSONLDContext = "https://rawgit.com/geojson/geojson-ld/master/contexts/geojson-time.jsonld";
-	
-	public static final String CapabilityURI = "http://coverageapi.org/def#capability";
-	public static final String SubsetByIndexURI = "http://coverageapi.org/def#subsetByIndex";
-	public static final String SubsetByCoordinateURI = "http://coverageapi.org/def#subsetByCoordinate";
-	public static final String EmbedURI = "http://coverageapi.org/def#embed";
-	public static final String SubsetOfURI = "http://coverageapi.org/def#subsetOf";
 	
 	static class FeatureMetadata {
 		public final DomainMetadata domainMeta;
@@ -231,7 +212,7 @@ public class CoverageResource extends ServerResource {
 		if (asGeoJson) {
 			coverageJson = getCoverageGeoJson(meta.getLazyDataset(), 
 					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset)
-					.put("@context", GeoJSONLDContext)
+					.put("@context", Constants.GeoJSONLDContext)
 					.build();
 		} else {
 			FeatureMetadata featureMeta = meta.getFeatureMetadata(coverageId);
@@ -247,7 +228,7 @@ public class CoverageResource extends ServerResource {
 			coverageJson = getCoverageCovJson(meta.getLazyDataset(), 
 					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset)
 					.put("@context", ImmutableList.of(
-							"https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld",
+							Constants.CoverageJSONContext,
 							ldContext
 								.put("qudt", "http://qudt.org/1.1/schema/qudt#")
 								.put("unit", "qudt:unit")
@@ -278,13 +259,13 @@ public class CoverageResource extends ServerResource {
 		
 		// TODO add as soon as subsetting by index is supported
 		//headers.add(new Header("Link", "<" + SubsetByIndexURI + ">; rel=\"" + CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + SubsetByCoordinateURI + ">; rel=\"" + CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + EmbedURI + ">; rel=\"" + CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.SubsetByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.EmbedURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
 		
 		Map json = getCoverageAsJson(false);
 
-		headers.add(new Header("Link", "<http://coveragejson.org/def#Coverage>; rel=\"type\""));
-		headers.add(new Header("Link", "<http://coveragejson.org/def#" + json.get("type") + ">; rel=\"type\""));
+		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + "Coverage>; rel=\"type\""));
+		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + json.get("type") + ">; rel=\"type\""));
 		
 		return App.getCovJsonRepresentation(this, json);
 	}
@@ -300,7 +281,7 @@ public class CoverageResource extends ServerResource {
 		if (isSubset) {
 			String coverageId = Reference.decode(getAttribute("coverageId"));
 			String coverageUrl = collectionUrl + "/" + coverageId;
-			headers.add(new Header("Link", "<" + coverageUrl + ">; rel=\"" + SubsetOfURI + "\""));
+			headers.add(new Header("Link", "<" + coverageUrl + ">; rel=\"" + Constants.SubsetOfURI + "\""));
 		} else {
 			headers.add(new Header("Link", "<" + collectionUrl + ">; rel=\"collection\""));
 		}

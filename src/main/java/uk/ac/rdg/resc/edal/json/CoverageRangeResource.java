@@ -64,10 +64,10 @@ public class CoverageRangeResource extends ServerResource {
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation json() throws IOException, EdalException {
 		Series<Header> headers = this.getResponse().getHeaders();
-		headers.add(new Header("Link", "<http://coveragejson.org/def#Range>; rel=\"type\""));
+		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + "Range>; rel=\"type\""));
 		// TODO add as soon as subsetting by index is supported
 		//headers.add(new Header("Link", "<" + CoverageResource.SubsetByIndexURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + CoverageResource.SubsetByCoordinateURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.SubsetByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
 		
 		// TODO add subsetOf rel if subsetted
 		// TODO add link to coverage

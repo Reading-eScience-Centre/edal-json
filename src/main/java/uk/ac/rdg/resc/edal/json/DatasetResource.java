@@ -41,7 +41,8 @@ public class DatasetResource extends ServerResource {
 		Builder b = ImmutableMap.builder()
 				.put("id", datasetUrl)
 				.put("type", "Dataset")
-				.put("title", "N/A (datasets in EDAL don't have a title, only at WMS level)")
+				// datasets in EDAL don't have a title, only at WMS level
+				.put("title", dataset.getId())
 				.put("license", "http://creativecommons.org/licenses/by/4.0/");
 		
 		// see GeoDCAT-AP for spatial and temporal spec

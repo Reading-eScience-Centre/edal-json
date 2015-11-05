@@ -59,7 +59,7 @@ public class ParameterResource extends ServerResource {
 		
 		Map j = getParamJson(dataset.getId(), param, getRootRef().toString())
 					.put("@context", ImmutableList.of(
-							"/static/contexts/Dataset.jsonld",
+							Constants.CoverageJSONContext,
 							ImmutableMap.of(param.getVariableId(), ImmutableMap.of(
 									"@id", getParamUrl(datasetId, param.getVariableId(), getRootRef().toString()),
 									"@type", "@id"

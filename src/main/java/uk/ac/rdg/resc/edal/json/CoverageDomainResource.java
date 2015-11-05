@@ -17,8 +17,6 @@ import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import org.restlet.util.Series;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -34,9 +32,7 @@ import uk.ac.rdg.resc.edal.grid.ReferenceableAxis;
 import uk.ac.rdg.resc.edal.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
-import uk.ac.rdg.resc.edal.json.CoverageResource.FeatureMetadata;
 import uk.ac.rdg.resc.edal.json.CoverageResource.UniformFeature;
-import uk.ac.rdg.resc.edal.metadata.Parameter;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageDomainResource extends ServerResource {
@@ -52,11 +48,11 @@ public class CoverageDomainResource extends ServerResource {
 				new UniformFeature((DiscreteFeature)dataset.readFeature(featureId));
 		
 		Series<Header> headers = this.getResponse().getHeaders();
-		headers.add(new Header("Link", "<http://coveragejson.org/def#Domain>; rel=\"type\""));
-		headers.add(new Header("Link", "<http://coveragejson.org/def#" + uniFeature.type + ">; rel=\"type\""));
+		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + "Domain>; rel=\"type\""));
+		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + uniFeature.type + ">; rel=\"type\""));
 		// TODO add as soon as subsetting by index is supported
 		//headers.add(new Header("Link", "<" + CoverageResource.SubsetByIndexURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + CoverageResource.SubsetByCoordinateURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.SubsetByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
 		
 		// TODO add subsetOf rel if subsetted
 		// TODO add link to coverage
