@@ -81,8 +81,8 @@ public class DatasetsResource extends ServerResource {
 		
 		Map j = ImmutableMap.builder()
 				.put("@context", "https://rawgit.com/ec-melodies/wp02-dcat/master/context.jsonld")
-				.put("type", "Catalog")
-				.put("id", datasetsUrl)
+				.put("@type", "Catalog")
+				.put("@id", datasetsUrl)
 				.put("title", "Catalogue 1")
 				.put("description", "This is my first catalogue.")
 				.put("publisher", ImmutableMap.of(

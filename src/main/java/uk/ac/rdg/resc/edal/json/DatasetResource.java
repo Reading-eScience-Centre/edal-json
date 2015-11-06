@@ -39,8 +39,8 @@ public class DatasetResource extends ServerResource {
 		BoundingBox bb = domainMeta.getBoundingBox();
 		
 		Builder b = ImmutableMap.builder()
-				.put("id", datasetUrl)
-				.put("type", "Dataset")
+				.put("@id", datasetUrl)
+				.put("@type", "Dataset")
 				// datasets in EDAL don't have a title, only at WMS level
 				.put("title", dataset.getId())
 				.put("license", "http://creativecommons.org/licenses/by/4.0/");
@@ -48,7 +48,7 @@ public class DatasetResource extends ServerResource {
 		// see GeoDCAT-AP for spatial and temporal spec
 		// TODO should always be WGS84, convert if necessary
 		b.put("spatial", ImmutableMap.of(
-				"type", "Location",
+				"@type", "Location",
 				"geometry", "POLYGON((" + 
 						bb.getMinX() + " " + bb.getMinY() + "," +
 						bb.getMaxX() + " " + bb.getMinY() + "," +
@@ -64,9 +64,9 @@ public class DatasetResource extends ServerResource {
 			
 			// GeoDCAT
 			b.put("temporal", ImmutableMap.of(
-					"type", "Interval",
-					"start", ex.getLow().toString(),
-					"end", ex.getHigh().toString()
+					"@type", "Interval",
+					"startDate", ex.getLow().toString(),
+					"endDate", ex.getHigh().toString()
 					));
 		}
 		
