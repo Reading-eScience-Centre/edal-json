@@ -14,6 +14,6 @@ public class RestletComponent extends Component {
 		// our REST API
 		App app = new App();
 		app.getEncoderService().setEnabled(true); // gzip
-		getDefaultHost().attach("/api", app);
+		getDefaultHost().attach("", app);
 	}
 }
