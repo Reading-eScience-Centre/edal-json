@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableSet;
 
 public class RestletComponent extends Component {
 	public RestletComponent() {
-		// FIXME doesn't output headers for some reason
 		CorsService corsService = new CorsService();
 		corsService.setExposedHeaders(ImmutableSet.of("Link"));
 		getServices().add(corsService);

@@ -9,7 +9,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<edal-version>1.0.4</edal-version>
-		<restlet-version>2.3.4</restlet-version>
+		<restlet-version>2.3.5</restlet-version>
 	</properties>
 	<build>
 		<plugins>
