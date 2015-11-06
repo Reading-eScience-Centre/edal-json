@@ -71,17 +71,17 @@ public class DatasetResource extends ServerResource {
 		}
 		
 		b.put("distributions", ImmutableList.of(ImmutableMap.of(
-					"title", "CoverageJSON API access",
+					"title", "Coverage data",
 					"accessURL", datasetUrl + "/coverages",
 					"mediaType", "application/prs.coverage+json"
 					),
 			ImmutableMap.of(
-					"title", "CoverageJSON (CBOR variant) API access",
+					"title", "Coverage data",
 					"accessURL", datasetUrl + "/coverages",
 					"mediaType", "application/prs.coverage+cbor"
 					),
 			ImmutableMap.of(
-					"title", "GeoJSON API access (coverage outlines only)",
+					"title", "Coverage outlines",
 					"accessURL", datasetUrl + "/coverages",
 					"mediaType", "application/vnd.geo+json"
 					)));
