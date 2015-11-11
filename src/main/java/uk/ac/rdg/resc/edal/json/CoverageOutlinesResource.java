@@ -73,7 +73,8 @@ public class CoverageOutlinesResource extends ServerResource {
 		Builder props = ImmutableMap.builder()
 				.put("domainType", type)
 				.put("title", meta.name)
-				.put("parameters", paramTitles);
+				.put("parameters", paramTitles)
+				.put("coverage", coverageUrl + subset.getCanonicalSubsetQueryString());
 		/*
 		 * Vertical extent is included in properties in a lax way.
 		 * It is not on the same level as "bbox" and "when" because
