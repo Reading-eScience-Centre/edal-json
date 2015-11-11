@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.joda.time.DateTime;
+import org.restlet.data.Dimension;
 import org.restlet.data.Form;
 import org.restlet.data.Header;
 import org.restlet.data.Reference;
@@ -135,8 +136,8 @@ public class CoverageCollectionResource extends ServerResource {
 	
 	private Builder getFeaturesJson(boolean asGeojson, Paging paging) throws IOException, EdalException {
 		final String datasetId = Reference.decode(getAttribute("datasetId"));
-		Embed defaultEmbed = new Embed(false, false, false);
-		Embed embed = Embed.from(getQueryValue("embed"), defaultEmbed);
+		Embed defaultEmbed = new Embed(false, false);
+		Embed embed = Embed.from(getRequest().getHeaders(), defaultEmbed);
 		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subsetByCoordinate"));
 		FilterConstraint filter = new FilterConstraint(getQueryValue("filterByCoordinate"), subset);
 		
@@ -284,10 +285,10 @@ public class CoverageCollectionResource extends ServerResource {
 		}
 		
 		if (paging.totalPages > 1) {
+			j.put("totalItems", paging.totalElements);
 			Builder pagination = ImmutableMap.builder()
 					.put("id", getReference().toString())
 					.put("type", "PartialCollectionView")
-					.put("totalItems", paging.totalElements)
 					.put("itemsPerPage", paging.elementsPerPage);
 			if (paging.first != null) {
 				pagination.put("first", paging.first);
@@ -304,7 +305,6 @@ public class CoverageCollectionResource extends ServerResource {
 			
 			j.put("view", ImmutableMap.of(
 					"id", "#pagination",
-					"foaf:primaryTopic", "",
 					// cannot be made nicer currently
 					// see https://github.com/json-ld/json-ld.org/issues/398
 					"@graph", pagination.build()
@@ -339,19 +339,11 @@ public class CoverageCollectionResource extends ServerResource {
 		
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
-		/*
-		 * Note that type=CoverageCollection is not included as a Link header since this
-		 * is not easily possible with paged collections. A page /coverages?page=2 is a partial view
-		 * and not the collection itself (the "id" inside the JSON also refers to /coverages only).
-		 * Similarly, this applies to /coverages?num=30 where it is not clear what type this should be.
-		 * Both of those redirect to their ?page=n version.
-		 */		
+		// FIXME add Vary: Prefer, see https://github.com/restlet/restlet-framework-java/issues/187
 		
 		Series<Header> headers = this.getResponse().getHeaders();
-		// FIXME check if this is semantically correct; use hydra IRITemplate in JSON and see if it matches
-		headers.add(new Header("Link", "<" + Constants.FilterByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.SubsetByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.EmbedURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.Domain + ">; rel=\"" + Constants.CanIncludeURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.Range + ">; rel=\"" + Constants.CanIncludeURI + "\""));
 		
 		Paging paging = new Paging(Constants.DEFAULT_COVERAGES_PER_PAGE, Constants.MAXIMUM_COVERAGES_PER_PAGE);
 		Map j = getFeaturesJson(false, paging).build();

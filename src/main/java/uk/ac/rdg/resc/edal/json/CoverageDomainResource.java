@@ -48,11 +48,6 @@ public class CoverageDomainResource extends ServerResource {
 				new UniformFeature((DiscreteFeature)dataset.readFeature(featureId));
 		
 		Series<Header> headers = this.getResponse().getHeaders();
-		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + "Domain>; rel=\"type\""));
-		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + uniFeature.type + ">; rel=\"type\""));
-		// TODO add as soon as subsetting by index is supported
-		//headers.add(new Header("Link", "<" + CoverageResource.SubsetByIndexURI + ">; rel=\"" + CoverageResource.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.SubsetByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
 		
 		// TODO add subsetOf rel if subsetted
 		// TODO add link to coverage

@@ -40,6 +40,7 @@ import uk.ac.rdg.resc.edal.grid.ReferenceableAxisImpl;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
 import uk.ac.rdg.resc.edal.grid.TimeAxisImpl;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
+import uk.ac.rdg.resc.edal.json.PreferParser.Preference;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 
@@ -64,16 +65,31 @@ public class CoverageResource extends ServerResource {
 	}
 	
 	static class Embed {
-		boolean domain, parameters, range;
+		boolean domain, range;
+		/**
+		 * Inspects the following header:
+		 * 
+		 * Prefer: return=representation; include="http://coveragejson.org/ns#Domain http://coveragejson.org/ns#Range"
+		 */
+		static Embed from(Series<Header> headers, Embed merge) {
+			Map<String,Preference> prefs = PreferParser.parse(Arrays.asList(headers.getValuesArray("Prefer")));
+			Preference pref = prefs.get("return");
+			if (pref == null) return merge;
+			String val = pref.getParameters().getOrDefault("include", "");
+			return new Embed(val.contains(Constants.Domain) || merge.domain, val.contains(Constants.Range) || merge.range);
+		}
+		/**
+		 * 
+		 * @param details query parameter string value of the form "domain,range"
+		 * @deprecated Use Prefer header instead (see other constructor)
+		 */
 		static Embed from(String details, Embed merge) {
 			if (details == null) return merge;
 			List<String> parts = Arrays.asList(details.split(","));
-			return new Embed(parts.contains("domain") || merge.domain, parts.contains("parameters") || merge.parameters, 
-					parts.contains("range") || merge.range);
+			return new Embed(parts.contains("domain") || merge.domain, parts.contains("range") || merge.range);
 		}
-		public Embed(boolean domain, boolean parameters, boolean range) {
+		public Embed(boolean domain, boolean range) {
 			this.domain = domain || range;
-			this.parameters = parameters;
 			this.range = range;
 		}
 	}
@@ -184,10 +200,7 @@ public class CoverageResource extends ServerResource {
 			} else {
 				j.put("domain", coverageUrl + "/domain");
 			}
-			// parameter metadata is repeated so that a feature can be processed stand-alone
-			if (details.parameters) {
-				j.put("parameters", getParametersJson(meta, rootUri));
-			}
+			j.put("parameters", getParametersJson(meta, rootUri));
 			j.put("ranges", getRangesJson(meta, feature, details.range, subset, rootUri));
 		
 		} catch (UnsupportedDomainException e) {
@@ -202,9 +215,8 @@ public class CoverageResource extends ServerResource {
 	private Map getCoverageAsJson(boolean asGeoJson) throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String coverageId = Reference.decode(getAttribute("coverageId"));
-		Embed defaultEmbed = new Embed(true, true, false);
-		Embed embed = Embed.from(getQueryValue("embed"), defaultEmbed);
-		embed.parameters = true;
+		Embed defaultEmbed = new Embed(true, false);
+		Embed embed = Embed.from(getRequest().getHeaders(), defaultEmbed);
 		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subsetByCoordinate"));
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
@@ -257,15 +269,10 @@ public class CoverageResource extends ServerResource {
 		addLinkHeaders();
 		Series<Header> headers = this.getResponse().getHeaders();
 		
-		// TODO add as soon as subsetting by index is supported
-		//headers.add(new Header("Link", "<" + SubsetByIndexURI + ">; rel=\"" + CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.SubsetByCoordinateURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.EmbedURI + ">; rel=\"" + Constants.CapabilityURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.Domain + ">; rel=\"" + Constants.CanIncludeURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.Range + ">; rel=\"" + Constants.CanIncludeURI + "\""));
 		
 		Map json = getCoverageAsJson(false);
-
-		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + "Coverage>; rel=\"type\""));
-		headers.add(new Header("Link", "<" + Constants.CoverageJSONNamespace + json.get("type") + ">; rel=\"type\""));
 		
 		return App.getCovJsonRepresentation(this, json);
 	}
