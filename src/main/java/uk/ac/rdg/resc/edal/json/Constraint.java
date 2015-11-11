@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.joda.time.DateTime;
+import org.restlet.data.Form;
 
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.util.Extents;
@@ -18,21 +19,34 @@ import com.google.common.collect.Sets;
  *
  */
 public abstract class Constraint {
+	Form queryParams;
 	public Extent<DateTime> timeExtent;
 	public Optional<DatelineBoundingBox> bbox;
 	public Extent<Double> longitudeExtent, latitudeExtent;
 	public Extent<Double> verticalExtent;
 	public Optional<Set<String>> params;
-	public boolean isSubset = true;
-		
-	public Constraint(String urlParam) {
+	public boolean isConstrained = false;
+	
+	public Constraint(Form queryParams) {
+		this(queryParams, "");
+	}
+	
+	public Constraint(Form queryParams, String prefix) {
+		this.queryParams = queryParams;
 		DateTime timeStart = null, timeEnd = null;
 		Double verticalStart = null, verticalEnd = null;
 		
-		for (Entry<String,String> kv : getParams(urlParam).entrySet()) {
-			String val = kv.getValue();
+		for (Entry<String,String> kv : queryParams.getValuesMap().entrySet()) {
+			if (!kv.getKey().startsWith(prefix)) continue;
 			
-			switch (kv.getKey()) {
+			String val = kv.getValue();
+			String name = kv.getKey().substring(prefix.length());
+			if (!prefix.isEmpty()) {
+				// TimeStart -> timeStart
+				name = name.substring(0, 1).toLowerCase() + name.substring(1);
+			}
+			
+			switch (name) {
 			case "timeStart": timeStart = DateTime.parse(val); break;
 			case "timeEnd": timeEnd = DateTime.parse(val); break;
 			case "bbox":
@@ -61,13 +75,20 @@ public abstract class Constraint {
 		if (params == null) {
 			params = Optional.empty();
 		}
+		
+		if (bbox.isPresent() || longitudeExtent.getLow() != null || longitudeExtent.getHigh() != null ||
+				latitudeExtent.getLow() != null || latitudeExtent.getHigh() != null ||
+				timeExtent.getLow() != null || timeExtent.getHigh() != null ||
+				verticalExtent.getLow() != null || verticalExtent.getHigh() != null ||
+				params.isPresent()) {
+			isConstrained = true;
+		}
 	}
 	
 	protected Map<String, String> getParams(String urlParam) {
 		Map<String, String> params = new HashMap<>();
 		if (urlParam == null) {
 			urlParam = "";
-			isSubset = false;
 		}
 		String[] parts = urlParam.split(";");
 		for (String part : parts) {

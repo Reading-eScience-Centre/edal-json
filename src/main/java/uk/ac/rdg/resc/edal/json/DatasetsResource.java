@@ -27,7 +27,7 @@ public class DatasetsResource extends ServerResource {
 	@Get("jsonld")
 	public Representation json() throws EdalException, IOException {
 
-		FilterConstraint filter = new FilterConstraint(getQueryValue("filter"));
+		FilterConstraint filter = new FilterConstraint(getQuery());
 		String rootUri = getRootRef().toString();
 		String datasetsUrl = rootUri + "/datasets";
 		
@@ -92,7 +92,9 @@ public class DatasetsResource extends ServerResource {
 				.put("license", "http://creativecommons.org/licenses/by/4.0/")
 				.put("homepage", "http://rdg.ac.uk/demo/datasets")
 				.put("datasets", datasetsJson)
-				.build();		
+				.build();
+		
+		// TODO add paging + filtering metadata
 		
 		JacksonRepresentation r = new JacksonRepresentation(j);
 		r.setMediaType(App.JSONLD);

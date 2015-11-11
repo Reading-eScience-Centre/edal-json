@@ -155,7 +155,7 @@ public class CoverageResource extends ServerResource {
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", "Feature")
-				.put("id", coverageUrl)
+				.put("id", coverageUrl + subset.getCanonicalSubsetQueryString())
 				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()))
 				.put("properties", props.build())
 				.put("geometry", geometry);
@@ -182,12 +182,12 @@ public class CoverageResource extends ServerResource {
 	}
 	
 	public static Builder getCoverageCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
-			Embed details, SubsetConstraint subset) throws EdalException {
+			Embed details, SubsetConstraint subset, boolean skipParameters) throws EdalException {
 		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", meta.domainMeta.getType() + "Coverage")
-				.put("id", coverageUrl)
+				.put("id", coverageUrl + subset.getCanonicalSubsetQueryString())
 				.put("title", meta.name);
 				
 		Supplier<UniformFeature> feature =
@@ -195,12 +195,14 @@ public class CoverageResource extends ServerResource {
 
 		try {
 			if (details.domain) {
-				Map domainJson = CoverageDomainResource.getDomainJson(feature.get(), subset);
+				Map domainJson = CoverageDomainResource.getDomainJson(feature.get(), subset, coverageUrl);
 				j.put("domain", domainJson);
 			} else {
-				j.put("domain", coverageUrl + "/domain");
+				j.put("domain", coverageUrl + "/domain" + subset.getCanonicalSubsetQueryString());
 			}
-			j.put("parameters", getParametersJson(meta, rootUri));
+			if (!skipParameters) {
+				j.put("parameters", getParametersJson(meta, rootUri));
+			}
 			j.put("ranges", getRangesJson(meta, feature, details.range, subset, rootUri));
 		
 		} catch (UnsupportedDomainException e) {
@@ -217,39 +219,81 @@ public class CoverageResource extends ServerResource {
 		String coverageId = Reference.decode(getAttribute("coverageId"));
 		Embed defaultEmbed = new Embed(true, false);
 		Embed embed = Embed.from(getRequest().getHeaders(), defaultEmbed);
-		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subsetByCoordinate"));
+		SubsetConstraint subset = new SubsetConstraint(getQuery());
+		
+		String rootUri = getRootRef().toString();
+		String collectionUrl = rootUri + "/datasets/" + datasetId + "/coverages";
+		String coverageUrl = collectionUrl + "/" + coverageId;
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
-		Map coverageJson;
+		FeatureMetadata featureMeta = meta.getFeatureMetadata(coverageId);
+		Builder coverageJson;
 		if (asGeoJson) {
 			coverageJson = getCoverageGeoJson(meta.getLazyDataset(), 
-					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset)
-					.put("@context", Constants.GeoJSONLDContext)
-					.build();
+					featureMeta, rootUri, embed, subset)
+					.put("@context", ImmutableList.of(
+							Constants.HydraContext,
+							Constants.GeoJSONLDContext,
+							ImmutableMap.of(
+									Constants.CovAPIPrefix, Constants.CovAPINamespace,
+									"api", Constants.CovAPIPrefix + ":api",
+									"subsetOf", Constants.CovAPIPrefix + ":subsetOf",
+									"opensearchgeo", Constants.OpenSearchGeoNamespace,
+									"opensearchtime", Constants.OpenSearchTimeNamespace
+									)
+							));
 		} else {
-			FeatureMetadata featureMeta = meta.getFeatureMetadata(coverageId);
-			
 			Builder ldContext = ImmutableMap.builder();
 			for (String paramId : featureMeta.rangeMeta.getParameterIds()) {
 				ldContext.put(paramId, ImmutableMap.of(
-						"@id", ParameterResource.getParamUrl(datasetId, paramId, getRootRef().toString()),
+						"@id", ParameterResource.getParamUrl(datasetId, paramId, rootUri),
 						"@type", "@id"
 						));
 			}
 			
 			coverageJson = getCoverageCovJson(meta.getLazyDataset(), 
-					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset)
+					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset, false)
 					.put("@context", ImmutableList.of(
 							Constants.CoverageJSONContext,
 							ldContext
 								.put("qudt", "http://qudt.org/1.1/schema/qudt#")
 								.put("unit", "qudt:unit")
 								.put("symbol", "qudt:symbol")
+								.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
+								.put("subsetOf", Constants.CovAPIPrefix + ":subsetOf")
+								.put("api", Constants.CovAPIPrefix + ":api")
+								.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
+								.put("opensearchtime", Constants.OpenSearchTimeNamespace)
+								.put("inCollection", ImmutableMap.of("@reverse", "member"))
 								.build()
-							))
-					.build();	
-		}		
-		return coverageJson;
+							));
+			
+			// we don't include that for GeoJSON since a GeoJSON collection is not a hydra collection
+			// instead a Link header with "collection" is used
+			Builder coll = ImmutableMap.builder()
+					.put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
+					.put("type", "CoverageCollection");
+			if (subset.isConstrained) {
+				coll.put("subsetOf", ImmutableMap.of(
+						"id", collectionUrl,
+						"type", "CoverageCollection"
+						));
+			}
+			coverageJson.put("inCollection", coll.build());
+		}
+		
+		Map apiIriTemplate = Hydra.getApiIriTemplate(coverageUrl, false, true);
+		if (subset.isConstrained) {
+			coverageJson.put("subsetOf", ImmutableMap.of(
+					"id", coverageUrl,
+					"type", featureMeta.domainMeta.getType() + "Coverage",
+					"api", apiIriTemplate
+					));
+		} else {
+			coverageJson.put("api", apiIriTemplate);
+		}
+		
+		return coverageJson.build();
 	}
 	
 	@Get("geojson")
@@ -283,15 +327,8 @@ public class CoverageResource extends ServerResource {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String collectionUrl = getRootRef() + "/datasets/" + datasetId + "/coverages";
 		
-		// TODO hacky, refactor
-		boolean isSubset = new SubsetConstraint(getQueryValue("subsetByCoordinate")).isSubset;
-		if (isSubset) {
-			String coverageId = Reference.decode(getAttribute("coverageId"));
-			String coverageUrl = collectionUrl + "/" + coverageId;
-			headers.add(new Header("Link", "<" + coverageUrl + ">; rel=\"" + Constants.SubsetOfURI + "\""));
-		} else {
-			headers.add(new Header("Link", "<" + collectionUrl + ">; rel=\"collection\""));
-		}
+		SubsetConstraint subset = new SubsetConstraint(getQuery());
+		headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"collection\""));
 	}
 	
 	private static void addPhenomenonTime(Builder featureJson, DomainMetadata meta) {
@@ -405,7 +442,7 @@ public class CoverageResource extends ServerResource {
 				continue;
 			}
 			Parameter param = meta.rangeMeta.getParameter(paramId);
-			String rangeUrl = root + "/coverages/" + meta.featureId + "/range/" + paramId;
+			String rangeUrl = root + "/coverages/" + meta.featureId + "/range/" + paramId + subset.getCanonicalSubsetQueryString();
 			Object rangeParam;
 			
 			if (includeValues) {

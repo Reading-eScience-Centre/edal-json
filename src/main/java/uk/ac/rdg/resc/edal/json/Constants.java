@@ -6,16 +6,18 @@ public class Constants {
 	public static final String CoverageJSONContext = "https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld";
 	public static final String HydraContext = "http://www.w3.org/ns/hydra/core";
 	
+	public static final String OpenSearchGeoNamespace = "http://a9.com/-/opensearch/extensions/geo/1.0/";
+	public static final String OpenSearchTimeNamespace = "http://a9.com/-/opensearch/extensions/time/1.0/";
+	
 	public static final String CovJSONNamespace = "http://coveragejson.org/ns#";
 	public static final String Domain = CovJSONNamespace + "Domain";
 	public static final String Range = CovJSONNamespace + "Range";
 	
 	public static final String CovAPINamespace = "http://coverageapi.org/ns#";
+	public static final String CovAPIPrefix = "covapi";
 		
 	public static final String CanIncludeURI = CovAPINamespace + "canInclude";
 	public static final String SubsetByIndexURI = "http://coverageapi.org/def#subsetByIndex";
-	public static final String SubsetByCoordinateURI = "http://coverageapi.org/def#subsetByCoordinate";
-	public static final String FilterByCoordinateURI = "http://coverageapi.org/def#filterByCoordinate";
 	
 	public static final String SubsetOfURI = "http://coverageapi.org/def#subsetOf";
 	

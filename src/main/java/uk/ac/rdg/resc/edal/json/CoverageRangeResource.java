@@ -35,7 +35,7 @@ public class CoverageRangeResource extends ServerResource {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("coverageId"));
 		String parameterId = Reference.decode(getAttribute("parameterId"));
-		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subsetByCoordinate"));
+		SubsetConstraint subset = new SubsetConstraint(getQuery());
 		
 		FeatureMetadata meta = DatasetResource.getDatasetMetadata(datasetId).getFeatureMetadata(featureId);
 		Dataset dataset = Utils.getDataset(datasetId);

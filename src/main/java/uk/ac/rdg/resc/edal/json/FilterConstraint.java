@@ -2,13 +2,15 @@ package uk.ac.rdg.resc.edal.json;
 
 import java.util.Optional;
 
+import org.restlet.data.Form;
+
 
 public class FilterConstraint extends Constraint {
 
 	public Optional<Class<?>> type;
 	
-	public FilterConstraint(String urlParam) {
-		this(urlParam, null);
+	public FilterConstraint(Form queryParams) {
+		this(queryParams, null);
 	}
 	
 	/**
@@ -18,10 +20,10 @@ public class FilterConstraint extends Constraint {
 	 * @param urlParam
 	 * @param subsetConstraint 
 	 */
-	public FilterConstraint(String urlParam, SubsetConstraint subsetConstraint) {
-		super(urlParam);
+	public FilterConstraint(Form queryParams, SubsetConstraint subsetConstraint) {
+		super(queryParams);
 		
-		String val = getParams(urlParam).get("type");
+		String val = null; //getParams(queryParams).get("type");
 		type = val == null ? Optional.empty() : Optional.of(FeatureTypes.getType(val));
 		
 		if (subsetConstraint == null) {

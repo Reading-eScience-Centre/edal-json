@@ -41,8 +41,10 @@ public class CoverageDomainResource extends ServerResource {
 	public Representation json() throws IOException, EdalException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String featureId = Reference.decode(getAttribute("coverageId"));
-		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subsetByCoordinate"));
+		SubsetConstraint subset = new SubsetConstraint(getQuery());
 		Dataset dataset = Utils.getDataset(datasetId);
+		
+		String coverageUrl = getRootRef() + "/datasets/" + datasetId + "/coverages/" + featureId;
 		
 		UniformFeature uniFeature =
 				new UniformFeature((DiscreteFeature)dataset.readFeature(featureId));
@@ -53,7 +55,7 @@ public class CoverageDomainResource extends ServerResource {
 		// TODO add link to coverage
 		
 		
-		Map j = getDomainJson(uniFeature, subset);
+		Map j = getDomainJson(uniFeature, subset, coverageUrl);
 		Representation r = App.getCovJsonRepresentation(this, j);
 		
 		// TODO think about caching strategy
@@ -63,8 +65,10 @@ public class CoverageDomainResource extends ServerResource {
 		return r;
 	}
 	
-	public static Map getDomainJson(UniformFeature uniFeature, SubsetConstraint subset) {
-		Builder domainJson = ImmutableMap.builder();
+	public static Map getDomainJson(UniformFeature uniFeature, SubsetConstraint subset, String coverageUrl) {
+		Builder domainJson = ImmutableMap.builder()
+				.put("id", coverageUrl + "/domain" + subset.getCanonicalSubsetQueryString())
+				.put("type", uniFeature.type);
 		
 		// no support for trajectories currently
 		// we support everything which is a subtype of a rectilinear grid (includes profiles)
@@ -74,7 +78,6 @@ public class CoverageDomainResource extends ServerResource {
 		addHorizontalGrid(uniFeature.rectgrid, subset, domainJson);
 		addVerticalAxis(uniFeature.z, subset, domainJson);
 		addTimeAxis(uniFeature.t, subset, domainJson);
-		domainJson.put("type", uniFeature.type);
 		
 		return domainJson.build();
 	}

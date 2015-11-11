@@ -10,15 +10,21 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.joda.time.DateTime;
-import org.restlet.data.Dimension;
 import org.restlet.data.Form;
 import org.restlet.data.Header;
 import org.restlet.data.Reference;
+import org.restlet.data.Status;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import org.restlet.util.Series;
+
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
@@ -28,12 +34,6 @@ import uk.ac.rdg.resc.edal.json.CoverageResource.Embed;
 import uk.ac.rdg.resc.edal.json.CoverageResource.FeatureMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.util.GISUtils;
-
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageCollectionResource extends ServerResource {
@@ -94,7 +94,7 @@ public class CoverageCollectionResource extends ServerResource {
 			createURLs();
 			
 			if (this.totalPages > 1 && this.currentPage == 1 && getReference().getQueryAsForm().getFirstValue("page") == null) {
-				redirect = getReference().addQueryParameter("page", "1");
+				redirect = getReference().addQueryParameter("page", "1").addQueryParameter("num", String.valueOf(this.elementsPerPage));
 			}
 		}
 		
@@ -134,16 +134,15 @@ public class CoverageCollectionResource extends ServerResource {
 		}
 	}
 	
-	private Builder getFeaturesJson(boolean asGeojson, Paging paging) throws IOException, EdalException {
+	private Builder getFeaturesJson(boolean asGeojson, Paging paging, FilterConstraint filter, SubsetConstraint subset)
+			throws IOException, EdalException {
 		final String datasetId = Reference.decode(getAttribute("datasetId"));
 		Embed defaultEmbed = new Embed(false, false);
 		Embed embed = Embed.from(getRequest().getHeaders(), defaultEmbed);
-		SubsetConstraint subset = new SubsetConstraint(getQueryValue("subsetByCoordinate"));
-		FilterConstraint filter = new FilterConstraint(getQueryValue("filterByCoordinate"), subset);
 		
 		DatasetMetadata datasetMeta = DatasetResource.getDatasetMetadata(datasetId);
 		
-		String datasetUrl = getRootRef().toString() + "/datasets/" + datasetId;
+		String collectionUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
 		
 		List jsonFeatures = new LinkedList();
 				
@@ -233,7 +232,7 @@ public class CoverageCollectionResource extends ServerResource {
 						embed, subset).build();
 			} else {
 				feature = CoverageResource.getCoverageCovJson(dataset, meta, getRootRef().toString(), 
-						embed, subset).build();
+						embed, subset, true).build();
 			}
 			jsonFeatures.add(feature);
 		}
@@ -245,7 +244,11 @@ public class CoverageCollectionResource extends ServerResource {
 					Constants.HydraContext,
 					Constants.GeoJSONLDContext,
 					ImmutableMap.of(
-							"foaf", "http://xmlns.com/foaf/0.1/"
+							Constants.CovAPIPrefix, Constants.CovAPINamespace,
+							"api", Constants.CovAPIPrefix + ":api",
+							"opensearchgeo", Constants.OpenSearchGeoNamespace,
+							"opensearchtime", Constants.OpenSearchTimeNamespace,
+							"subsetOf", Constants.CovAPIPrefix + ":subsetOf"
 							)
 					))
 			 .put("type", "FeatureCollection")
@@ -271,17 +274,27 @@ public class CoverageCollectionResource extends ServerResource {
 					Constants.HydraContext,
 					Constants.CoverageJSONContext,
 					ldContext
-						.put("foaf", "http://xmlns.com/foaf/0.1/")
 						.put("qudt", "http://qudt.org/1.1/schema/qudt#")
 						.put("unit", "qudt:unit")
 						.put("symbol", "qudt:symbol")
+						.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
+						.put("api", Constants.CovAPIPrefix + ":api")
+						.put("subsetOf", Constants.CovAPIPrefix + ":subsetOf")
+						.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
+						.put("opensearchtime", Constants.OpenSearchTimeNamespace)
 						.build()
 					))
-			 // FIXME the URL has to include filter/subset parameters since it is not the same collection
-			 .put("id", datasetUrl + "/coverages")
+			 .put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
 			 .put("type", "CoverageCollection")
 			 .put("parameters", jsonParams.build())
 			 .put("coverages", jsonFeatures);
+		}
+		
+		if (subset.isConstrained) {
+			j.put("subsetOf", ImmutableMap.of(
+						"id", collectionUrl,
+						"type", "CoverageCollection"
+						));
 		}
 		
 		if (paging.totalPages > 1) {
@@ -310,6 +323,8 @@ public class CoverageCollectionResource extends ServerResource {
 					"@graph", pagination.build()
 					));
 		}
+
+		j.put("api", Hydra.getApiIriTemplate(collectionUrl, true, true));
 		
 		return j;
 	}
@@ -345,11 +360,28 @@ public class CoverageCollectionResource extends ServerResource {
 		headers.add(new Header("Link", "<" + Constants.Domain + ">; rel=\"" + Constants.CanIncludeURI + "\""));
 		headers.add(new Header("Link", "<" + Constants.Range + ">; rel=\"" + Constants.CanIncludeURI + "\""));
 		
-		Paging paging = new Paging(Constants.DEFAULT_COVERAGES_PER_PAGE, Constants.MAXIMUM_COVERAGES_PER_PAGE);
-		Map j = getFeaturesJson(false, paging).build();
+		Paging paging;
+		SubsetConstraint subset;
+		FilterConstraint filter;
+		Map j;
+		try {
+			paging = new Paging(Constants.DEFAULT_COVERAGES_PER_PAGE, Constants.MAXIMUM_COVERAGES_PER_PAGE);
+			subset = new SubsetConstraint(getQuery());
+			filter = new FilterConstraint(getQuery(), subset);
+			j = getFeaturesJson(false, paging, filter, subset).build();
+		} catch (IllegalArgumentException e) {
+			setStatus(Status.CLIENT_ERROR_NOT_FOUND);
+			return null;
+		}
+		
+		if (filter.isConstrained || subset.isConstrained) {
+			final String datasetId = Reference.decode(getAttribute("datasetId"));
+			String collectionUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
+			headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"canonical\""));
+		}
 		
 		if (paging.redirect != null) {
-			getResponse().redirectPermanent(paging.redirect);
+			getResponse().redirectSeeOther(paging.redirect);
 			return null;
 		} else {
 			// if paged, this would be type=PartialCollectionView or similar and not the CoverageCollection itself!
@@ -361,11 +393,31 @@ public class CoverageCollectionResource extends ServerResource {
 		
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
-		Paging paging = new Paging(Constants.DEFAULT_GEOJSON_FEATURES_PER_PAGE, Constants.MAXIMUM_GEOJSON_FEATURES_PER_PAGE);
-		Map j = getFeaturesJson(true, paging).build();
+		Paging paging;
+		SubsetConstraint subset;
+		FilterConstraint filter;
+		Map j;
+		
+		try {
+			paging = new Paging(Constants.DEFAULT_GEOJSON_FEATURES_PER_PAGE, Constants.MAXIMUM_GEOJSON_FEATURES_PER_PAGE);
+			subset = new SubsetConstraint(getQuery());
+			filter = new FilterConstraint(getQuery(), subset);
+			j = getFeaturesJson(true, paging, filter, subset).build();
+		} catch (IllegalArgumentException e) {
+			setStatus(Status.CLIENT_ERROR_NOT_FOUND);
+			return null;
+		}
+		
+		// TODO remove duplication with covjson()
+		Series<Header> headers = this.getResponse().getHeaders();
+		if (filter.isConstrained || subset.isConstrained) {
+			final String datasetId = Reference.decode(getAttribute("datasetId"));
+			String collectionUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
+			headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"canonical\""));
+		}
 		
 		if (paging.redirect != null) {
-			getResponse().redirectPermanent(paging.redirect);
+			getResponse().redirectSeeOther(paging.redirect);
 			return null;
 		} else {
 			// if paged, this would be type=PartialCollectionView or similar and not the CoverageCollection itself!
