@@ -23,11 +23,11 @@ public class Constants {
 	
 	// paging is disabled for geojson for now
 	// reason: general geojson clients couldn't handle it anyway
-	public static final int DEFAULT_COVERAGES_PER_PAGE = Integer.MAX_VALUE;
+	public static final int DEFAULT_COVERAGES_PER_PAGE = 100;
 	public static final int DEFAULT_GEOJSON_FEATURES_PER_PAGE = Integer.MAX_VALUE;
 	
 	// TODO this should depend on coverage size and whether range/domain is embedded or not
 	public static final int MAXIMUM_COVERAGES_PER_PAGE = 10000;
-	public static final int MAXIMUM_GEOJSON_FEATURES_PER_PAGE = 100000;	
+	public static final int MAXIMUM_GEOJSON_FEATURES_PER_PAGE = Integer.MAX_VALUE;	
 	
 }
