@@ -80,12 +80,9 @@ public class DatasetResource extends ServerResource {
 					"accessURL", datasetUrl + "/coverages",
 					"mediaType", "application/prs.coverage+cbor"
 					),
-			// FIXME GeoJSON should not be under the same URL since it is not the same thing that is represented
-			//   it doesn't represent the data, but just the *outlines* of it! content negotiation should only be
-			//   used for different encodings of the same data, not to offer different concepts!
 			ImmutableMap.of(
 					"title", "Coverage outlines",
-					"accessURL", datasetUrl + "/coverages",
+					"accessURL", datasetUrl + "/outlines",
 					"mediaType", "application/vnd.geo+json"
 					)));
 		

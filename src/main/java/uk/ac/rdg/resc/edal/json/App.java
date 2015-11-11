@@ -18,6 +18,7 @@ import org.restlet.routing.Router;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 public class App extends Application {
 	
@@ -54,13 +55,17 @@ public class App extends Application {
         getMetadataService().addExtension("covmsgpack", CovJSONMsgpack);
         getMetadataService().addExtension("cbor", CovJSONCBOR);
 		
-		Router router = new Router();
+		Router router = new Router(getContext());
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}/range/{parameterId}",
 				CoverageRangeResource.class);
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}/domain",
 				CoverageDomainResource.class);
+		router.attach("/datasets/{datasetId}/coverages/{coverageId}/outlines",
+				CoverageOutlinesResource.class);
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}",
 				CoverageResource.class);
+		router.attach("/datasets/{datasetId}/outlines",
+				CoverageCollectionResource.class);
 		router.attach("/datasets/{datasetId}/coverages",
 				CoverageCollectionResource.class);
 		router.attach("/datasets/{datasetId}/params/{paramId}",
@@ -111,5 +116,13 @@ public class App extends Application {
 			}
 			return r;
 		}
+	}
+	
+	public static Representation getErrorRepresentation(Exception e) {
+		JacksonRepresentation<Map<String,?>> r = new JacksonRepresentation<>(ImmutableMap.of(
+				"error", e.getMessage()
+				));
+		r.setMediaType(MediaType.APPLICATION_JSON);
+		return r;
 	}
 }

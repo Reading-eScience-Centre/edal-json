@@ -93,7 +93,8 @@ public class CoverageCollectionResource extends ServerResource {
 			}
 			createURLs();
 			
-			if (this.totalPages > 1 && this.currentPage == 1 && getReference().getQueryAsForm().getFirstValue("page") == null) {
+			Form form = getReference().getQueryAsForm();
+			if (this.totalPages > 1 && this.currentPage == 1 && (form.getFirstValue("page") == null || form.getFirstValue("num") == null)) {
 				redirect = getReference().addQueryParameter("page", "1").addQueryParameter("num", String.valueOf(this.elementsPerPage));
 			}
 		}
@@ -228,10 +229,10 @@ public class CoverageCollectionResource extends ServerResource {
 			Map feature;
 			FeatureMetadata meta = datasetMeta.getFeatureMetadata(featureId);
 			if (asGeojson) {
-				 feature = CoverageResource.getCoverageGeoJson(dataset, meta, getRootRef().toString(), 
-						embed, subset).build();
+				 feature = CoverageOutlinesResource.getOutlinesAsGeoJson(dataset, meta, getRootRef().toString(), 
+						subset).build();
 			} else {
-				feature = CoverageResource.getCoverageCovJson(dataset, meta, getRootRef().toString(), 
+				feature = CoverageResource.getCoverageAsCovJson(dataset, meta, getRootRef().toString(), 
 						embed, subset, true).build();
 			}
 			jsonFeatures.add(feature);
@@ -354,6 +355,11 @@ public class CoverageCollectionResource extends ServerResource {
 		
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
+		// FIXME cheap hack, rather separate geojson out into separate resource (like CoverageOutlinesResource)
+		if (getReference().toString().contains("/outlines")) {
+			return geojson();
+		}
+		
 		// FIXME add Vary: Prefer, see https://github.com/restlet/restlet-framework-java/issues/187
 		
 		Series<Header> headers = this.getResponse().getHeaders();
@@ -371,7 +377,7 @@ public class CoverageCollectionResource extends ServerResource {
 			j = getFeaturesJson(false, paging, filter, subset).build();
 		} catch (IllegalArgumentException e) {
 			setStatus(Status.CLIENT_ERROR_NOT_FOUND);
-			return null;
+			return App.getErrorRepresentation(e);
 		}
 		
 		if (filter.isConstrained || subset.isConstrained) {
@@ -393,6 +399,8 @@ public class CoverageCollectionResource extends ServerResource {
 		
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {
+		// Note: paging is disabled for geojson by having very high default items per page
+		// reason: general geojson clients couldn't handle it anyway
 		Paging paging;
 		SubsetConstraint subset;
 		FilterConstraint filter;
@@ -402,10 +410,20 @@ public class CoverageCollectionResource extends ServerResource {
 			paging = new Paging(Constants.DEFAULT_GEOJSON_FEATURES_PER_PAGE, Constants.MAXIMUM_GEOJSON_FEATURES_PER_PAGE);
 			subset = new SubsetConstraint(getQuery());
 			filter = new FilterConstraint(getQuery(), subset);
+			
+			// TODO cheap hack, rather separate geojson out into separate resource (like CoverageOutlinesResource)
+			if (!getReference().toString().contains("/outlines")) {
+				final String datasetId = Reference.decode(getAttribute("datasetId"));
+				String outlinesUrl = getRootRef().toString() + "/datasets/" + datasetId + "/outlines" ;
+				
+				getResponse().redirectSeeOther(outlinesUrl + subset.getCanonicalSubsetQueryString());
+				return null;
+			}
+			
 			j = getFeaturesJson(true, paging, filter, subset).build();
 		} catch (IllegalArgumentException e) {
 			setStatus(Status.CLIENT_ERROR_NOT_FOUND);
-			return null;
+			return App.getErrorRepresentation(e);
 		}
 		
 		// TODO remove duplication with covjson()

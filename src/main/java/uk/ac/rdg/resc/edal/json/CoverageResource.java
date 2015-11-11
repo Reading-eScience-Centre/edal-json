@@ -4,20 +4,17 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
 import org.opengis.referencing.cs.CoordinateSystem;
 import org.opengis.referencing.cs.RangeMeaning;
 import org.restlet.data.Header;
 import org.restlet.data.Reference;
-import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import org.restlet.util.Series;
 
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -33,7 +30,6 @@ import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
 import uk.ac.rdg.resc.edal.feature.Feature;
 import uk.ac.rdg.resc.edal.feature.GridFeature;
 import uk.ac.rdg.resc.edal.feature.ProfileFeature;
-import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.grid.RectilinearGridImpl;
 import uk.ac.rdg.resc.edal.grid.ReferenceableAxisImpl;
@@ -93,95 +89,8 @@ public class CoverageResource extends ServerResource {
 			this.range = range;
 		}
 	}
-	
-	public static Builder getCoverageGeoJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
-			Embed embed, SubsetConstraint subset) throws EdalException {
-		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
 		
-		// TODO possibly have to convert to WGS84
-		BoundingBox bb = meta.domainMeta.getBoundingBox();
-		
-		Map geometry;
-		// Profile -> Point
-		// Grid -> Bbox Polygon (could have actual outline, but for now just bbox)
-		// Trajectory -> LineString (not supported in EDAL yet)
-		String type;
-		if (meta.type.isAssignableFrom(ProfileFeature.class)) {
-			type = "Profile";
-			geometry = ImmutableMap.of(
-					"type", "Point",
-					"coordinates", ImmutableList.of(bb.getMinX(), bb.getMinY())
-					);
-		} else if (meta.type.isAssignableFrom(GridFeature.class)) {
-			type = "Grid";
-			geometry = ImmutableMap.of(
-					"type", "Polygon",
-					"coordinates", ImmutableList.of(ImmutableList.of(
-							// counter-clockwise as recommended in https://tools.ietf.org/html/draft-butler-geojson-05
-							// to improve dateline handling
-							ImmutableList.of(bb.getMinX(), bb.getMinY()),
-							ImmutableList.of(bb.getMaxX(), bb.getMinY()),
-							ImmutableList.of(bb.getMaxX(), bb.getMaxY()),
-							ImmutableList.of(bb.getMinX(), bb.getMaxY()),
-							ImmutableList.of(bb.getMinX(), bb.getMinY())
-							))
-					);
-		} else {
-			throw new IllegalStateException(meta.type.getName() + " not supported");
-		}
-		
-		List<String> paramTitles = meta.rangeMeta.getParameters().stream().map(p -> p.getTitle()).collect(Collectors.toList());
-
-		Builder props = ImmutableMap.builder()
-				.put("domainType", type)
-				.put("title", meta.name)
-				.put("parameters", paramTitles);
-		/*
-		 * Vertical extent is included in properties in a lax way.
-		 * It is not on the same level as "bbox" and "when" because
-		 * the bbox already includes altitude if it is in meters above WGS84.
-		 * We don't want to duplicate or extend this concept and claim some
-		 * general format here. Therefore the extent lives in properties
-		 * as informal additional information.
-		 * TODO If the vertical CRS is height above WGS84 then the bbox
-		 *      should be used instead. 
-		 */
-		Extent<Double> v = meta.domainMeta.getVerticalExtent();
-		if (v != null) {
-			// TODO ambiguous if increases downwards (negate value?)
-			props.put("verticalExtent", ImmutableList.of(v.getLow(), v.getHigh()))
-			     .put("verticalUnits", meta.domainMeta.getVerticalCrs().getUnits());
-		}
-		
-		Builder j = ImmutableMap.builder()
-				.put("type", "Feature")
-				.put("id", coverageUrl + subset.getCanonicalSubsetQueryString())
-				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()))
-				.put("properties", props.build())
-				.put("geometry", geometry);
-				
-		Extent<DateTime> dt = meta.domainMeta.getTimeExtent();
-		if (dt != null) {
-			Map jsonTime;
-			if (dt.getLow() == dt.getHigh()) {
-				jsonTime = ImmutableMap.of(
-						"type", "Instant",
-						"datetime", dt.getLow().toString()
-						);
-			} else {
-				jsonTime = ImmutableMap.of(
-						"type", "Interval",
-						"start", dt.getLow().toString(),
-						"stop", dt.getHigh().toString()
-						);
-			}
-			j.put("when", jsonTime);
-		}
-		
-		return j;
-	}
-	
-	public static Builder getCoverageCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
+	public static Builder getCoverageAsCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
 			Embed details, SubsetConstraint subset, boolean skipParameters) throws EdalException {
 		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
 		
@@ -213,8 +122,28 @@ public class CoverageResource extends ServerResource {
 		
 		return j;
 	}
+		
+	@Get("geojson")
+	public Representation geojson() throws IOException, EdalException {
+		String datasetId = Reference.decode(getAttribute("datasetId"));
+		String coverageId = Reference.decode(getAttribute("coverageId"));
+		SubsetConstraint subset = new SubsetConstraint(getQuery());
+		
+		String coverageUrl = getRootRef() + "/datasets/" + datasetId + "/coverages" + "/" + coverageId;		
+		
+		getResponse().redirectSeeOther(coverageUrl + "/outlines" + subset.getCanonicalSubsetQueryString());
+		return null;
+	}
 	
-	private Map getCoverageAsJson(boolean asGeoJson) throws EdalException, IOException {
+	@Get("covjson|covcbor|covmsgpack")
+	public Representation covjson() throws IOException, EdalException {
+		addLinkHeaders();
+		Series<Header> headers = this.getResponse().getHeaders();
+		
+		headers.add(new Header("Link", "<" + Constants.Domain + ">; rel=\"" + Constants.CanIncludeURI + "\""));
+		headers.add(new Header("Link", "<" + Constants.Range + ">; rel=\"" + Constants.CanIncludeURI + "\""));
+		
+		
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String coverageId = Reference.decode(getAttribute("coverageId"));
 		Embed defaultEmbed = new Embed(true, false);
@@ -227,60 +156,43 @@ public class CoverageResource extends ServerResource {
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
 		FeatureMetadata featureMeta = meta.getFeatureMetadata(coverageId);
-		Builder coverageJson;
-		if (asGeoJson) {
-			coverageJson = getCoverageGeoJson(meta.getLazyDataset(), 
-					featureMeta, rootUri, embed, subset)
-					.put("@context", ImmutableList.of(
-							Constants.HydraContext,
-							Constants.GeoJSONLDContext,
-							ImmutableMap.of(
-									Constants.CovAPIPrefix, Constants.CovAPINamespace,
-									"api", Constants.CovAPIPrefix + ":api",
-									"subsetOf", Constants.CovAPIPrefix + ":subsetOf",
-									"opensearchgeo", Constants.OpenSearchGeoNamespace,
-									"opensearchtime", Constants.OpenSearchTimeNamespace
-									)
-							));
-		} else {
-			Builder ldContext = ImmutableMap.builder();
-			for (String paramId : featureMeta.rangeMeta.getParameterIds()) {
-				ldContext.put(paramId, ImmutableMap.of(
-						"@id", ParameterResource.getParamUrl(datasetId, paramId, rootUri),
-						"@type", "@id"
-						));
-			}
-			
-			coverageJson = getCoverageCovJson(meta.getLazyDataset(), 
-					meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset, false)
-					.put("@context", ImmutableList.of(
-							Constants.CoverageJSONContext,
-							ldContext
-								.put("qudt", "http://qudt.org/1.1/schema/qudt#")
-								.put("unit", "qudt:unit")
-								.put("symbol", "qudt:symbol")
-								.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
-								.put("subsetOf", Constants.CovAPIPrefix + ":subsetOf")
-								.put("api", Constants.CovAPIPrefix + ":api")
-								.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
-								.put("opensearchtime", Constants.OpenSearchTimeNamespace)
-								.put("inCollection", ImmutableMap.of("@reverse", "member"))
-								.build()
-							));
-			
-			// we don't include that for GeoJSON since a GeoJSON collection is not a hydra collection
-			// instead a Link header with "collection" is used
-			Builder coll = ImmutableMap.builder()
-					.put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
-					.put("type", "CoverageCollection");
-			if (subset.isConstrained) {
-				coll.put("subsetOf", ImmutableMap.of(
-						"id", collectionUrl,
-						"type", "CoverageCollection"
-						));
-			}
-			coverageJson.put("inCollection", coll.build());
+		
+		Builder ldContext = ImmutableMap.builder();
+		for (String paramId : featureMeta.rangeMeta.getParameterIds()) {
+			ldContext.put(paramId, ImmutableMap.of(
+					"@id", ParameterResource.getParamUrl(datasetId, paramId, rootUri),
+					"@type", "@id"
+					));
 		}
+		
+		Builder coverageJson = getCoverageAsCovJson(meta.getLazyDataset(), 
+				meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset, false)
+				.put("@context", ImmutableList.of(
+						Constants.CoverageJSONContext,
+						ldContext
+							.put("qudt", "http://qudt.org/1.1/schema/qudt#")
+							.put("unit", "qudt:unit")
+							.put("symbol", "qudt:symbol")
+							.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
+							.put("subsetOf", Constants.CovAPIPrefix + ":subsetOf")
+							.put("api", Constants.CovAPIPrefix + ":api")
+							.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
+							.put("opensearchtime", Constants.OpenSearchTimeNamespace)
+							.put("inCollection", ImmutableMap.of("@reverse", "member"))
+							.build()
+						));
+		
+		Builder coll = ImmutableMap.builder()
+				.put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
+				.put("type", "CoverageCollection");
+		if (subset.isConstrained) {
+			coll.put("subsetOf", ImmutableMap.of(
+					"id", collectionUrl,
+					"type", "CoverageCollection"
+					));
+		}
+		coverageJson.put("inCollection", coll.build());
+		
 		
 		Map apiIriTemplate = Hydra.getApiIriTemplate(coverageUrl, false, true);
 		if (subset.isConstrained) {
@@ -293,30 +205,7 @@ public class CoverageResource extends ServerResource {
 			coverageJson.put("api", apiIriTemplate);
 		}
 		
-		return coverageJson.build();
-	}
-	
-	@Get("geojson")
-	public Representation geojson() throws IOException, EdalException {
-		addLinkHeaders();
-		Map featureJson = getCoverageAsJson(true);
-		JacksonRepresentation r = new JacksonRepresentation(featureJson);
-		r.setMediaType(App.GeoJSON);
-		if (!App.acceptsJSON(this)) {
-			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-		}
-		return r;
-	}
-	
-	@Get("covjson|covcbor|covmsgpack")
-	public Representation covjson() throws IOException, EdalException {
-		addLinkHeaders();
-		Series<Header> headers = this.getResponse().getHeaders();
-		
-		headers.add(new Header("Link", "<" + Constants.Domain + ">; rel=\"" + Constants.CanIncludeURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.Range + ">; rel=\"" + Constants.CanIncludeURI + "\""));
-		
-		Map json = getCoverageAsJson(false);
+		Map json = coverageJson.build();
 		
 		return App.getCovJsonRepresentation(this, json);
 	}
