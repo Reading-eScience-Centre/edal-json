@@ -20,7 +20,7 @@ public class SubsetConstraint extends Constraint {
 	public SubsetConstraint(Form queryParams) {
 		super(queryParams, PREFIX);
 
-		String val = null; //getParams(urlParam).get("verticalTarget");
+		String val = queryParams.getFirstValue(PREFIX + "VerticalTarget");
 		verticalTarget = val == null ? Optional.empty() : Optional.of(Double.parseDouble(val));
 	}
 

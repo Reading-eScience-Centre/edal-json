@@ -21,7 +21,7 @@ public class Hydra {
 		assert canFilter || canSubset;
 		
 		String filter = "bbox,timeStart,timeEnd,verticalStart,verticalEnd";
-		String subset = "subsetBbox,subsetTimeStart,subsetTimeEnd,subsetVerticalStart,subsetVerticalEnd";
+		String subset = "subsetBbox,subsetTimeStart,subsetTimeEnd,subsetVerticalStart,subsetVerticalEnd,subsetVerticalTarget";
 		
 		String template = baseUrl + "{?";
 		if (canFilter) {
@@ -73,7 +73,12 @@ public class Hydra {
 						"Numeric string with the start of the vertical interval given in native CRS units."),
 				
 				mapping("subsetVerticalEnd", Constants.CovAPIPrefix + ":subsetVerticalEnd", "xsd:string", 
-						"Numeric string with the end of the vertical interval given in native CRS units.")
+						"Numeric string with the end of the vertical interval given in native CRS units."),
+				
+				mapping("subsetVerticalTarget", Constants.CovAPIPrefix + ":subsetVerticalTarget", "xsd:string", 
+						"Numeric string with a vertical target given in native CRS units. "
+						+ "The subsetted coverage will only contain the single vertical coordinate which is closest "
+						+ "to the target.")
 				);
 		}
 		
