@@ -289,6 +289,19 @@ public class CoverageCollectionResource extends ServerResource {
 			 .put("type", "CoverageCollection")
 			 .put("parameters", jsonParams.build())
 			 .put("coverages", jsonFeatures);
+			
+			// Domain template
+			// exists when all coverages are of the same type/CRS etc.
+			// can be used by clients to handle uniform collections easier
+			if (datasetMeta.getFeatureTypes().size() == 1) {
+				String firstFeatureId = datasetMeta.getFeatureIds().iterator().next();
+				String domainType = datasetMeta.getFeatureMetadata(firstFeatureId).domainMeta.getType();
+				j.put("domainTemplate", ImmutableMap.of(
+						"type", domainType,
+						"axes", "TODO",
+						"referencing", "TODO"
+						));
+			}
 		}
 		
 		if (subset.isConstrained) {
