@@ -184,7 +184,7 @@ public class CoverageResource extends ServerResource {
 							.put("api", Constants.CovAPIPrefix + ":api")
 							.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
 							.put("opensearchtime", Constants.OpenSearchTimeNamespace)
-							.put("inCollection", ImmutableMap.of("@reverse", "member"))
+							.put("inCollection", ImmutableMap.of("@reverse", "hydra:member"))
 							.build()
 						));
 		
