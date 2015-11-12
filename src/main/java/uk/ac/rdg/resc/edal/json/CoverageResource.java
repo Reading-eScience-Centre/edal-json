@@ -174,6 +174,7 @@ public class CoverageResource extends ServerResource {
 		Builder coverageJson = getCoverageAsCovJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset, false)
 				.put("@context", ImmutableList.of(
+						Constants.HydraContext,
 						Constants.CoverageJSONContext,
 						ldContext
 							.put("qudt", "http://qudt.org/1.1/schema/qudt#")

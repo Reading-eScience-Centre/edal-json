@@ -87,7 +87,7 @@ public class Hydra {
 			"@graph", ImmutableMap.of(
 					"type", "IriTemplate",
 					"template", template,
-					"mappings", mappings.build()
+					"mapping", mappings.build()
 					)
 			);
 	}
