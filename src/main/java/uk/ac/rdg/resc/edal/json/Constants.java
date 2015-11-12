@@ -1,6 +1,12 @@
 package uk.ac.rdg.resc.edal.json;
 
 public class Constants {
+	
+	public static final String CoverageHTMLUrlPrefix = "http://reading-escience-centre.github.io/leaflet-coverage/#";
+	public static final String CoverageCollectionHTMLUrlPrefix = CoverageHTMLUrlPrefix;
+	public static final String CoverageOutlinesHTMLUrlPrefix = "http://geojson.io/#data=data:text/x-url,";
+	public static final String CoverageCollectionOutlinesHTMLUrlPrefix = CoverageOutlinesHTMLUrlPrefix;
+	public static final String DatasetCatalogHTMLUrlPrefix = "http://ec-melodies.github.io/demo-portal/#";
 
 	public static final String GeoJSONLDContext = "https://rawgit.com/geojson/geojson-ld/master/contexts/geojson-time.jsonld";
 	public static final String CoverageJSONContext = "https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld";

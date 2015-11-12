@@ -122,6 +122,12 @@ public class CoverageResource extends ServerResource {
 		
 		return j;
 	}
+	
+	@Get("html")
+	public Representation html() throws IOException, EdalException {
+		getResponse().redirectSeeOther(Constants.CoverageHTMLUrlPrefix + getReference());
+		return null;
+	}
 		
 	@Get("geojson")
 	public Representation geojson() throws IOException, EdalException {

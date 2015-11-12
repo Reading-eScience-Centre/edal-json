@@ -352,6 +352,17 @@ public class CoverageCollectionResource extends ServerResource {
 			headers.add(new Header("Link", "<" + url + ">; rel=\"" + rel + "\""));
 		}
 	}
+	
+	@Get("html")
+	public Representation html() throws IOException, EdalException {
+		// FIXME cheap hack, rather separate geojson out into separate resource (like CoverageOutlinesResource)
+		if (getReference().toString().contains("/outlines")) {
+			getResponse().redirectSeeOther(Constants.CoverageCollectionOutlinesHTMLUrlPrefix + getReference());
+		} else {
+			getResponse().redirectSeeOther(Constants.CoverageCollectionHTMLUrlPrefix + getReference());
+		}
+		return null;
+	}
 		
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {

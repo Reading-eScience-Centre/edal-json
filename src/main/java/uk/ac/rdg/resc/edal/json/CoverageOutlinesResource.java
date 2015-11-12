@@ -157,6 +157,12 @@ public class CoverageOutlinesResource extends ServerResource {
 		}
 		return r;
 	}
+	
+	@Get("html")
+	public Representation html() throws IOException, EdalException {
+		getResponse().redirectSeeOther(Constants.CoverageOutlinesHTMLUrlPrefix + getReference());
+		return null;
+	}
 		
 	void addLinkHeaders() {
 		Series<Header> headers = this.getResponse().getHeaders();

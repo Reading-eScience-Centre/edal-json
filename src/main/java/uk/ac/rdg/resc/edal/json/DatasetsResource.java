@@ -8,6 +8,7 @@ import java.util.Map;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
+import org.restlet.data.Reference;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
@@ -24,7 +25,7 @@ import uk.ac.rdg.resc.edal.util.GISUtils;
 public class DatasetsResource extends ServerResource {
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Get("jsonld")
+	@Get("jsonld|json")
 	public Representation json() throws EdalException, IOException {
 
 		FilterConstraint filter = new FilterConstraint(getQuery());
@@ -102,6 +103,12 @@ public class DatasetsResource extends ServerResource {
 			r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 		}
 		return r;
+	}
+	
+	@Get("html")
+	public Representation html() {
+		getResponse().redirectSeeOther(Constants.DatasetCatalogHTMLUrlPrefix + getReference());
+		return null;
 	}
 
 }

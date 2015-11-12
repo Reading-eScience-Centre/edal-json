@@ -99,7 +99,7 @@ public class DatasetResource extends ServerResource {
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Get("jsonld")
+	@Get("jsonld|json")
 	public Representation json() throws EdalException, IOException {
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 

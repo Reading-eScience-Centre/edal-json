@@ -54,6 +54,8 @@ public class App extends Application {
         getMetadataService().addExtension("covcbor", CovJSONCBOR);
         getMetadataService().addExtension("covmsgpack", CovJSONMsgpack);
         getMetadataService().addExtension("cbor", CovJSONCBOR);
+        getMetadataService().addExtension("html", MediaType.TEXT_HTML);
+        getMetadataService().addExtension("json", MediaType.APPLICATION_JSON);
 		
 		Router router = new Router(getContext());
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}/range/{parameterId}",
