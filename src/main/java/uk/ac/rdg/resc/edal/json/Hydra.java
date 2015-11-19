@@ -1,7 +1,5 @@
 package uk.ac.rdg.resc.edal.json;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
@@ -82,14 +80,20 @@ public class Hydra {
 				);
 		}
 		
+		Map<String,Object> templateObj = ImmutableMap.of(
+				"type", "IriTemplate",
+				"template", template,
+				"mapping", mappings.build()
+				);
+		
+		return templateObj;
+		// JSON-LD framing doesn't support named graphs yet, therefore we don't use non-default graphs yet.
+		/*
 		return ImmutableMap.of(
 			"id", "#api",
-			"@graph", ImmutableMap.of(
-					"type", "IriTemplate",
-					"template", template,
-					"mapping", mappings.build()
-					)
+			"@graph", templateObj
 			);
+		*/
 	}
 	
 	private static Map<String,Object> mapping(String variable, String propertyId, String propertyRange, String propertyComment) {

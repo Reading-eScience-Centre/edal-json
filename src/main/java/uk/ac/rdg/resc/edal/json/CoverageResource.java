@@ -181,7 +181,7 @@ public class CoverageResource extends ServerResource {
 							.put("unit", "qudt:unit")
 							.put("symbol", "qudt:symbol")
 							.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
-							.put("subsetOf", Constants.CovAPIPrefix + ":subsetOf")
+							.put("derivedFrom", Constants.DctNS + ":source")
 							.put("api", Constants.CovAPIPrefix + ":api")
 							.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
 							.put("opensearchtime", Constants.OpenSearchTimeNamespace)
@@ -193,7 +193,7 @@ public class CoverageResource extends ServerResource {
 				.put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
 				.put("type", "CoverageCollection");
 		if (subset.isConstrained) {
-			coll.put("subsetOf", ImmutableMap.of(
+			coll.put("derivedFrom", ImmutableMap.of(
 					"id", collectionUrl,
 					"type", "CoverageCollection"
 					));
@@ -203,7 +203,7 @@ public class CoverageResource extends ServerResource {
 		
 		Map apiIriTemplate = Hydra.getApiIriTemplate(coverageUrl, false, true);
 		if (subset.isConstrained) {
-			coverageJson.put("subsetOf", ImmutableMap.of(
+			coverageJson.put("derivedFrom", ImmutableMap.of(
 					"id", coverageUrl,
 					"type", featureMeta.domainMeta.getType() + "Coverage",
 					"api", apiIriTemplate

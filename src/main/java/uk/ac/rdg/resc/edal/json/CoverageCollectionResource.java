@@ -249,7 +249,7 @@ public class CoverageCollectionResource extends ServerResource {
 							"api", Constants.CovAPIPrefix + ":api",
 							"opensearchgeo", Constants.OpenSearchGeoNamespace,
 							"opensearchtime", Constants.OpenSearchTimeNamespace,
-							"subsetOf", Constants.CovAPIPrefix + ":subsetOf"
+							"derivedFrom", Constants.DctNS + ":source"
 							)
 					))
 			 .put("type", "FeatureCollection")
@@ -280,7 +280,7 @@ public class CoverageCollectionResource extends ServerResource {
 						.put("symbol", "qudt:symbol")
 						.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
 						.put("api", Constants.CovAPIPrefix + ":api")
-						.put("subsetOf", Constants.CovAPIPrefix + ":subsetOf")
+						.put("derivedFrom", Constants.DctNS + ":source")
 						.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
 						.put("opensearchtime", Constants.OpenSearchTimeNamespace)
 						.build()
@@ -305,7 +305,7 @@ public class CoverageCollectionResource extends ServerResource {
 		}
 		
 		if (subset.isConstrained) {
-			j.put("subsetOf", ImmutableMap.of(
+			j.put("derivedFrom", ImmutableMap.of(
 						"id", collectionUrl,
 						"type", "CoverageCollection"
 						));
@@ -330,12 +330,15 @@ public class CoverageCollectionResource extends ServerResource {
 				pagination.put("last", paging.last);
 			}
 			
+			// JSON-LD framing doesn't support named graphs yet, therefore we don't use non-default graphs yet.
+			j.put("view", pagination.build());
+			/*
 			j.put("view", ImmutableMap.of(
 					"id", "#pagination",
 					// cannot be made nicer currently
 					// see https://github.com/json-ld/json-ld.org/issues/398
 					"@graph", pagination.build()
-					));
+					));*/
 		}
 
 		j.put("api", Hydra.getApiIriTemplate(collectionUrl, true, true));
