@@ -4,12 +4,18 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.joda.time.DateTime;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.crs.DerivedCRS;
+import org.opengis.referencing.crs.GeodeticCRS;
+import org.opengis.referencing.crs.ProjectedCRS;
 import org.restlet.data.Header;
 import org.restlet.data.Reference;
 import org.restlet.representation.Representation;
@@ -27,12 +33,14 @@ import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
+import uk.ac.rdg.resc.edal.grid.AbstractTransformedGrid;
 import uk.ac.rdg.resc.edal.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.grid.ReferenceableAxis;
 import uk.ac.rdg.resc.edal.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
 import uk.ac.rdg.resc.edal.json.CoverageResource.UniformFeature;
+import uk.ac.rdg.resc.edal.position.VerticalCrs;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageDomainResource extends ServerResource {
@@ -66,78 +74,196 @@ public class CoverageDomainResource extends ServerResource {
 	}
 	
 	public static Map getDomainJson(UniformFeature uniFeature, SubsetConstraint subset, String coverageUrl) {
+		Builder axes = ImmutableMap.builder();
+		List referencing = new LinkedList();
+		
+		if (uniFeature.rectgrid != null) {
+			addHorizontalGrid(uniFeature.rectgrid, subset, axes, referencing);
+		} else {
+			addHorizontalGrid(uniFeature.projgrid, subset, axes, referencing);
+		}		
+		addVerticalAxis(uniFeature.z, subset, axes, referencing);
+		addTimeAxis(uniFeature.t, subset, axes, referencing);
+		
 		Builder domainJson = ImmutableMap.builder()
 				.put("id", coverageUrl + "/domain" + subset.getCanonicalSubsetQueryString())
-				.put("type", uniFeature.type);
+				.put("type", "Domain")
+				.put("profile", uniFeature.type)
+				.put("axes", axes.build())
+				.put("referencing", referencing);
+		
+		List<String> axisOrder = new LinkedList<>();
+		axisOrder.add("y");
+		axisOrder.add("x");
+		if (uniFeature.z != null) {
+			axisOrder.add("z");
+		}
+		if (uniFeature.t != null) {
+			axisOrder.add("t");
+		}
+		domainJson.put("rangeAxisOrder", axisOrder);
 		
 		// no support for trajectories currently
 		// we support everything which is a subtype of a rectilinear grid (includes profiles)
 		
 		// TODO add shortcuts when no subsetting is requested
 		
-		addHorizontalGrid(uniFeature.rectgrid, subset, domainJson);
-		addVerticalAxis(uniFeature.z, subset, domainJson);
-		addTimeAxis(uniFeature.t, subset, domainJson);
-		
 		return domainJson.build();
 	}
 	
-	/**
-	 * NOTE: supports rectilinear lon-lat grids only for now
-	 */
-	private static void addHorizontalGrid(RectilinearGrid grid, Constraint subset, Builder domainJson) {
+	private static void addHorizontalGrid(RectilinearGrid grid, Constraint subset, Builder axes, List referencing) {
 		List<Double> x = grid.getXAxis().getCoordinateValues();
 		List<Double> y = grid.getYAxis().getCoordinateValues();
 		double[] subsettedX = getXAxisIndices(grid.getXAxis(), subset).mapToDouble(x::get).toArray();
 		double[] subsettedY = getYAxisIndices(grid.getYAxis(), subset).mapToDouble(y::get).toArray();
 				
-		BoundingBox bb = grid.getBoundingBox();
-		domainJson.putAll(ImmutableMap.of(
-			    "crs", Utils.getCrsUri(grid.getCoordinateReferenceSystem()),
-			    // FIXME have to subset bbox as well
-			    "bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()),
-			    "x", subsettedX.length == 1 ? subsettedX[0] : subsettedX,
-				"y", subsettedY.length == 1 ? subsettedY[0] : subsettedY
+		if (grid instanceof RegularGrid && (grid.getXSize() > 1 || grid.getYSize() > 1)) {
+			RegularGrid reggrid = (RegularGrid) grid;
+			int xnum = subsettedX.length;
+			int ynum = subsettedY.length;
+			double xstart = subsettedX[0];
+			double xstop = subsettedX[xnum-1];
+			double ystart = subsettedY[0];
+			double ystop = subsettedY[ynum-1];
+			double xstep = reggrid.getXAxis().getCoordinateSpacing();
+			double ystep = reggrid.getYAxis().getCoordinateSpacing();
+			// calculate num from step to check consistency
+			int xnumcheck = (int) Math.round(1 + (xstop-xstart)/xstep);
+			int ynumcheck = (int) Math.round(1 + (ystop-ystart)/ystep);
+			if (xnum != xnumcheck || ynum != ynumcheck) {
+				throw new IllegalStateException();
+			}
+			axes.putAll(ImmutableMap.of(
+				    "x", ImmutableMap.of(
+				    		"start", xstart,
+				    		"stop", xstop,
+				    		"num", xnum
+				    		),
+					"y", ImmutableMap.of(
+				    		"start", ystart,
+				    		"stop", ystop,
+				    		"num", ynum
+				    		)
+					));
+		} else {
+			axes.putAll(ImmutableMap.of(
+				    "x", ImmutableMap.of("values", subsettedX),
+					"y", ImmutableMap.of("values", subsettedY)
+					));
+		}
+			
+		referencing.add(ImmutableMap.of(
+				"identifiers", ImmutableList.of("x", "y"),
+				"srs", getCRSJson(grid.getCoordinateReferenceSystem())
 				));
+				
+	    // FIXME have to subset bbox as well
+//		BoundingBox bb = grid.getBoundingBox();
+//	    "bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()),
 		
 		// FIXME add bounds if not infinitesimal
 		//  -> how do we query that except checking if low==high?
-		
-		if (grid instanceof RegularGrid && (grid.getXSize() > 1 || grid.getYSize() > 1)) {
-			RegularGrid reggrid = (RegularGrid) grid;
-			domainJson.putAll(ImmutableMap.of(
-					"delta", ImmutableList.of(
-				    		reggrid.getXAxis().getCoordinateSpacing(),
-				    		reggrid.getYAxis().getCoordinateSpacing()
-				    		)
-				    ));
-		}
 	}
 	
-	private static void addVerticalAxis(VerticalAxis z, SubsetConstraint subset, Builder domainJson) {
+	private static void addHorizontalGrid(AbstractTransformedGrid grid, Constraint subset, Builder axes, List referencing) {
+		if (subset.latitudeExtent.getLow() != null || subset.latitudeExtent.getHigh() != null ||
+				subset.longitudeExtent.getLow() != null || subset.longitudeExtent.getHigh() != null) {
+			throw new IllegalStateException("Horizontal subsetting not supported for projected grids");
+		}
+		axes.putAll(ImmutableMap.of(
+			    "x", ImmutableMap.of(
+			    		"start", 0,
+			    		"stop", grid.getXSize()-1,
+			    		"num", grid.getXSize()
+			    		),
+				"y", ImmutableMap.of(
+			    		"start", 0,
+			    		"stop", grid.getYSize()-1,
+			    		"num", grid.getYSize()
+			    		)
+				));
+	
+		referencing.add(ImmutableMap.of(
+				"identifiers", ImmutableList.of("x", "y"),
+				"srs", ImmutableMap.of(
+						"type", "ProjectedCRS",
+						"baseCRS", getCRSJson(grid.getCoordinateReferenceSystem())
+						)
+				));
+	}
+	
+	private static Map getCRSJson(CoordinateReferenceSystem crs) {
+		Builder crsMap = ImmutableMap.builder();
+				
+		String crsType;
+		if (crs instanceof GeodeticCRS) {
+			crsType = "GeodeticCRS";
+		} else if (crs instanceof ProjectedCRS) {
+			crsType = "ProjectedCRS";
+		} else {
+			throw new RuntimeException("Unsupported CRS type: " + crs.getClass().getSimpleName());
+		}
+		crsMap.put("type", crsType);
+		
+		if (crs instanceof DerivedCRS) {
+			CoordinateReferenceSystem baseCrs = ((DerivedCRS) crs).getBaseCRS();
+			crsMap.put("baseCRS", getCRSJson(baseCrs));
+		}
+		
+		String crsUri = Utils.getCrsUri(crs);
+		if (crsUri != null) {
+			crsMap.put("id", crsUri);
+		}
+		
+		return crsMap.build();
+	}
+	
+	private static Map getCRSJson(VerticalCrs crs) {
+		String axisName = "Vertical";
+		if (crs.isPressure()) {
+			axisName = "Pressure";
+		} else if ("m".equals(crs.getUnits())) {
+			if (crs.isPositiveUpwards()) {
+				axisName = "Height";
+			} else {
+				axisName = "Depth";
+			}
+		}
+		return ImmutableMap.of(
+				"type", "VerticalCRS",
+				"cs", ImmutableMap.of(
+						"axes", ImmutableList.of(ImmutableMap.of(
+								"name", ImmutableMap.of("en", axisName),
+								"direction", crs.isPositiveUpwards() ? "up" : "down",
+								"unit", ImmutableMap.of(
+										"symbol", crs.getUnits()
+										)
+								))
+						)
+				);
+	}
+	
+	private static void addVerticalAxis(VerticalAxis z, SubsetConstraint subset, Builder axes, List referencing) {
 		if (z == null) {
 			return;
 		}
 		List<Double> heights = z.getCoordinateValues();
 		double[] subsettedHeights = getVerticalAxisIndices(z, subset).mapToDouble(heights::get).toArray();
 		
-		domainJson.put("z", subsettedHeights);
+		axes.put("z", ImmutableMap.of("values", subsettedHeights));
 		
 		// FIXME add bounds if not infinitesimal
 		//  -> how do we query that except checking if low==high?
 		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
 		
-		// TODO are there no standards for vertical CRS, with codes etc.?
-		domainJson.put("zCrs", ImmutableMap.of(
-				"uom", z.getVerticalCrs().getUnits(),
-				"positiveUpwards", z.getVerticalCrs().isPositiveUpwards(),
-				"dimensionless", z.getVerticalCrs().isDimensionless(),
-				"pressure", z.getVerticalCrs().isPressure()
+		referencing.add(ImmutableMap.of(
+				"identifiers", ImmutableList.of("z"),
+				"srs", getCRSJson(z.getVerticalCrs())
 				));
 		
 	}
 		
-	private static void addTimeAxis(TimeAxis t, Constraint subset, Builder domainJson) {
+	private static void addTimeAxis(TimeAxis t, Constraint subset, Builder axes, List referencing) {
 		if (t == null) {
 			return;
 		}
@@ -145,7 +271,18 @@ public class CoverageDomainResource extends ServerResource {
 		String[] subsettedTimes = getTimeAxisIndices(t, subset)
 				.mapToObj(i -> times.get(i).toString())
 				.toArray(String[]::new);
-		domainJson.put("t", subsettedTimes.length == 1 ? subsettedTimes[0] : subsettedTimes);
+		
+		axes.put("t", ImmutableMap.of("values", subsettedTimes));
+		
+		// TODO does EDAL support only Gregorian dates?
+		
+		referencing.add(ImmutableMap.of(
+				"identifiers", ImmutableList.of("t"),
+				"trs", ImmutableMap.of(
+						"type", "TemporalRS",
+						"calendar", "Gregorian"
+						)
+				));
 		
 		// FIXME add bounds if not infinitesimal
 		//  -> how do we query that except checking if low==high?

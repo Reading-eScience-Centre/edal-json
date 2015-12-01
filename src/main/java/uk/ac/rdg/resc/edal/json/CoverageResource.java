@@ -30,6 +30,7 @@ import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
 import uk.ac.rdg.resc.edal.feature.Feature;
 import uk.ac.rdg.resc.edal.feature.GridFeature;
 import uk.ac.rdg.resc.edal.feature.ProfileFeature;
+import uk.ac.rdg.resc.edal.grid.AbstractTransformedGrid;
 import uk.ac.rdg.resc.edal.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.grid.RectilinearGridImpl;
 import uk.ac.rdg.resc.edal.grid.ReferenceableAxisImpl;
@@ -95,9 +96,10 @@ public class CoverageResource extends ServerResource {
 		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
 		
 		Builder j = ImmutableMap.builder()
-				.put("type", meta.domainMeta.getType() + "Coverage")
+				.put("type", "Coverage")
+				.put("profile", meta.domainMeta.getType() + "Coverage")
 				.put("id", coverageUrl + subset.getCanonicalSubsetQueryString())
-				.put("title", meta.name);
+				.put("title", ImmutableMap.of("en", meta.name));
 				
 		Supplier<UniformFeature> feature =
 				Suppliers.memoize(() -> new UniformFeature((DiscreteFeature)dataset.get().readFeature(meta.featureId)));
@@ -108,6 +110,7 @@ public class CoverageResource extends ServerResource {
 				j.put("domain", domainJson);
 			} else {
 				j.put("domain", coverageUrl + "/domain" + subset.getCanonicalSubsetQueryString());
+				j.put("domainProfile", meta.domainMeta.getType());
 			}
 			if (!skipParameters) {
 				j.put("parameters", getParametersJson(meta, rootUri));
@@ -115,6 +118,7 @@ public class CoverageResource extends ServerResource {
 			j.put("ranges", getRangesJson(meta, feature, details.range, subset, rootUri));
 		
 		} catch (UnsupportedDomainException e) {
+			// FIXME return proper error doc
 			j.put("domain", unsupportedDomain(e.domain, e.info));
 		}
 
@@ -181,7 +185,7 @@ public class CoverageResource extends ServerResource {
 							.put("unit", "qudt:unit")
 							.put("symbol", "qudt:symbol")
 							.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
-							.put("derivedFrom", Constants.DctNS + ":source")
+							.put("derivedFrom", Constants.DctNS + "source")
 							.put("api", Constants.CovAPIPrefix + ":api")
 							.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
 							.put("opensearchtime", Constants.OpenSearchTimeNamespace)
@@ -253,6 +257,7 @@ public class CoverageResource extends ServerResource {
 	static class UniformFeature {
 		DiscreteFeature<?,?> feature;
 		RectilinearGrid rectgrid;
+		AbstractTransformedGrid projgrid;
 		TimeAxis t;
 		VerticalAxis z;
 		String type;
@@ -267,12 +272,15 @@ public class CoverageResource extends ServerResource {
 				GridDomain grid = gridFeature.getDomain();
 				t = grid.getTimeAxis();
 				z = grid.getVerticalAxis();
+				type = "Grid";
 				
 				if (grid.getHorizontalGrid() instanceof RectilinearGrid) {
 					rectgrid = (RectilinearGrid) grid.getHorizontalGrid();
-					type = "Grid";
+				} else if (grid.getHorizontalGrid() instanceof AbstractTransformedGrid) {
+					// curvilinear grid or common projection
+					projgrid = (AbstractTransformedGrid) grid.getHorizontalGrid();
 				} else {
-					throw new UnsupportedDomainException(feature.getDomain(), grid.getHorizontalGrid().getClass().getName());
+					throw new RuntimeException("Not supported: " + grid.getHorizontalGrid().getClass().getSimpleName());
 				}
 			} else if (feature instanceof ProfileFeature) {
 				ProfileFeature profile = (ProfileFeature) feature;

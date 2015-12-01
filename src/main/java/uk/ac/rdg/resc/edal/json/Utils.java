@@ -61,12 +61,10 @@ public final class Utils {
 				// geotoolkit doesn't return this URI yet
 				if (crs.getName().toString() == "WGS84(DD)") {
 					crsUri = "http://www.opengis.net/def/crs/OGC/1.3/CRS84";
-				} else {
-					crsUri = crs.getName().toString();
 				}
 			}
 		} catch (FactoryException e) {
-			crsUri = "UNKNOWN: " + e.toString(); 
+			throw new RuntimeException(e); 
 		}
 		return crsUri;
 	}

@@ -30,10 +30,7 @@ public class ParameterResource extends ServerResource {
 				.put("id", getParamUrl(datasetId, param.getVariableId(), rootUri))
 				.put("type", "Parameter")
 				.put("description", ImmutableMap.of("en", param.getDescription()))
-				// TODO translate EDAL units to qudt terms
 				.put("unit", ImmutableMap.of(
-						"id", "TODOhttp://qudt.org/vocab/unit#DegreeCelsius",
-						// TODO read unit label from qudt ontology
 						"symbol", param.getUnits()
 						));
 			

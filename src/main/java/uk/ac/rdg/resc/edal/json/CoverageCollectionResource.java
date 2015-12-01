@@ -249,7 +249,7 @@ public class CoverageCollectionResource extends ServerResource {
 							"api", Constants.CovAPIPrefix + ":api",
 							"opensearchgeo", Constants.OpenSearchGeoNamespace,
 							"opensearchtime", Constants.OpenSearchTimeNamespace,
-							"derivedFrom", Constants.DctNS + ":source"
+							"derivedFrom", Constants.DctNS + "source"
 							)
 					))
 			 .put("type", "FeatureCollection")

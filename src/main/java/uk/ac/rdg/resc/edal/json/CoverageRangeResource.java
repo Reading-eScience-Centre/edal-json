@@ -3,6 +3,7 @@ package uk.ac.rdg.resc.edal.json;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
@@ -54,6 +55,7 @@ public class CoverageRangeResource extends ServerResource {
 		
 		Map j = ImmutableMap.of(
 				"type", "Range",
+				"dataType", "float",
 				"values", getValues(feature.getValues(param.getVariableId()), feature, subset),
 				"validMin", meta.rangeMeta.getMinValue(param),
 				"validMax", meta.rangeMeta.getMaxValue(param)
@@ -89,6 +91,14 @@ public class CoverageRangeResource extends ServerResource {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
 		
+		if (uniFeature.rectgrid == null) {
+			// use uniFeature.projgrid somehow
+			// FIXME unknown order
+			List<Number> vals = new ArrayList<>((int)valsArr.size());
+			valsArr.forEach(vals::add);
+			return vals;
+		}
+		
 		int[] xIndices = CoverageDomainResource.getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset).toArray();
 		int[] yIndices = CoverageDomainResource.getYAxisIndices(uniFeature.rectgrid.getYAxis(), subset).toArray();
 		int[] zIndices = CoverageDomainResource.getVerticalAxisIndices(uniFeature.z, subset).toArray();
@@ -96,9 +106,7 @@ public class CoverageRangeResource extends ServerResource {
 		
 		// FIXME EN3 has 99999.0 as values which probably means missing
 		//  -> shouldn't this be detected by EDAL and returned as null instead?
-		
-//		valsArr.forEach(vals::add);
-		
+				
 				
 		Array4D<Number> vals4D;
 		
@@ -119,8 +127,6 @@ public class CoverageRangeResource extends ServerResource {
 		} else {
 			throw new RuntimeException("not supported: " + valsArr.getClass().getName());
 		}
-		
-
 		
 		Number[] vals = new Number[xIndices.length * yIndices.length * 
 				zIndices.length * tIndices.length];

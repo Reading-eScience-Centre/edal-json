@@ -116,7 +116,7 @@ public class DomainMetadata {
 			verticalCrs = domain.getVerticalAxis() == null ? null :
 				          domain.getVerticalAxis().getVerticalCrs();
 		} else if (feature instanceof ProfileFeature) {
-			type = "Profile";
+			type = "VerticalProfile";
 			ProfileFeature feat = (ProfileFeature) feature;
 			HorizontalPosition pos = feat.getHorizontalPosition();
 			bbox = new BoundingBoxImpl(pos.getX(), pos.getY(), pos.getX(),
