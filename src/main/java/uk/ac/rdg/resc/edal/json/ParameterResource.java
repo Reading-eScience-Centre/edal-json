@@ -1,6 +1,10 @@
 package uk.ac.rdg.resc.edal.json;
 
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.restlet.data.Disposition;
 import org.restlet.data.Reference;
@@ -12,6 +16,7 @@ import org.restlet.resource.ServerResource;
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
+import uk.ac.rdg.resc.edal.metadata.Parameter.Category;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
@@ -42,6 +47,21 @@ public class ParameterResource extends ServerResource {
 				.put("label", ImmutableMap.of("en", param.getTitle()));
 		if (observedPropertyUri != null) {
 			obsProp.put("id", observedPropertyUri);
+		}
+		if (param.getCategories() != null) {
+			List cats = new LinkedList();
+			Map<String,Integer> catEnc = new HashMap<>();
+			for (Entry<Integer,Category> entry : param.getCategories().entrySet()) {
+				int value = entry.getKey();
+				Category cat = entry.getValue();
+				cats.add(ImmutableMap.of(
+						"id", cat.getId(),
+						"label", ImmutableMap.of("en", cat.getLabel())
+						));
+				catEnc.put(cat.getId(), value);
+			}
+			obsProp.put("categories", cats);
+			j.put("categoryEncoding", catEnc);
 		}
 		j.put("observedProperty", obsProp.build());
 		return j;

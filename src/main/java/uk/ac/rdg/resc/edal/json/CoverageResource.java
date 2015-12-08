@@ -353,11 +353,12 @@ public class CoverageResource extends ServerResource {
 				// TODO how do we know which axis order the array has?!
 				UniformFeature uniFeature = uniFeatureFn.get();
 				
+				boolean isCategorical = param.getCategories() != null;
 				rangeParam = ImmutableMap.builder()
 						.put("id", rangeUrl)
 						.put("validMin", meta.rangeMeta.getMinValue(param))
 						.put("validMax", meta.rangeMeta.getMaxValue(param))
-						.put("values", CoverageRangeResource.getValues(uniFeature.feature.getValues(paramId), uniFeature, subset))
+						.put("values", CoverageRangeResource.getValues(uniFeature.feature.getValues(paramId), uniFeature, subset, isCategorical))
 						.build();
 			} else {
 				rangeParam = rangeUrl;
