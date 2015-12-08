@@ -96,10 +96,10 @@ public class CoverageDomainResource extends ServerResource {
 		axisOrder.add("y");
 		axisOrder.add("x");
 		if (uniFeature.z != null) {
-			axisOrder.add("z");
+			axisOrder.add(0, "z");
 		}
 		if (uniFeature.t != null) {
-			axisOrder.add("t");
+			axisOrder.add(0, "t");
 		}
 		domainJson.put("rangeAxisOrder", axisOrder);
 		

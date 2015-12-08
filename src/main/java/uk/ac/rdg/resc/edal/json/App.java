@@ -104,20 +104,24 @@ public class App extends Application {
 	public static Representation getCovJsonRepresentation(Resource resource, Map<String,?> json) {
 		MediaType type = resource.getClientInfo().getAcceptedMediaTypes().get(0).getMetadata();
 		
+		Representation r;
+		
 		if (type.equals(App.CovJSONMsgpack)) {
-			Representation r = new MessagePackRepresentation(json);
+			r = new MessagePackRepresentation(json);
 			r.setMediaType(App.CovJSONMsgpack);
+		} else if (type.equals(App.CovJSONCBOR)) {
+			r = new CBORRepresentation(json);
+			r.setMediaType(App.CovJSONCBOR);
 			return r;
-		} /*else if (type.equals(App.CovJSONCBOR)) {
-			
-		}*/ else /*if (type.equals(App.CovJSON))*/ {
-			JacksonRepresentation<Map<String,?>> r = new JacksonRepresentation<>(json);
+		} else /*if (type.equals(App.CovJSON))*/ {
+			r = new JacksonRepresentationWithTimer<>(json);
 			r.setMediaType(App.CovJSON);
 			if (!App.acceptsJSON(resource)) {
-				r.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+				JacksonRepresentation<Map<String,?>> jack = (JacksonRepresentation<Map<String, ?>>) r;
+				jack.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 			}
-			return r;
 		}
+		return r;
 	}
 	
 	public static Representation getErrorRepresentation(Exception e) {
