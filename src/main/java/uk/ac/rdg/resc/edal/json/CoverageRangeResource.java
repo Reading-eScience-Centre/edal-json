@@ -48,15 +48,15 @@ public class CoverageRangeResource extends ServerResource {
 		}
 		Parameter param = feature.getParameter(parameterId);
 		
-		String parameterRangeUrl = getRootRef().toString() + "/datasets/" + dataset.getId() +
-				"/coverages/" + feature.getId() + "/range/" + param.getVariableId();
-		
 		// TODO remove duplication with FeatureResource
+		
+		boolean isCategorical = param.getCategories() != null;
+		String dtype = isCategorical ? "integer" : "float";
 		
 		Map j = ImmutableMap.of(
 				"type", "Range",
-				"dataType", "float",
-				"values", getValues(feature.getValues(param.getVariableId()), feature, subset),
+				"dataType", dtype,
+				"values", getValues(feature.getValues(param.getVariableId()), feature, subset, isCategorical),
 				"validMin", meta.rangeMeta.getMinValue(param),
 				"validMax", meta.rangeMeta.getMaxValue(param)
 				);
@@ -81,12 +81,12 @@ public class CoverageRangeResource extends ServerResource {
 	}
 		
 	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, 
-			SubsetConstraint subset) {
-		return getValues(valsArr, new UniformFeature(feature), subset);
+			SubsetConstraint subset, boolean isCategorical) {
+		return getValues(valsArr, new UniformFeature(feature), subset, isCategorical);
 	}
 	
 	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, 
-			SubsetConstraint subset) {
+			SubsetConstraint subset, boolean isCategorical) {
 		if (valsArr.size() > Integer.MAX_VALUE) {
 			throw new RuntimeException("Array too big, consider subsetting!");
 		}
@@ -136,7 +136,8 @@ public class CoverageRangeResource extends ServerResource {
 			for (int z : zIndices) {
 				for (int y : yIndices) {
 					for (int x : xIndices) {
-						vals[i++] = vals4D.get(t, z, y, x);
+						Number val = vals4D.get(t, z, y, x);
+						vals[i++] = isCategorical ? val.intValue() : val;
 					}
 				}
 			}
