@@ -137,7 +137,7 @@ public class CoverageRangeResource extends ServerResource {
 				for (int y : yIndices) {
 					for (int x : xIndices) {
 						Number val = vals4D.get(t, z, y, x);
-						vals[i++] = isCategorical ? val.intValue() : val;
+						vals[i++] = isCategorical && val != null ? val.intValue() : val;
 					}
 				}
 			}
