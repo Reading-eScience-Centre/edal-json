@@ -17,6 +17,7 @@ import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.metadata.Parameter.Category;
+import uk.ac.rdg.resc.edal.util.GraphicsUtils;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
@@ -54,10 +55,13 @@ public class ParameterResource extends ServerResource {
 			for (Entry<Integer,Category> entry : param.getCategories().entrySet()) {
 				int value = entry.getKey();
 				Category cat = entry.getValue();
-				cats.add(ImmutableMap.of(
-						"id", cat.getId(),
-						"label", ImmutableMap.of("en", cat.getLabel())
-						));
+				Builder catMap = ImmutableMap.builder()
+						.put("id", cat.getId())
+						.put("label", ImmutableMap.of("en", cat.getLabel()));
+				if (cat.getColour() != null) {
+					catMap.put("preferredColor", GraphicsUtils.colourToHtmlString(cat.getColour()));
+				}
+				cats.add(catMap.build());
 				catEnc.put(cat.getId(), value);
 			}
 			obsProp.put("categories", cats);
