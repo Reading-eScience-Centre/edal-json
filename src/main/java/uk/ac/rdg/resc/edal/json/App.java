@@ -5,15 +5,22 @@ import java.util.Map;
 
 import org.restlet.Application;
 import org.restlet.Component;
+import org.restlet.Context;
+import org.restlet.Request;
+import org.restlet.Response;
 import org.restlet.Restlet;
+import org.restlet.data.CacheDirective;
 import org.restlet.data.ClientInfo;
 import org.restlet.data.Header;
 import org.restlet.data.MediaType;
 import org.restlet.data.Preference;
 import org.restlet.data.Protocol;
+import org.restlet.data.Status;
 import org.restlet.ext.jackson.JacksonRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Resource;
+import org.restlet.resource.ServerResource;
+import org.restlet.routing.Filter;
 import org.restlet.routing.Router;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -21,6 +28,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 public class App extends Application {
+	
+	static final int MAX_AGE = 3600; // cache control header for all responses (1h caching)
 	
     static MediaType JSONLD = new MediaType("application/ld+json");
     static MediaType CovJSON = new MediaType("application/prs.coverage+json");
@@ -59,22 +68,43 @@ public class App extends Application {
 		
 		Router router = new Router(getContext());
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}/range/{parameterId}",
-				CoverageRangeResource.class);
+				withFilters(CoverageRangeResource.class));
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}/domain",
-				CoverageDomainResource.class);
+				withFilters(CoverageDomainResource.class));
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}/outlines",
-				CoverageOutlinesResource.class);
+				withFilters(CoverageOutlinesResource.class));
 		router.attach("/datasets/{datasetId}/coverages/{coverageId}",
-				CoverageResource.class);
+				withFilters(CoverageResource.class));
 		router.attach("/datasets/{datasetId}/outlines",
-				CoverageCollectionResource.class);
+				withFilters(CoverageCollectionResource.class));
 		router.attach("/datasets/{datasetId}/coverages",
-				CoverageCollectionResource.class);
+				withFilters(CoverageCollectionResource.class));
 		router.attach("/datasets/{datasetId}/params/{paramId}",
-				ParameterResource.class);
-		router.attach("/datasets/{datasetId}", DatasetResource.class);
-		router.attach("/datasets", DatasetsResource.class);
+				withFilters(ParameterResource.class));
+		router.attach("/datasets/{datasetId}", withFilters(DatasetResource.class));
+		router.attach("/datasets", withFilters(DatasetsResource.class));
 		return router;
+	}
+	
+	Restlet withFilters(Class<? extends ServerResource> clazz) {
+		Filter filter = new CacheFilter(getContext());
+		filter.setNext(clazz);
+		return filter;
+	}
+	
+	class CacheFilter extends Filter {
+		public CacheFilter(Context context) {
+			super(context);
+		}
+		@Override
+		protected void afterHandle(Request request, Response response) {
+			super.afterHandle(request, response);
+			if (response!= null && response.getEntity() != null) {
+				if (response.getStatus().equals(Status.SUCCESS_OK)){
+					response.setCacheDirectives(ImmutableList.of(CacheDirective.maxAge(MAX_AGE)));
+				}
+			}
+		}
 	}
 	
 	static List<MediaType> jsonTypes = ImmutableList.of(

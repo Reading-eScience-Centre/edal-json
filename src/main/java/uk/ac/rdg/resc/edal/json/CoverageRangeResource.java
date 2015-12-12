@@ -71,13 +71,7 @@ public class CoverageRangeResource extends ServerResource {
 		// TODO add link to coverage
 		
 		Map j = rangeData();
-		Representation r = App.getCovJsonRepresentation(this, j);
-		
-		// TODO think about caching strategy
-		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
-		r.setExpirationDate(exp);
-		
-		return r;
+		return App.getCovJsonRepresentation(this, j);
 	}
 		
 	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, 

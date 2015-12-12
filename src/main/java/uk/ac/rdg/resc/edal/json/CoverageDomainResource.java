@@ -64,13 +64,7 @@ public class CoverageDomainResource extends ServerResource {
 		
 		
 		Map j = getDomainJson(uniFeature, subset, coverageUrl);
-		Representation r = App.getCovJsonRepresentation(this, j);
-		
-		// TODO think about caching strategy
-		Date exp = Date.from(LocalDate.now().plusDays(1).atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
-		r.setExpirationDate(exp);
-		
-		return r;
+		return App.getCovJsonRepresentation(this, j);
 	}
 	
 	public static Map getDomainJson(UniformFeature uniFeature, SubsetConstraint subset, String coverageUrl) {
