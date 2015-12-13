@@ -2,7 +2,7 @@ package uk.ac.rdg.resc.edal.json;
 
 public class Constants {
 	
-	public static final String CoverageHTMLUrlPrefix = "http://reading-escience-centre.github.io/leaflet-coverage/#";
+	public static final String CoverageHTMLUrlPrefix = "http://reading-escience-centre.github.io/leaflet-coverage-demo/#";
 	public static final String CoverageCollectionHTMLUrlPrefix = CoverageHTMLUrlPrefix;
 	public static final String CoverageOutlinesHTMLUrlPrefix = "http://geojson.io/#data=data:text/x-url,";
 	public static final String CoverageCollectionOutlinesHTMLUrlPrefix = CoverageOutlinesHTMLUrlPrefix;
