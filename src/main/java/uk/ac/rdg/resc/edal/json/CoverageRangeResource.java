@@ -98,6 +98,12 @@ public class CoverageRangeResource extends ServerResource {
 		int[] zIndices = CoverageDomainResource.getVerticalAxisIndices(uniFeature.z, subset).toArray();
 		int[] tIndices = CoverageDomainResource.getTimeAxisIndices(uniFeature.t, subset).toArray();
 		
+		long size = xIndices.length * yIndices.length * zIndices.length * tIndices.length;
+		if (size > 3600*7200) {
+			// TODO implement streaming solution
+			throw new RuntimeException("range too big, please subset");
+		}
+		
 		// FIXME EN3 has 99999.0 as values which probably means missing
 		//  -> shouldn't this be detected by EDAL and returned as null instead?
 				
