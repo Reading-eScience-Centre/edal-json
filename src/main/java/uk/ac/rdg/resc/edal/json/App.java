@@ -31,6 +31,10 @@ public class App extends Application {
 	
 	static final int MAX_AGE = 3600; // cache control header for all responses (1h caching)
 	
+	// there are still some memory problems both server and client side with big coverages (like OSTIA)
+	// so we disable it for now
+	static final boolean ENABLE_COVCBOR = false;
+	
     static MediaType JSONLD = new MediaType("application/ld+json");
     static MediaType CovJSON = new MediaType("application/prs.coverage+json");
     static MediaType CovJSONMsgpack = new MediaType("application/prs.coverage+msgpack");
@@ -139,7 +143,7 @@ public class App extends Application {
 		if (type.equals(App.CovJSONMsgpack)) {
 			r = new MessagePackRepresentation(json);
 			r.setMediaType(App.CovJSONMsgpack);
-		} else if (type.equals(App.CovJSONCBOR)) {
+		} else if (type.equals(App.CovJSONCBOR) && ENABLE_COVCBOR) {
 			r = new CBORRepresentation(json);
 			r.setMediaType(App.CovJSONCBOR);
 			return r;
