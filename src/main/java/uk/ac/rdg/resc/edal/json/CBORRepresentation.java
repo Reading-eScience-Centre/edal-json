@@ -74,7 +74,7 @@ public class CBORRepresentation extends StreamRepresentation {
 			return new UnicodeString(s);
 		} else if (o instanceof List) {
 			List<?> l = (List<?>) o;
-			Array arr = new Array();
+			Array arr = new Array(l.size());
 			for (Object el : l) {
 				arr.add(getDataItem(el));
 			}
