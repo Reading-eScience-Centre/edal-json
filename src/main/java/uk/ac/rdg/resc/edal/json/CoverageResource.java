@@ -338,8 +338,7 @@ public class CoverageResource extends ServerResource {
 	private static Map getRangesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 
 			boolean includeValues, SubsetConstraint subset, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId;
-		Builder values = ImmutableMap.builder()
-				.put("type", "RangeSet");
+		Builder values = ImmutableMap.builder();
 
 		for (String paramId : meta.rangeMeta.getParameterIds()) {
 			if (subset.params.isPresent() && !subset.params.get().contains(paramId)) {
