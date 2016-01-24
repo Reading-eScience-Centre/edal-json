@@ -147,7 +147,7 @@ public class CoverageDomainResource extends ServerResource {
 		}
 			
 		referencing.add(ImmutableMap.of(
-				"identifiers", ImmutableList.of("x", "y"),
+				"dimensions", ImmutableList.of("x", "y"),
 				"srs", getCRSJson(grid.getCoordinateReferenceSystem())
 				));
 				
@@ -178,7 +178,7 @@ public class CoverageDomainResource extends ServerResource {
 				));
 	
 		referencing.add(ImmutableMap.of(
-				"identifiers", ImmutableList.of("x", "y"),
+				"dimensions", ImmutableList.of("x", "y"),
 				"srs", ImmutableMap.of(
 						"type", "ProjectedCRS",
 						"baseCRS", getCRSJson(grid.getCoordinateReferenceSystem())
@@ -251,7 +251,7 @@ public class CoverageDomainResource extends ServerResource {
 		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
 		
 		referencing.add(ImmutableMap.of(
-				"identifiers", ImmutableList.of("z"),
+				"dimensions", ImmutableList.of("z"),
 				"srs", getCRSJson(z.getVerticalCrs())
 				));
 		
@@ -271,7 +271,7 @@ public class CoverageDomainResource extends ServerResource {
 		// TODO does EDAL support only Gregorian dates?
 		
 		referencing.add(ImmutableMap.of(
-				"identifiers", ImmutableList.of("t"),
+				"dimensions", ImmutableList.of("t"),
 				"trs", ImmutableMap.of(
 						"type", "TemporalRS",
 						"calendar", "Gregorian"
