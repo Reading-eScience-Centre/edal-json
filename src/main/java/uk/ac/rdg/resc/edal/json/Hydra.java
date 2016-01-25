@@ -81,9 +81,9 @@ public class Hydra {
 		}
 		
 		Map<String,Object> templateObj = ImmutableMap.of(
-				"type", "IriTemplate",
-				"template", template,
-				"mapping", mappings.build()
+				"type", Constants.HydraPrefix + ":IriTemplate",
+				Constants.HydraPrefix + ":template", template,
+				Constants.HydraPrefix + ":mapping", mappings.build()
 				);
 		
 		return templateObj;
@@ -98,14 +98,14 @@ public class Hydra {
 	
 	private static Map<String,Object> mapping(String variable, String propertyId, String propertyRange, String propertyComment) {
 		return ImmutableMap.of(
-				"type", "IriTemplateMapping",
-				"variable", variable,
-				"property", ImmutableMap.of(
+				"type", Constants.HydraPrefix + ":IriTemplateMapping",
+				Constants.HydraPrefix + ":variable", variable,
+				Constants.HydraPrefix + ":property", ImmutableMap.of(
 						"id", propertyId,
 						"comment", propertyComment,
-						"range", propertyRange
+						Constants.RdfsPrefix + ":range", propertyRange
 						),
-				"required", false
+				Constants.HydraPrefix + ":required", false
 				);
 	}
 	

@@ -136,14 +136,17 @@ public class CoverageOutlinesResource extends ServerResource {
 		Builder geojsonBuilder = getOutlinesAsGeoJson(meta.getLazyDataset(),
 				featureMeta, rootUri, subset)
 				.put("@context", ImmutableList.of(
-						Constants.HydraContext,
 						Constants.GeoJSONLDContext,
-						ImmutableMap.of(
-								Constants.CovAPIPrefix, Constants.CovAPINamespace,
-								"api", Constants.CovAPIPrefix + ":api",
-								"opensearchgeo", Constants.OpenSearchGeoNamespace,
-								"opensearchtime", Constants.OpenSearchTimeNamespace
-								)
+						ImmutableMap.builder()
+							.put(Constants.RdfsPrefix, Constants.RdfsNamespace)
+							.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
+							.put(Constants.HydraPrefix, Constants.HydraNamespace)
+							.put("comment", Constants.Comment)
+							.put("derivedFrom", Constants.DctNS + "source")
+							.put("api", Constants.CovAPIPrefix + ":api")
+							.put(Constants.OpenSearchGeoPrefix, Constants.OpenSearchGeoNamespace)
+							.put(Constants.OpenSearchTimePrefix, Constants.OpenSearchTimeNamespace)
+							.build()
 						));
 
 		Map apiIriTemplate = Hydra.getApiIriTemplate(outlinesUrl, false, true);

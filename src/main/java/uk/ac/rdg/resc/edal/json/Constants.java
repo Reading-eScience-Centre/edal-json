@@ -12,9 +12,21 @@ public class Constants {
 
 	public static final String GeoJSONLDContext = "https://rawgit.com/geojson/geojson-ld/master/contexts/geojson-time.jsonld";
 	public static final String CoverageJSONContext = "https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld";
-	public static final String HydraContext = "http://www.w3.org/ns/hydra/core";
 	
+	// we don't use the Hydra context anymore since it was unavailable for ~1week and the w3c took too long to fix it
+	//public static final String HydraContext = "http://www.w3.org/ns/hydra/core";
+	
+	public static final String HydraPrefix = "hydra";
+	public static final String HydraNamespace = "http://www.w3.org/ns/hydra/core#";
+	
+	public static final String RdfsPrefix = "rdfs";
+	public static final String RdfsNamespace = "http://www.w3.org/2000/01/rdf-schema#";
+	public static final String Comment = RdfsPrefix + ":comment";
+	
+	public static final String OpenSearchGeoPrefix = "opensearchgeo";
 	public static final String OpenSearchGeoNamespace = "http://a9.com/-/opensearch/extensions/geo/1.0/";
+	
+	public static final String OpenSearchTimePrefix = "opensearchtime";
 	public static final String OpenSearchTimeNamespace = "http://a9.com/-/opensearch/extensions/time/1.0/";
 	
 	public static final String CovJSONNamespace = "http://coveragejson.org/ns#";

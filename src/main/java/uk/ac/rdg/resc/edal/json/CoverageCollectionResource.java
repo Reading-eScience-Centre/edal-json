@@ -242,15 +242,21 @@ public class CoverageCollectionResource extends ServerResource {
 		Builder j = ImmutableMap.builder();
 		if (asGeojson) {
 			j.put("@context", ImmutableList.of(
-					Constants.HydraContext,
 					Constants.GeoJSONLDContext,
-					ImmutableMap.of(
-							Constants.CovAPIPrefix, Constants.CovAPINamespace,
-							"api", Constants.CovAPIPrefix + ":api",
-							"opensearchgeo", Constants.OpenSearchGeoNamespace,
-							"opensearchtime", Constants.OpenSearchTimeNamespace,
-							"derivedFrom", Constants.DctNS + "source"
-							)
+					ImmutableMap.builder()
+						.put(Constants.RdfsPrefix, Constants.RdfsNamespace)
+						.put(Constants.HydraPrefix, Constants.HydraNamespace)
+						.put("first", ImmutableMap.of("@id", Constants.HydraPrefix + ":first", "@type", "@id"))
+						.put("last", ImmutableMap.of("@id", Constants.HydraPrefix + ":last", "@type", "@id"))
+						.put("next", ImmutableMap.of("@id", Constants.HydraPrefix + ":next", "@type", "@id"))
+						.put("previous", ImmutableMap.of("@id", Constants.HydraPrefix + ":previous", "@type", "@id"))
+						.put("comment", Constants.Comment)
+						.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
+						.put("api", Constants.CovAPIPrefix + ":api")
+						.put(Constants.OpenSearchGeoPrefix, Constants.OpenSearchGeoNamespace)
+						.put(Constants.OpenSearchTimePrefix, Constants.OpenSearchTimeNamespace)
+						.put("derivedFrom", Constants.DctNS + "source")
+						.build()
 					))
 			 .put("type", "FeatureCollection")
 			 .put("features", jsonFeatures);
@@ -270,19 +276,20 @@ public class CoverageCollectionResource extends ServerResource {
 			}
 			
 			j.put("@context", ImmutableList.of(
-					// hydra comes first since it defines some generic terms like "title" under the hydra: ns
-					// but we want to use our own "title" definition from the coveragejson context (overriding hydra's)
-					Constants.HydraContext,
 					Constants.CoverageJSONContext,
 					ldContext
-						.put("qudt", "http://qudt.org/1.1/schema/qudt#")
-						.put("unit", "qudt:unit")
-						.put("symbol", "qudt:symbol")
+						.put(Constants.RdfsPrefix, Constants.RdfsNamespace)
+						.put(Constants.HydraPrefix, Constants.HydraNamespace)
+						.put("first", ImmutableMap.of("@id", Constants.HydraPrefix + ":first", "@type", "@id"))
+						.put("last", ImmutableMap.of("@id", Constants.HydraPrefix + ":last", "@type", "@id"))
+						.put("next", ImmutableMap.of("@id", Constants.HydraPrefix + ":next", "@type", "@id"))
+						.put("previous", ImmutableMap.of("@id", Constants.HydraPrefix + ":previous", "@type", "@id"))
+						.put("comment", Constants.Comment)
 						.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
 						.put("api", Constants.CovAPIPrefix + ":api")
-						.put("derivedFrom", Constants.DctNS + ":source")
-						.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
-						.put("opensearchtime", Constants.OpenSearchTimeNamespace)
+						.put("derivedFrom", Constants.DctNS + "source")
+						.put(Constants.OpenSearchGeoPrefix, Constants.OpenSearchGeoNamespace)
+						.put(Constants.OpenSearchTimePrefix, Constants.OpenSearchTimeNamespace)
 						.build()
 					))
 			 .put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
@@ -318,8 +325,8 @@ public class CoverageCollectionResource extends ServerResource {
 			j.put("totalItems", paging.totalElements);
 			Builder pagination = ImmutableMap.builder()
 					.put("id", getReference().toString())
-					.put("type", "PartialCollectionView")
-					.put("itemsPerPage", paging.elementsPerPage);
+					.put("type", Constants.HydraPrefix + ":PartialCollectionView")
+					.put(Constants.HydraPrefix + ":itemsPerPage", paging.elementsPerPage);
 			if (paging.first != null) {
 				pagination.put("first", paging.first);
 			}
@@ -334,7 +341,7 @@ public class CoverageCollectionResource extends ServerResource {
 			}
 			
 			// JSON-LD framing doesn't support named graphs yet, therefore we don't use non-default graphs yet.
-			j.put("view", pagination.build());
+			j.put(Constants.HydraPrefix + ":view", pagination.build());
 			/*
 			j.put("view", ImmutableMap.of(
 					"id", "#pagination",

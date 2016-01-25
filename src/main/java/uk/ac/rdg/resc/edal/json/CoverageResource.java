@@ -178,14 +178,16 @@ public class CoverageResource extends ServerResource {
 		Builder coverageJson = getCoverageAsCovJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset, false)
 				.put("@context", ImmutableList.of(
-						Constants.HydraContext,
 						Constants.CoverageJSONContext,
 						ldContext
+							.put(Constants.RdfsPrefix, Constants.RdfsNamespace)
 							.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
+							.put(Constants.HydraPrefix, Constants.HydraNamespace)
+							.put("comment", Constants.Comment)
 							.put("derivedFrom", Constants.DctNS + "source")
 							.put("api", Constants.CovAPIPrefix + ":api")
-							.put("opensearchgeo", Constants.OpenSearchGeoNamespace)
-							.put("opensearchtime", Constants.OpenSearchTimeNamespace)
+							.put(Constants.OpenSearchGeoPrefix, Constants.OpenSearchGeoNamespace)
+							.put(Constants.OpenSearchTimePrefix, Constants.OpenSearchTimeNamespace)
 							.put("inCollection", ImmutableMap.of("@reverse", "hydra:member"))
 							.build()
 						));
