@@ -181,9 +181,6 @@ public class CoverageResource extends ServerResource {
 						Constants.HydraContext,
 						Constants.CoverageJSONContext,
 						ldContext
-							.put("qudt", "http://qudt.org/1.1/schema/qudt#")
-							.put("unit", "qudt:unit")
-							.put("symbol", "qudt:symbol")
 							.put(Constants.CovAPIPrefix, Constants.CovAPINamespace)
 							.put("derivedFrom", Constants.DctNS + "source")
 							.put("api", Constants.CovAPIPrefix + ":api")
