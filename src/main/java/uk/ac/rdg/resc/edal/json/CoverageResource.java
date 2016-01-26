@@ -208,7 +208,7 @@ public class CoverageResource extends ServerResource {
 		if (subset.isConstrained) {
 			coverageJson.put("derivedFrom", ImmutableMap.of(
 					"id", coverageUrl,
-					"type", featureMeta.domainMeta.getType() + "Coverage",
+					"type", "Coverage",
 					"api", apiIriTemplate
 					));
 		} else {
