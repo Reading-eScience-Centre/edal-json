@@ -13,7 +13,7 @@ public class FeatureTypes {
 
 	private static final Map<Class<?>,String> typeToName = ImmutableMap.of(
 		GridFeature.class, "Grid",
-		ProfileFeature.class, "Profile"
+		ProfileFeature.class, "VerticalProfile"
 		);
 	
 	private static final Map<String, Class<?>> nameToType = new HashMap<>();

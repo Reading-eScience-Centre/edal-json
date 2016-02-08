@@ -43,15 +43,13 @@ public class CoverageOutlinesResource extends ServerResource {
 		// Profile -> Point
 		// Grid -> Bbox Polygon (could have actual outline, but for now just bbox)
 		// Trajectory -> LineString (not supported in EDAL yet)
-		String type;
+		String type = FeatureTypes.getName(meta.type);
 		if (meta.type.isAssignableFrom(ProfileFeature.class)) {
-			type = "Profile";
 			geometry = ImmutableMap.of(
 					"type", "Point",
 					"coordinates", ImmutableList.of(bb.getMinX(), bb.getMinY())
 					);
 		} else if (meta.type.isAssignableFrom(GridFeature.class)) {
-			type = "Grid";
 			geometry = ImmutableMap.of(
 					"type", "Polygon",
 					"coordinates", ImmutableList.of(ImmutableList.of(

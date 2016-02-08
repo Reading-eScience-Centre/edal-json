@@ -262,6 +262,7 @@ public class CoverageResource extends ServerResource {
 		String type;
 		public UniformFeature(DiscreteFeature<?,?> feature) {
 			this.feature = feature;
+			this.type = FeatureTypes.getName(feature.getClass());
 						
 			// FIXME feature types should be interfaces
 			
@@ -271,7 +272,6 @@ public class CoverageResource extends ServerResource {
 				GridDomain grid = gridFeature.getDomain();
 				t = grid.getTimeAxis();
 				z = grid.getVerticalAxis();
-				type = "Grid";
 				
 				if (grid.getHorizontalGrid() instanceof RectilinearGrid) {
 					rectgrid = (RectilinearGrid) grid.getHorizontalGrid();
@@ -295,8 +295,6 @@ public class CoverageResource extends ServerResource {
 						new ReferenceableAxisImpl("x", ImmutableList.of(pos.getX()), isLongitudeX),
 						new ReferenceableAxisImpl("y", ImmutableList.of(pos.getY()), isLongitudeY),
 						pos.getCoordinateReferenceSystem());
-				
-				type = "Profile";
 			} else {
 				// TODO should probably say unsupported feature
 				throw new UnsupportedDomainException(feature.getDomain());
