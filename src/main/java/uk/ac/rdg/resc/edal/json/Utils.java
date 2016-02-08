@@ -42,6 +42,8 @@ public final class Utils {
 			dataset = datasetFactory.createDataset(datasetId,
 					resource.getFile());
 		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("trying EN3 reader");
 			datasetFactory = new En3DatasetFactory();
 			try {
 				dataset = datasetFactory.createDataset(datasetId,

@@ -1,6 +1,8 @@
 package uk.ac.rdg.resc.edal.json;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,11 @@ public class DatasetsResource extends ServerResource {
 		List<String> datasetIds = IOUtils.readLines(DatasetsResource.class.getClassLoader()
 		        .getResourceAsStream(Utils.DATASETS_FOLDER.substring(1)), Charsets.UTF_8);
 		for (String datasetId : datasetIds) {
+			URL resource = Utils.class.getResource(Utils.DATASETS_FOLDER + datasetId);
+			if (new File(resource.getFile()).isDirectory()) {
+				continue;
+			}
+			
 			DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
 			DomainMetadata domainMeta = meta.getDomainMetadata();
 			
