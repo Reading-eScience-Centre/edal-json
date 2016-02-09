@@ -323,7 +323,7 @@ public class CoverageCollectionResource extends ServerResource {
 		}
 		
 		if (paging.totalPages > 1) {
-			j.put("totalItems", paging.totalElements);
+			j.put("hydra:totalItems", paging.totalElements);
 			Builder pagination = ImmutableMap.builder()
 					.put("id", getReference().toString())
 					.put("type", Constants.HydraPrefix + ":PartialCollectionView")
