@@ -56,9 +56,10 @@ public class CoverageRangeResource extends ServerResource {
 		Map j = ImmutableMap.of(
 				"type", "Range",
 				"dataType", dtype,
-				"values", getValues(feature.getValues(param.getVariableId()), feature, subset, isCategorical),
-				"validMin", meta.rangeMeta.getMinValue(param),
-				"validMax", meta.rangeMeta.getMaxValue(param)
+				"values", getValues(feature.getValues(param.getVariableId()), feature, subset, isCategorical)
+				// TODO enable again when CBOR missing-value encoding is implemented and only output for CBOR
+//				"validMin", meta.rangeMeta.getMinValue(param),
+//				"validMax", meta.rangeMeta.getMaxValue(param)
 				);
 		return j;
 	}
