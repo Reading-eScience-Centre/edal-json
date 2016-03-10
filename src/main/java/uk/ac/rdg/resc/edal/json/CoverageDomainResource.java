@@ -1,10 +1,6 @@
 package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +28,6 @@ import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
-import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.grid.AbstractTransformedGrid;
 import uk.ac.rdg.resc.edal.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.grid.ReferenceableAxis;
@@ -44,6 +39,9 @@ import uk.ac.rdg.resc.edal.position.VerticalCrs;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageDomainResource extends ServerResource {
+	
+	public static final String COMPONENTS = "components";
+	public static final String SYSTEM = "system";
 
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation json() throws IOException, EdalException {
@@ -147,8 +145,8 @@ public class CoverageDomainResource extends ServerResource {
 		}
 			
 		referencing.add(ImmutableMap.of(
-				"dimensions", ImmutableList.of("x", "y"),
-				"srs", getCRSJson(grid.getCoordinateReferenceSystem())
+				COMPONENTS, ImmutableList.of("x", "y"),
+				SYSTEM, getCRSJson(grid.getCoordinateReferenceSystem())
 				));
 				
 	    // FIXME have to subset bbox as well
@@ -178,8 +176,8 @@ public class CoverageDomainResource extends ServerResource {
 				));
 	
 		referencing.add(ImmutableMap.of(
-				"dimensions", ImmutableList.of("x", "y"),
-				"srs", ImmutableMap.of(
+				COMPONENTS, ImmutableList.of("x", "y"),
+				SYSTEM, ImmutableMap.of(
 						"type", "ProjectedCRS",
 						"baseCRS", getCRSJson(grid.getCoordinateReferenceSystem())
 						)
@@ -251,8 +249,8 @@ public class CoverageDomainResource extends ServerResource {
 		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
 		
 		referencing.add(ImmutableMap.of(
-				"dimensions", ImmutableList.of("z"),
-				"srs", getCRSJson(z.getVerticalCrs())
+				COMPONENTS, ImmutableList.of("z"),
+				SYSTEM, getCRSJson(z.getVerticalCrs())
 				));
 		
 	}
@@ -271,8 +269,8 @@ public class CoverageDomainResource extends ServerResource {
 		// TODO does EDAL support only Gregorian dates?
 		
 		referencing.add(ImmutableMap.of(
-				"dimensions", ImmutableList.of("t"),
-				"trs", ImmutableMap.of(
+				COMPONENTS, ImmutableList.of("t"),
+				SYSTEM, ImmutableMap.of(
 						"type", "TemporalRS",
 						"calendar", "Gregorian"
 						)
