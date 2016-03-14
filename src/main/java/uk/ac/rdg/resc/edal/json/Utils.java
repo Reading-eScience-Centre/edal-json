@@ -18,6 +18,8 @@ import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.dataset.DatasetFactory;
 import uk.ac.rdg.resc.edal.dataset.cdm.CdmGridDatasetFactory;
 import uk.ac.rdg.resc.edal.dataset.cdm.En3DatasetFactory;
+import uk.ac.rdg.resc.edal.domain.Extent;
+import uk.ac.rdg.resc.edal.util.Extents;
 
 public final class Utils {
 	// TODO probably not the right place
@@ -77,5 +79,26 @@ public final class Utils {
 	
 	public static <I,O> List<O> mapList(Collection<I> l, Function<? super I,O> fn) {
 		return l.stream().map(fn).collect(Collectors.toList());
+	}
+	
+	public static Extent<Double> wrapLongitudeExtent(Extent<Double> extent, Extent<Double> wrapExtent) {
+		double lonLow = wrapLongitude(extent.getLow(), wrapExtent);
+		double lonHigh = wrapLongitude(extent.getHigh(), wrapExtent);
+		if (lonHigh < lonLow) {
+			lonHigh += 360;
+		}
+		Extent<Double> wrappedExtent = Extents.newExtent(lonLow, lonHigh);
+		return wrappedExtent;
+	}
+	
+	/**
+	 * Wraps a longitude such that it falls within the given extent. If the extent
+	 * is smaller than 360 degrees, then it gets extended on both sides.
+	 */
+	public static Double wrapLongitude(double lon, Extent<Double> extent) {
+		double lonMid = (extent.getLow() + extent.getHigh()) / 2.0;
+		double lonMinExtented = lonMid - 180;
+		double lonWrapped = ((lon - lonMinExtented) % 360 + 360) % 360 + lonMinExtented;
+		return lonWrapped;
 	}
 }

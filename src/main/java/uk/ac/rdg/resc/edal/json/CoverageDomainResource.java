@@ -340,10 +340,18 @@ public class CoverageDomainResource extends ServerResource {
 		List<Extent<Double>> bounds = IntStream.range(0, ax.size())
 				.mapToObj(ax::getCoordinateBounds)
 				.collect(Collectors.toList());
-		// FIXME longitudes must be (un)wrapped the same way!!
-		//  -> are longitudes normalized in some way when read in EDAL?
+
+		Extent<Double> lonExtent;
+		if (subset.longitudeExtent.getLow() != null) {
+			// wrap the (unwrapped) query longitude to the longitude range of the coverage domain
+			// e.g. [-170,-160] might get wrapped to [190,200] if the domain extent is [0,360] and not [-180,180]
+			lonExtent = Utils.wrapLongitudeExtent(subset.longitudeExtent, ax.getCoordinateExtent());
+		} else {
+			lonExtent = subset.longitudeExtent;
+		}
+		
 		IntStream axIndices = IntStream.range(0, ax.size())
-			.filter(i -> subset.longitudeExtent.intersects(bounds.get(i)));
+			.filter(i -> lonExtent.intersects(bounds.get(i)));
 		return axIndices;
 	}
 
