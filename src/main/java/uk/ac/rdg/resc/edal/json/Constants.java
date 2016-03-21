@@ -29,7 +29,7 @@ public class Constants {
 	public static final String OpenSearchTimePrefix = "opensearchtime";
 	public static final String OpenSearchTimeNamespace = "http://a9.com/-/opensearch/extensions/time/1.0/";
 	
-	public static final String CovJSONNamespace = "http://coveragejson.org/ns#";
+	public static final String CovJSONNamespace = "http://coveragejson.org/def#";
 	public static final String Domain = CovJSONNamespace + "Domain";
 	public static final String Range = CovJSONNamespace + "Range";
 	
