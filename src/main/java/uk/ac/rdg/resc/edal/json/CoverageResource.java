@@ -61,6 +61,8 @@ public class CoverageResource extends ServerResource {
 		}
 	}
 	
+	// FIXME send Vary: Prefer header
+	// see https://github.com/restlet/restlet-framework-java/issues/1202
 	static class Embed {
 		boolean domain, range;
 		/**
@@ -352,8 +354,9 @@ public class CoverageResource extends ServerResource {
 				boolean isCategorical = param.getCategories() != null;
 				rangeParam = ImmutableMap.builder()
 						.put("id", rangeUrl)
-						.put("validMin", meta.rangeMeta.getMinValue(param))
-						.put("validMax", meta.rangeMeta.getMaxValue(param))
+						// TODO enable again when CBOR missing-value encoding is implemented and only output for CBOR
+//						.put("validMin", meta.rangeMeta.getMinValue(param))
+//						.put("validMax", meta.rangeMeta.getMaxValue(param))
 						.put("values", CoverageRangeResource.getValues(uniFeature.feature.getValues(paramId), uniFeature, subset, isCategorical))
 						.build();
 			} else {
