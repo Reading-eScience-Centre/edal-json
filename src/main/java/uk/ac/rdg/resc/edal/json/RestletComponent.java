@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableSet;
 public class RestletComponent extends Component {
 	public RestletComponent() {
 		CorsService corsService = new CorsService();
+		corsService.setSkippingResourceForCorsOptions(true);
 		corsService.setExposedHeaders(ImmutableSet.of("Link"));
 		getServices().add(corsService);
 		
