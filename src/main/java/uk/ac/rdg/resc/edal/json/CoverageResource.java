@@ -124,8 +124,6 @@ public class CoverageResource extends ServerResource {
 			j.put("domain", unsupportedDomain(e.domain, e.info));
 		}
 
-		addPhenomenonTime(j, meta.domainMeta);
-		
 		return j;
 	}
 	
@@ -231,30 +229,7 @@ public class CoverageResource extends ServerResource {
 		SubsetConstraint subset = new SubsetConstraint(getQuery());
 		headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"collection\""));
 	}
-	
-	private static void addPhenomenonTime(Builder featureJson, DomainMetadata meta) {
-		// a time range or a single point in time
-		Extent<DateTime> time = meta.getTimeExtent();
-		if (time == null) return;
-
-		featureJson.put("phenomenonTime", time.getLow() == time.getHigh() 
-			? ImmutableMap.of(
-					"type", "Instant",
-					"dateTime", time.getLow().toString()
-					)
-			: ImmutableMap.of(
-					"type", "Interval",
-					"start", ImmutableMap.of(
-							"type", "Instant",
-							"dateTime", time.getLow().toString()
-							),
-					"end", ImmutableMap.of(
-							"type", "Instant",
-							"dateTime", time.getHigh().toString()
-							)
-					)); 
-	}
-	
+		
 	static class UniformFeature {
 		DiscreteFeature<?,?> feature;
 		RectilinearGrid rectgrid;
