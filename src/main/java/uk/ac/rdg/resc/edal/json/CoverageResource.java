@@ -165,15 +165,8 @@ public class CoverageResource extends ServerResource {
 		String coverageUrl = collectionUrl + "/" + coverageId;
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
-		FeatureMetadata featureMeta = meta.getFeatureMetadata(coverageId);
 		
 		Builder ldContext = ImmutableMap.builder();
-		for (String paramId : featureMeta.rangeMeta.getParameterIds()) {
-			ldContext.put(paramId, ImmutableMap.of(
-					"@id", ParameterResource.getParamUrl(datasetId, paramId, rootUri),
-					"@type", "@id"
-					));
-		}
 		
 		Builder coverageJson = getCoverageAsCovJson(meta.getLazyDataset(), 
 				meta.getFeatureMetadata(coverageId), getRootRef().toString(), embed, subset, false)

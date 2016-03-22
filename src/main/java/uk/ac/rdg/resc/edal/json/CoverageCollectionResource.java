@@ -269,10 +269,6 @@ public class CoverageCollectionResource extends ServerResource {
 				Parameter param = dataset_.getVariableMetadata(paramId).getParameter();
 				Map m = ParameterResource.getParamJson(dataset_.getId(), param, getRootRef().toString()).build();
 				jsonParams.put(paramId, m);
-				ldContext.put(paramId, ImmutableMap.of(
-						"@id", ParameterResource.getParamUrl(datasetId, paramId, getRootRef().toString()),
-						"@type", "@id"
-						));
 			}
 			
 			j.put("@context", ImmutableList.of(
