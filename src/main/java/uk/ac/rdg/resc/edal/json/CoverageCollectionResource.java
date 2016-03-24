@@ -420,15 +420,17 @@ public class CoverageCollectionResource extends ServerResource {
 			headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"canonical\""));
 		}
 		
+		// if paging is initiated, don't redirect to avoid CORS issues, but instead send Content-Location header
+		// see https://github.com/Reading-eScience-Centre/coverage-restapi/issues/12
 		if (paging.redirect != null) {
-			getResponse().redirectSeeOther(paging.redirect);
-			return null;
-		} else {
-			// if paged, this would be type=PartialCollectionView or similar and not the CoverageCollection itself!
-			// therefore we skip the Link header and only include that information in the data itself
-			setPagingHeaders(paging);
-			return App.getCovJsonRepresentation(this, j);
+			// getResponse().redirectSeeOther(paging.redirect);
+			// return null;
+			getResponse().getHeaders().set("Content-Location", paging.redirect.toString());
 		}
+		// if paged, this would be type=PartialCollectionView or similar and not the CoverageCollection itself!
+		// therefore we skip the Link header and only include that information in the data itself
+		setPagingHeaders(paging);
+		return App.getCovJsonRepresentation(this, j);
 	}
 		
 	@Get("geojson")
