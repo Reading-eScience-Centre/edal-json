@@ -1,17 +1,17 @@
 package uk.ac.rdg.resc.edal.json;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
-import org.joda.time.DateTime;
 import org.opengis.referencing.cs.CoordinateSystem;
 import org.opengis.referencing.cs.RangeMeaning;
 import org.restlet.data.Header;
+import org.restlet.data.MediaType;
+import org.restlet.data.Preference;
 import org.restlet.data.Reference;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
+import org.restlet.resource.Resource;
 import org.restlet.resource.ServerResource;
 import org.restlet.util.Series;
 
@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap.Builder;
 
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.domain.Domain;
-import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.domain.GridDomain;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
@@ -37,7 +36,6 @@ import uk.ac.rdg.resc.edal.grid.ReferenceableAxisImpl;
 import uk.ac.rdg.resc.edal.grid.TimeAxis;
 import uk.ac.rdg.resc.edal.grid.TimeAxisImpl;
 import uk.ac.rdg.resc.edal.grid.VerticalAxis;
-import uk.ac.rdg.resc.edal.json.PreferParser.Preference;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 
@@ -60,33 +58,28 @@ public class CoverageResource extends ServerResource {
 			this.type = feature.getClass();
 		}
 	}
-	
+		
 	// FIXME send Vary: Prefer header
 	// see https://github.com/restlet/restlet-framework-java/issues/1202
 	static class Embed {
 		boolean domain, range;
 		/**
-		 * Inspects the following header:
+		 * Inspects the profile media type parameter:
 		 * 
-		 * Prefer: return=representation; include="http://coveragejson.org/ns#Domain http://coveragejson.org/ns#Range"
+		 * Accept: application/prs.coverage+json; profile="http://coveragejson.org/profiles/standalone"
 		 */
-		static Embed from(Series<Header> headers, Embed merge) {
-			Map<String,Preference> prefs = PreferParser.parse(Arrays.asList(headers.getValuesArray("Prefer")));
-			Preference pref = prefs.get("return");
-			if (pref == null) return merge;
-			String val = pref.getParameters().getOrDefault("include", "");
-			return new Embed(val.contains(Constants.Domain) || merge.domain, val.contains(Constants.Range) || merge.range);
+		static Embed from(Resource resource, Embed merge) {
+			boolean standalone = false;
+			for (Preference<MediaType> preference : resource.getClientInfo().getAcceptedMediaTypes()) {
+				MediaType type = preference.getMetadata();
+				String profile = type.getParameters().getFirstValue("profile");
+				if (profile != null && profile.contains(Constants.CovJSONProfileStandalone)) {
+					standalone = true;
+				}		
+			}	
+			return new Embed(standalone || merge.domain, standalone || merge.range);
 		}
-		/**
-		 * 
-		 * @param details query parameter string value of the form "domain,range"
-		 * @deprecated Use Prefer header instead (see other constructor)
-		 */
-		static Embed from(String details, Embed merge) {
-			if (details == null) return merge;
-			List<String> parts = Arrays.asList(details.split(","));
-			return new Embed(parts.contains("domain") || merge.domain, parts.contains("range") || merge.range);
-		}
+		
 		public Embed(boolean domain, boolean range) {
 			this.domain = domain || range;
 			this.range = range;
@@ -148,16 +141,11 @@ public class CoverageResource extends ServerResource {
 	@Get("covjson|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
 		addLinkHeaders();
-		Series<Header> headers = this.getResponse().getHeaders();
-		
-		headers.add(new Header("Link", "<" + Constants.Domain + ">; rel=\"" + Constants.CanIncludeURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.Range + ">; rel=\"" + Constants.CanIncludeURI + "\""));
-		
 		
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String coverageId = Reference.decode(getAttribute("coverageId"));
 		Embed defaultEmbed = new Embed(true, false);
-		Embed embed = Embed.from(getRequest().getHeaders(), defaultEmbed);
+		Embed embed = Embed.from(this, defaultEmbed);
 		SubsetConstraint subset = new SubsetConstraint(getQuery());
 		
 		String rootUri = getRootRef().toString();

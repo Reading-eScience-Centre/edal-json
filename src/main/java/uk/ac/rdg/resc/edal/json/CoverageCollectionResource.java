@@ -139,7 +139,7 @@ public class CoverageCollectionResource extends ServerResource {
 			throws IOException, EdalException {
 		final String datasetId = Reference.decode(getAttribute("datasetId"));
 		Embed defaultEmbed = new Embed(false, false);
-		Embed embed = Embed.from(getRequest().getHeaders(), defaultEmbed);
+		Embed embed = Embed.from(this, defaultEmbed);
 		
 		DatasetMetadata datasetMeta = DatasetResource.getDatasetMetadata(datasetId);
 		
@@ -397,9 +397,7 @@ public class CoverageCollectionResource extends ServerResource {
 		// FIXME add Vary: Prefer, see https://github.com/restlet/restlet-framework-java/issues/187
 		
 		Series<Header> headers = this.getResponse().getHeaders();
-		headers.add(new Header("Link", "<" + Constants.Domain + ">; rel=\"" + Constants.CanIncludeURI + "\""));
-		headers.add(new Header("Link", "<" + Constants.Range + ">; rel=\"" + Constants.CanIncludeURI + "\""));
-		
+
 		Paging paging;
 		SubsetConstraint subset;
 		FilterConstraint filter;

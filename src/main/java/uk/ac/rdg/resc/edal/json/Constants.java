@@ -29,14 +29,11 @@ public class Constants {
 	public static final String OpenSearchTimePrefix = "opensearchtime";
 	public static final String OpenSearchTimeNamespace = "http://a9.com/-/opensearch/extensions/time/1.0/";
 	
-	public static final String CovJSONNamespace = "http://coveragejson.org/def#";
-	public static final String Domain = CovJSONNamespace + "Domain";
-	public static final String Range = CovJSONNamespace + "Range";
+	public static final String CovJSONProfileStandalone = "http://coveragejson.org/profiles/standalone";
 	
 	public static final String CovAPINamespace = "http://coverageapi.org/ns#";
 	public static final String CovAPIPrefix = "covapi";
 		
-	public static final String CanIncludeURI = CovAPINamespace + "canInclude";
 	public static final String SubsetByIndexURI = "http://coverageapi.org/def#subsetByIndex";
 		
 	// paging is disabled for geojson for now
