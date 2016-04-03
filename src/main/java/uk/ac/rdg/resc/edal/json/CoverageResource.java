@@ -140,7 +140,7 @@ public class CoverageResource extends ServerResource {
 		return null;
 	}
 	
-	@Get("covjson|covcbor|covmsgpack")
+	@Get("covjson|covjsons|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
 		addLinkHeaders();
 		

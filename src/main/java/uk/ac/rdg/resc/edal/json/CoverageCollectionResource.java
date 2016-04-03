@@ -389,7 +389,7 @@ public class CoverageCollectionResource extends ServerResource {
 		return null;
 	}
 		
-	@Get("covjson|covcbor|covmsgpack")
+	@Get("covjson|covjsons|covcbor|covmsgpack")
 	public Representation covjson() throws IOException, EdalException {
 		// FIXME cheap hack, rather separate geojson out into separate resource (like CoverageOutlinesResource)
 		if (getReference().toString().contains("/outlines")) {

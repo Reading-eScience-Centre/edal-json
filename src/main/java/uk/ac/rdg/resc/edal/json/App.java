@@ -13,6 +13,7 @@ import org.restlet.data.CacheDirective;
 import org.restlet.data.ClientInfo;
 import org.restlet.data.Header;
 import org.restlet.data.MediaType;
+import org.restlet.data.Parameter;
 import org.restlet.data.Preference;
 import org.restlet.data.Protocol;
 import org.restlet.data.Status;
@@ -22,6 +23,7 @@ import org.restlet.resource.Resource;
 import org.restlet.resource.ServerResource;
 import org.restlet.routing.Filter;
 import org.restlet.routing.Router;
+import org.restlet.util.Series;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
@@ -37,6 +39,11 @@ public class App extends Application {
 	
     static MediaType JSONLD = new MediaType("application/ld+json");
     static MediaType CovJSON = new MediaType("application/prs.coverage+json");
+    static Series<Parameter> CovJSONParams = new Series<Parameter>(Parameter.class);
+    static {
+    	CovJSONParams.add("profile", "http://coveragejson.org/profiles/standalone");
+    }
+    static MediaType CovJSONS = new MediaType("application/prs.coverage+json", CovJSONParams);
     static MediaType CovJSONMsgpack = new MediaType("application/prs.coverage+msgpack");
     static MediaType CovJSONCBOR = new MediaType("application/prs.coverage+cbor");
     static MediaType GeoJSON = new MediaType("application/vnd.geo+json");
@@ -63,6 +70,7 @@ public class App extends Application {
         // GeoJSON and binary CoverageJSON will only be delivered if explicitly requested.
         getMetadataService().addExtension("jsonld", JSONLD);
         getMetadataService().addExtension("covjson", CovJSON);
+        getMetadataService().addExtension("covjsons", CovJSONS);
         getMetadataService().addExtension("geojson", GeoJSON);
         getMetadataService().addExtension("covcbor", CovJSONCBOR);
         getMetadataService().addExtension("covmsgpack", CovJSONMsgpack);
