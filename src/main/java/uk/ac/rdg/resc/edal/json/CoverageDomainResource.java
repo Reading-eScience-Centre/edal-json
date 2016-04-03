@@ -110,51 +110,66 @@ public class CoverageDomainResource extends ServerResource {
 		List<Double> y = grid.getYAxis().getCoordinateValues();
 		double[] subsettedX = getXAxisIndices(grid.getXAxis(), subset).mapToDouble(x::get).toArray();
 		double[] subsettedY = getYAxisIndices(grid.getYAxis(), subset).mapToDouble(y::get).toArray();
-				
-		if (grid instanceof RegularGrid && (grid.getXSize() > 1 || grid.getYSize() > 1)) {
+		
+		// X axis
+		if (grid instanceof RegularGrid) {
 			RegularGrid reggrid = (RegularGrid) grid;
 			int xnum = subsettedX.length;
-			int ynum = subsettedY.length;
 			double xstart = subsettedX[0];
 			double xstop = subsettedX[xnum-1];
-			double ystart = subsettedY[0];
-			double ystop = subsettedY[ynum-1];
 			double xstep = reggrid.getXAxis().getCoordinateSpacing();
-			double ystep = reggrid.getYAxis().getCoordinateSpacing();
-			// calculate num from step to check consistency
-			int xnumcheck = (int) Math.round(1 + (xstop-xstart)/xstep);
-			int ynumcheck = (int) Math.round(1 + (ystop-ystart)/ystep);
-			if (xnum != xnumcheck || ynum != ynumcheck) {
-				throw new IllegalStateException();
-			}
-			axes.putAll(ImmutableMap.of(
-				    "x", ImmutableMap.of(
+			if (subsettedX.length > 1) {
+				axes.put("x", ImmutableMap.of(
 				    		"start", xstart,
 				    		"stop", xstop,
 				    		"num", xnum
-				    		),
-					"y", ImmutableMap.of(
-				    		"start", ystart,
-				    		"stop", ystop,
-				    		"num", ynum
-				    		)
-					));
+				    		));
+			} else {
+				double[] bounds = new double[2];
+				bounds[0] = subsettedX[0] - (xstep/2);
+				bounds[1] = subsettedX[0] + (xstep/2);
+				axes.put("x", ImmutableMap.of(
+			    		"values", subsettedX,
+			    		"bounds", bounds
+			    		));
+			}
 		} else {
-			axes.putAll(ImmutableMap.of(
-				    "x", ImmutableMap.of("values", subsettedX),
-					"y", ImmutableMap.of("values", subsettedY)
-					));
+			// TODO add bounds
+			axes.put("x", ImmutableMap.of("values", subsettedX));
+		}
+		
+		// Y axis
+		if (grid instanceof RegularGrid) {
+			RegularGrid reggrid = (RegularGrid) grid;
+			int ynum = subsettedY.length;
+			double ystart = subsettedY[0];
+			double ystop = subsettedY[ynum-1];
+			double ystep = reggrid.getYAxis().getCoordinateSpacing();
+			if (subsettedY.length > 1) {
+				axes.put("y", ImmutableMap.of(
+					    		"start", ystart,
+					    		"stop", ystop,
+					    		"num", ynum
+					    		));
+			} else {
+				double[] bounds = new double[2];
+				bounds[0] = subsettedY[0] - (ystep/2);
+				bounds[1] = subsettedY[0] + (ystep/2);
+				axes.put("y", ImmutableMap.of(
+			    		"values", subsettedY,
+			    		"bounds", bounds
+			    		));
+			}
+		} else {
+			// TODO add bounds
+			axes.put("y", ImmutableMap.of("values", subsettedY));
 		}
 			
 		referencing.add(ImmutableMap.of(
 				COMPONENTS, ImmutableList.of("x", "y"),
 				SYSTEM, getCRSJson(grid.getCoordinateReferenceSystem())
 				));
-				
-	    // FIXME have to subset bbox as well
-//		BoundingBox bb = grid.getBoundingBox();
-//	    "bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()),
-		
+
 		// FIXME add bounds if not infinitesimal
 		//  -> how do we query that except checking if low==high?
 	}
