@@ -15,13 +15,14 @@ public class Hydra {
 	 * @param canSubset whether to include subset parameters
 	 * @return
 	 */
-	public static Map<String,Object> getApiIriTemplate(String baseUrl, boolean canFilter, boolean canSubset) {
+	public static Map<String,Object> getApiIriTemplate(String baseUrl, String queryString, boolean canFilter, boolean canSubset) {
 		assert canFilter || canSubset;
 		
 		String filter = "bbox,timeStart,timeEnd,verticalStart,verticalEnd";
 		String subset = "subsetBbox,subsetTimeStart,subsetTimeEnd,subsetVerticalStart,subsetVerticalEnd,subsetVerticalTarget";
 		
-		String template = baseUrl + "{?";
+		String templateStart = queryString.equals("") ? "{?" : "{&";
+		String template = baseUrl + queryString + templateStart;
 		if (canFilter) {
 			template += filter;
 		}

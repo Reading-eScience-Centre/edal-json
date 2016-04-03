@@ -34,6 +34,7 @@ public class CoverageOutlinesResource extends ServerResource {
 	public static Builder getOutlinesAsGeoJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
 			SubsetConstraint subset) throws EdalException {
 		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 		String outlinesUrl = coverageUrl + "/outlines";
 		
 		// TODO possibly have to convert to WGS84
@@ -69,10 +70,10 @@ public class CoverageOutlinesResource extends ServerResource {
 		List<String> paramTitles = meta.rangeMeta.getParameters().stream().map(p -> p.getTitle()).collect(Collectors.toList());
 
 		Builder props = ImmutableMap.builder()
-				.put("domainType", type)
+				.put("domainProfile", type)
 				.put("title", meta.name)
 				.put("parameters", paramTitles)
-				.put("coverage", coverageUrl + subset.getCanonicalSubsetQueryString());
+				.put("coverage", coverageUrl + queryString);
 		/*
 		 * Vertical extent is included in properties in a lax way.
 		 * It is not on the same level as "bbox" and "when" because
@@ -92,7 +93,7 @@ public class CoverageOutlinesResource extends ServerResource {
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", "Feature")
-				.put("id", outlinesUrl + subset.getCanonicalSubsetQueryString())
+				.put("id", outlinesUrl + queryString)
 				.put("bbox", ImmutableList.of(bb.getMinX(), bb.getMinY(), bb.getMaxX(), bb.getMaxY()))
 				.put("properties", props.build())
 				.put("geometry", geometry);
@@ -128,6 +129,7 @@ public class CoverageOutlinesResource extends ServerResource {
 		
 		String rootUri = getRootRef().toString();
 		String outlinesUrl = rootUri + "/datasets/" + datasetId + "/coverages/" + coverageId + "/outlines";
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
 		FeatureMetadata featureMeta = meta.getFeatureMetadata(coverageId);
@@ -147,7 +149,7 @@ public class CoverageOutlinesResource extends ServerResource {
 							.build()
 						));
 
-		Map apiIriTemplate = Hydra.getApiIriTemplate(outlinesUrl, false, true);
+		Map apiIriTemplate = Hydra.getApiIriTemplate(outlinesUrl, queryString, false, true);
 		geojsonBuilder.put("api", apiIriTemplate);
 		
 		Map geojson = geojsonBuilder.build();
@@ -172,7 +174,8 @@ public class CoverageOutlinesResource extends ServerResource {
 		String collectionUrl = getRootRef() + "/datasets/" + datasetId + "/outlines";
 		
 		SubsetConstraint subset = new SubsetConstraint(getQuery());
-		headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"collection\""));
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
+		headers.add(new Header("Link", "<" + collectionUrl + queryString + ">; rel=\"collection\""));
 	}
 
 

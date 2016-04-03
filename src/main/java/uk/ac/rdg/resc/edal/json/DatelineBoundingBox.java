@@ -36,10 +36,17 @@ public class DatelineBoundingBox implements GeographicBoundingBox {
 	 */
 	public DatelineBoundingBox(double lonWest, double latSouth, double lonEast, double latNorth) {
 		assert -90 <= latSouth && latSouth <= latNorth && latNorth <= 90;
-		this.lonWest = wrapLongitude(lonWest);
 		this.latSouth = latSouth;
-		this.lonEast = wrapLongitude(lonEast);
 		this.latNorth = latNorth;
+		double wrappedLonDiff = Math.abs(wrapLongitude(lonWest) - wrapLongitude(lonEast));
+		if (lonWest != lonEast && wrappedLonDiff < 1e-8) {
+			// this applies for cases like [-0.5,359.5] which would wrap to [-0.5,-0.5]
+			this.lonWest = -180;
+			this.lonEast = 180;
+		} else {
+			this.lonWest = wrapLongitude(lonWest);
+			this.lonEast = wrapLongitude(lonEast);
+		}
 		containsDiscontinuity = this.lonWest > this.lonEast;
 	}
 		
@@ -119,6 +126,15 @@ public class DatelineBoundingBox implements GeographicBoundingBox {
 		return false;
 	}
 	
+	public DatelineBoundingBox intersect(DatelineBoundingBox other) {
+		double latSouth = other.latSouth > this.latSouth ? other.latSouth : this.latSouth;
+		double latNorth = other.latNorth < this.latNorth ? other.latNorth : this.latNorth;		
+		double lonWest = other.lonWest > this.lonWest ? other.lonWest : this.lonWest;
+		double lonEast = other.getUnwrappedEastBoundLongitude() < this.getUnwrappedEastBoundLongitude() ?
+				other.getUnwrappedEastBoundLongitude() : this.getUnwrappedEastBoundLongitude();		
+		return new DatelineBoundingBox(lonWest, latSouth, lonEast, latNorth);
+	}
+	
 	public boolean contains(HorizontalPosition pos) {
 		BoundingBox bb = new BoundingBoxImpl(pos.getX(), pos.getY(), pos.getX(),
 				pos.getY(), pos.getCoordinateReferenceSystem());
@@ -186,8 +202,15 @@ public class DatelineBoundingBox implements GeographicBoundingBox {
 			}
 		}
 		
-		double lonWest = wrapLongitude(xs.get(biggestGapIdx+1));
-		double lonEast = wrapLongitude(xs.get(biggestGapIdx));
+		double lonWest, lonEast;
+		if (biggestGapIdx == -1) {
+			// there are no gaps, the resulting bounding box is global
+			lonWest = -180;
+			lonEast = 180;
+		} else {
+			lonWest = wrapLongitude(xs.get(biggestGapIdx+1));
+			lonEast = wrapLongitude(xs.get(biggestGapIdx));
+		}
 		
 		return new DatelineBoundingBox(lonWest, latSouth, lonEast, latNorth);
 	}

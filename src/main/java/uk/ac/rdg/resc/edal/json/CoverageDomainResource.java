@@ -77,8 +77,10 @@ public class CoverageDomainResource extends ServerResource {
 		addVerticalAxis(uniFeature.z, subset, axes, referencing);
 		addTimeAxis(uniFeature.t, subset, axes, referencing);
 		
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
+		
 		Builder domainJson = ImmutableMap.builder()
-				.put("id", coverageUrl + "/domain" + subset.getCanonicalSubsetQueryString())
+				.put("id", coverageUrl + "/domain" + queryString)
 				.put("type", "Domain")
 				.put("profile", uniFeature.type)
 				.put("axes", axes.build())

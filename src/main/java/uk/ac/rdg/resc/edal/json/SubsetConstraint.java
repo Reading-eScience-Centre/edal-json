@@ -1,6 +1,6 @@
 package uk.ac.rdg.resc.edal.json;
 
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +10,7 @@ import org.restlet.data.Form;
 public class SubsetConstraint extends Constraint {
 
 	private static final String PREFIX = "subset";
+	private static final String VerticalTarget = PREFIX + "VerticalTarget";
 	
 	/**
 	 * If given, it restricts the vertical axis to exactly the element
@@ -19,28 +20,49 @@ public class SubsetConstraint extends Constraint {
 	
 	public SubsetConstraint(Form queryParams) {
 		super(queryParams, PREFIX);
-
-		String val = queryParams.getFirstValue(PREFIX + "VerticalTarget");
+		String val = queryParams.getFirstValue(VerticalTarget);
 		verticalTarget = val == null ? Optional.empty() : Optional.of(Double.parseDouble(val));
 	}
-
-	/**
-	 * Return a query string that only contains the subset* parameters
-	 * in alphabetical order. Includes "?" if query string not empty.
-	 */
-	public String getCanonicalSubsetQueryString() {
-		List<String> names = new LinkedList<>();
-		for (String name : this.queryParams.getNames()) {
-			if (name.startsWith(PREFIX)) {
-				names.add(name);
-			}
-		}
-		names.sort(Comparator.naturalOrder());
+	
+	public Form getCanonicalQueryParams() {
 		Form form = new Form();
-		for (String name : names) {
-			form.add(name, this.queryParams.getFirstValue(name));
+		
+		if (timeExtent.getLow() != null) {
+			String time = timeExtent.getLow().toString();
+			form.add(PREFIX + upper(TimeStart), time);
 		}
-		String queryString = form.getQueryString();
-		return queryString.isEmpty() ? "" : "?" + queryString;
+		if (timeExtent.getHigh() != null) {
+			String time = timeExtent.getHigh().toString();
+			form.add(PREFIX + upper(TimeEnd), time);
+		}
+		if (bbox.isPresent()) {
+			DatelineBoundingBox bb = bbox.get();
+			String box = bb.getWestBoundLongitude() + "," + bb.getSouthBoundLatitude() + "," + bb.getEastBoundLongitude() + "," +
+			     bb.getNorthBoundLatitude();
+			form.add(PREFIX + upper(Bbox), box);
+		}
+		if (verticalExtent.getLow() != null) {
+			String val = verticalExtent.getLow().toString();
+			form.add(PREFIX + upper(VerticalStart), val);
+		}
+		if (verticalExtent.getHigh() != null) {
+			String val = verticalExtent.getHigh().toString();
+			form.add(PREFIX + upper(VerticalEnd), val);
+		}
+		if (verticalTarget.isPresent()) {
+			String val = verticalTarget.get().toString();
+			form.add(PREFIX + upper(VerticalTarget), val);
+		}
+		if (params.isPresent()) {
+			List<String> p = new LinkedList<>(params.get());
+			Collections.sort(p);
+			String val = String.join(",", p);
+			form.add(PREFIX + Params, val);
+		}
+		return form;
+	}
+	
+	private static String upper(String name) {
+		return name.substring(0, 1).toUpperCase() + name.substring(1);
 	}
 }

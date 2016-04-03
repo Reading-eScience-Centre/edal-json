@@ -89,11 +89,12 @@ public class CoverageResource extends ServerResource {
 	public static Builder getCoverageAsCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
 			Embed details, SubsetConstraint subset, boolean skipParameters) throws EdalException {
 		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", "Coverage")
 				.put("profile", meta.domainMeta.getType() + "Coverage")
-				.put("id", coverageUrl + subset.getCanonicalSubsetQueryString())
+				.put("id", coverageUrl + queryString)
 				.put("title", ImmutableMap.of("en", meta.name));
 				
 		Supplier<UniformFeature> feature =
@@ -104,7 +105,7 @@ public class CoverageResource extends ServerResource {
 				Map domainJson = CoverageDomainResource.getDomainJson(feature.get(), subset, coverageUrl);
 				j.put("domain", domainJson);
 			} else {
-				j.put("domain", coverageUrl + "/domain" + subset.getCanonicalSubsetQueryString());
+				j.put("domain", coverageUrl + "/domain" + queryString);
 				j.put("domainProfile", meta.domainMeta.getType());
 			}
 			if (!skipParameters) {
@@ -132,9 +133,10 @@ public class CoverageResource extends ServerResource {
 		String coverageId = Reference.decode(getAttribute("coverageId"));
 		SubsetConstraint subset = new SubsetConstraint(getQuery());
 		
-		String coverageUrl = getRootRef() + "/datasets/" + datasetId + "/coverages" + "/" + coverageId;		
+		String coverageUrl = getRootRef() + "/datasets/" + datasetId + "/coverages" + "/" + coverageId;
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 		
-		getResponse().redirectSeeOther(coverageUrl + "/outlines" + subset.getCanonicalSubsetQueryString());
+		getResponse().redirectSeeOther(coverageUrl + "/outlines" + queryString);
 		return null;
 	}
 	
@@ -151,6 +153,7 @@ public class CoverageResource extends ServerResource {
 		String rootUri = getRootRef().toString();
 		String collectionUrl = rootUri + "/datasets/" + datasetId + "/coverages";
 		String coverageUrl = collectionUrl + "/" + coverageId;
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 		
 		DatasetMetadata meta = DatasetResource.getDatasetMetadata(datasetId);
 		
@@ -174,7 +177,7 @@ public class CoverageResource extends ServerResource {
 						));
 		
 		Builder coll = ImmutableMap.builder()
-				.put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
+				.put("id", collectionUrl + queryString)
 				.put("type", "CoverageCollection");
 		if (subset.isConstrained) {
 			coll.put("derivedFrom", ImmutableMap.of(
@@ -183,18 +186,15 @@ public class CoverageResource extends ServerResource {
 					));
 		}
 		coverageJson.put("inCollection", coll.build());
-		
-		
-		Map apiIriTemplate = Hydra.getApiIriTemplate(coverageUrl, false, true);
+				
 		if (subset.isConstrained) {
 			coverageJson.put("derivedFrom", ImmutableMap.of(
 					"id", coverageUrl,
-					"type", "Coverage",
-					"api", apiIriTemplate
+					"type", "Coverage"
 					));
-		} else {
-			coverageJson.put("api", apiIriTemplate);
 		}
+		Map apiIriTemplate = Hydra.getApiIriTemplate(coverageUrl, queryString, false, true);
+		coverageJson.put("api", apiIriTemplate);
 		
 		Map json = coverageJson.build();
 		
@@ -204,11 +204,13 @@ public class CoverageResource extends ServerResource {
 	void addLinkHeaders() {
 		Series<Header> headers = this.getResponse().getHeaders();
 		
+		SubsetConstraint subset = new SubsetConstraint(getQuery());
+		
 		String datasetId = Reference.decode(getAttribute("datasetId"));
 		String collectionUrl = getRootRef() + "/datasets/" + datasetId + "/coverages";
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 		
-		SubsetConstraint subset = new SubsetConstraint(getQuery());
-		headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"collection\""));
+		headers.add(new Header("Link", "<" + collectionUrl + queryString + ">; rel=\"collection\""));
 	}
 		
 	static class UniformFeature {
@@ -294,13 +296,15 @@ public class CoverageResource extends ServerResource {
 			boolean includeValues, SubsetConstraint subset, String rootUri) {
 		String root = rootUri + "/datasets/" + meta.datasetId;
 		Builder values = ImmutableMap.builder();
+		
+		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 
 		for (String paramId : meta.rangeMeta.getParameterIds()) {
 			if (subset.params.isPresent() && !subset.params.get().contains(paramId)) {
 				continue;
 			}
 			Parameter param = meta.rangeMeta.getParameter(paramId);
-			String rangeUrl = root + "/coverages/" + meta.featureId + "/range/" + paramId + subset.getCanonicalSubsetQueryString();
+			String rangeUrl = root + "/coverages/" + meta.featureId + "/range/" + paramId + queryString;
 			Object rangeParam;
 			
 			if (includeValues) {

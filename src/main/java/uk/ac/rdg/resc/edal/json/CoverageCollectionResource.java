@@ -144,6 +144,7 @@ public class CoverageCollectionResource extends ServerResource {
 		DatasetMetadata datasetMeta = DatasetResource.getDatasetMetadata(datasetId);
 		
 		String collectionUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
+		String queryString = Constraint.getQueryString(filter.getCanonicalQueryParams(), subset.getCanonicalQueryParams());
 		
 		List jsonFeatures = new LinkedList();
 				
@@ -288,7 +289,8 @@ public class CoverageCollectionResource extends ServerResource {
 						.put(Constants.OpenSearchTimePrefix, Constants.OpenSearchTimeNamespace)
 						.build()
 					))
-			 .put("id", collectionUrl + subset.getCanonicalSubsetQueryString())
+			// FIXME add applied query params to URL template
+			 .put("id", collectionUrl + queryString)
 			 .put("type", "CoverageCollection")
 			 .put("parameters", jsonParams.build())
 			 .put("coverages", jsonFeatures);
@@ -348,7 +350,7 @@ public class CoverageCollectionResource extends ServerResource {
 					));*/
 		}
 
-		j.put("api", Hydra.getApiIriTemplate(collectionUrl, true, true));
+		j.put("api", Hydra.getApiIriTemplate(collectionUrl, queryString, true, true));
 		
 		return j;
 	}
@@ -415,7 +417,9 @@ public class CoverageCollectionResource extends ServerResource {
 		if (filter.isConstrained || subset.isConstrained) {
 			final String datasetId = Reference.decode(getAttribute("datasetId"));
 			String collectionUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
-			headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"canonical\""));
+			String queryString = Constraint.getQueryString(filter.getCanonicalQueryParams(), subset.getCanonicalQueryParams());
+			
+			headers.add(new Header("Link", "<" + collectionUrl + queryString + ">; rel=\"canonical\""));
 		}
 		
 		// if paging is initiated, don't redirect to avoid CORS issues, but instead send Content-Location header
@@ -449,8 +453,9 @@ public class CoverageCollectionResource extends ServerResource {
 			if (!getReference().toString().contains("/outlines")) {
 				final String datasetId = Reference.decode(getAttribute("datasetId"));
 				String outlinesUrl = getRootRef().toString() + "/datasets/" + datasetId + "/outlines" ;
+				String queryString = Constraint.getQueryString(filter.getCanonicalQueryParams(), subset.getCanonicalQueryParams());
 				
-				getResponse().redirectSeeOther(outlinesUrl + subset.getCanonicalSubsetQueryString());
+				getResponse().redirectSeeOther(outlinesUrl + queryString);
 				return null;
 			}
 			
@@ -465,7 +470,8 @@ public class CoverageCollectionResource extends ServerResource {
 		if (filter.isConstrained || subset.isConstrained) {
 			final String datasetId = Reference.decode(getAttribute("datasetId"));
 			String collectionUrl = getRootRef().toString() + "/datasets/" + datasetId + "/coverages";
-			headers.add(new Header("Link", "<" + collectionUrl + subset.getCanonicalSubsetQueryString() + ">; rel=\"canonical\""));
+			String queryString = Constraint.getQueryString(filter.getCanonicalQueryParams(), subset.getCanonicalQueryParams());
+			headers.add(new Header("Link", "<" + collectionUrl + queryString + ">; rel=\"canonical\""));
 		}
 		
 		if (paging.redirect != null) {
