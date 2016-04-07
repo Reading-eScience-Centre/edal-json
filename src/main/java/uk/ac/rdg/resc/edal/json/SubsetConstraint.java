@@ -10,7 +10,7 @@ import org.restlet.data.Form;
 public class SubsetConstraint extends Constraint {
 
 	private static final String PREFIX = "subset";
-	private static final String VerticalTarget = PREFIX + "VerticalTarget";
+	private static final String VerticalTarget = "verticalTarget";
 	
 	/**
 	 * If given, it restricts the vertical axis to exactly the element
@@ -20,7 +20,7 @@ public class SubsetConstraint extends Constraint {
 	
 	public SubsetConstraint(Form queryParams) {
 		super(queryParams, PREFIX);
-		String val = queryParams.getFirstValue(VerticalTarget);
+		String val = queryParams.getFirstValue(PREFIX + upper(VerticalTarget));
 		verticalTarget = val == null ? Optional.empty() : Optional.of(Double.parseDouble(val));
 	}
 	
