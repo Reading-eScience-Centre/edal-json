@@ -85,18 +85,7 @@ public class CoverageDomainResource extends ServerResource {
 				.put("profile", uniFeature.type)
 				.put("axes", axes.build())
 				.put("referencing", referencing);
-		
-		List<String> axisOrder = new LinkedList<>();
-		axisOrder.add("y");
-		axisOrder.add("x");
-		if (uniFeature.z != null) {
-			axisOrder.add(0, "z");
-		}
-		if (uniFeature.t != null) {
-			axisOrder.add(0, "t");
-		}
-		domainJson.put("rangeAxisOrder", axisOrder);
-		
+				
 		// no support for trajectories currently
 		// we support everything which is a subtype of a rectilinear grid (includes profiles)
 		

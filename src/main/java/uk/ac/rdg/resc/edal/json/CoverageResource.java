@@ -87,7 +87,7 @@ public class CoverageResource extends ServerResource {
 	}
 		
 	public static Builder getCoverageAsCovJson(Supplier<Dataset> dataset, FeatureMetadata meta, String rootUri, 
-			Embed details, SubsetConstraint subset, boolean skipParameters) throws EdalException {
+			Embed details, SubsetConstraint subset, boolean skipParameters) throws EdalException, IOException {
 		String coverageUrl = rootUri + "/datasets/" + meta.datasetId + "/coverages/" + meta.featureId;
 		String queryString = Constraint.getQueryString(subset.getCanonicalQueryParams());
 		
@@ -278,9 +278,8 @@ public class CoverageResource extends ServerResource {
 		
 	private static Map unsupportedDomain(Domain<?> domain, String info) {
 		return ImmutableMap.of(
-				"type", domain.getClass().getName(),
 				"info", info,
-				"ERROR", "UNSUPPORTED"
+				"ERROR", "UNSUPPORTED: " + domain.getClass().getName()
 				);
 	}
 		
@@ -293,7 +292,7 @@ public class CoverageResource extends ServerResource {
 	}
 		
 	private static Map getRangesJson(FeatureMetadata meta, Supplier<UniformFeature> uniFeatureFn, 
-			boolean includeValues, SubsetConstraint subset, String rootUri) {
+			boolean includeValues, SubsetConstraint subset, String rootUri) throws EdalException, IOException {
 		String root = rootUri + "/datasets/" + meta.datasetId;
 		Builder values = ImmutableMap.builder();
 		
@@ -303,22 +302,11 @@ public class CoverageResource extends ServerResource {
 			if (subset.params.isPresent() && !subset.params.get().contains(paramId)) {
 				continue;
 			}
-			Parameter param = meta.rangeMeta.getParameter(paramId);
 			String rangeUrl = root + "/coverages/" + meta.featureId + "/range/" + paramId + queryString;
 			Object rangeParam;
 			
 			if (includeValues) {
-				// TODO how do we know which axis order the array has?!
-				UniformFeature uniFeature = uniFeatureFn.get();
-				
-				boolean isCategorical = param.getCategories() != null;
-				rangeParam = ImmutableMap.builder()
-						.put("id", rangeUrl)
-						// TODO enable again when CBOR missing-value encoding is implemented and only output for CBOR
-//						.put("validMin", meta.rangeMeta.getMinValue(param))
-//						.put("validMax", meta.rangeMeta.getMaxValue(param))
-						.put("values", CoverageRangeResource.getValues(uniFeature.feature.getValues(paramId), uniFeature, subset, isCategorical))
-						.build();
+				rangeParam = CoverageRangeResource.getRangeJson(meta.datasetId, meta.featureId, paramId, subset);
 			} else {
 				rangeParam = rangeUrl;
 			}
@@ -328,7 +316,5 @@ public class CoverageResource extends ServerResource {
 		
 		return values.build();
 	}
-
-
 
 }

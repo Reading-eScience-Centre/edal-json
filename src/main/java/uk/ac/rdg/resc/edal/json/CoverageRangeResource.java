@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -32,12 +33,7 @@ import uk.ac.rdg.resc.edal.util.Array4D;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageRangeResource extends ServerResource {
 		
-	private Map rangeData() throws IOException, EdalException {
-		String datasetId = Reference.decode(getAttribute("datasetId"));
-		String featureId = Reference.decode(getAttribute("coverageId"));
-		String parameterId = Reference.decode(getAttribute("parameterId"));
-		SubsetConstraint subset = new SubsetConstraint(getQuery());
-		
+	public static Map getRangeJson(String datasetId, String featureId, String paramId, SubsetConstraint subset) throws EdalException, IOException {		
 		FeatureMetadata meta = DatasetResource.getDatasetMetadata(datasetId).getFeatureMetadata(featureId);
 		Dataset dataset = Utils.getDataset(datasetId);
 		DiscreteFeature feature;
@@ -46,22 +42,50 @@ public class CoverageRangeResource extends ServerResource {
 		} catch (ClassCastException e) {
 			throw new IllegalArgumentException("Only discrete features are supported");
 		}
-		Parameter param = feature.getParameter(parameterId);
+		Parameter param = feature.getParameter(paramId);
 		
-		// TODO remove duplication with FeatureResource
+		UniformFeature uniFeature =	new UniformFeature(feature);
 		
 		boolean isCategorical = param.getCategories() != null;
 		String dtype = isCategorical ? "integer" : "float";
 		
+		AxesIndices ind = getAxesIndices(uniFeature, subset);
+		
+		List<Integer> shape = new LinkedList<>();
+		List<String> axisNames = new LinkedList<>();
+		if (uniFeature.t != null) {
+			axisNames.add("t");
+			shape.add(ind.t.length);
+		}
+		if (uniFeature.z != null) {
+			axisNames.add("z");
+			shape.add(ind.z.length);
+		}
+		axisNames.add("y");
+		shape.add(ind.y.length);
+		axisNames.add("x");
+		shape.add(ind.x.length);
+		
 		Map j = ImmutableMap.of(
-				"type", "Range",
+				"type", "NdArray",
 				"dataType", dtype,
-				"values", getValues(feature.getValues(param.getVariableId()), feature, subset, isCategorical)
+				"axisNames", axisNames,
+				"shape", shape,
+				"values", getValues(feature.getValues(param.getVariableId()), uniFeature, ind, isCategorical)
 				// TODO enable again when CBOR missing-value encoding is implemented and only output for CBOR
 //				"validMin", meta.rangeMeta.getMinValue(param),
 //				"validMax", meta.rangeMeta.getMaxValue(param)
 				);
 		return j;
+	}
+	
+	private Map rangeData() throws IOException, EdalException {
+		String datasetId = Reference.decode(getAttribute("datasetId"));
+		String featureId = Reference.decode(getAttribute("coverageId"));
+		String paramId = Reference.decode(getAttribute("parameterId"));
+		SubsetConstraint subset = new SubsetConstraint(getQuery());
+		
+		return getRangeJson(datasetId, featureId, paramId, subset);
 	}
 
 	@Get("covjson|covcbor|covmsgpack")
@@ -74,24 +98,18 @@ public class CoverageRangeResource extends ServerResource {
 		Map j = rangeData();
 		return App.getCovJsonRepresentation(this, j);
 	}
-		
-	public static List<Number> getValues(Array<Number> valsArr, DiscreteFeature<?,?> feature, 
-			SubsetConstraint subset, boolean isCategorical) {
-		return getValues(valsArr, new UniformFeature(feature), subset, isCategorical);
+	
+	static class AxesIndices {
+		int[] x;
+		int[] y;
+		int[] z;
+		int[] t;
 	}
 	
-	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, 
-			SubsetConstraint subset, boolean isCategorical) {
-		if (valsArr.size() > Integer.MAX_VALUE) {
-			throw new RuntimeException("Array too big, consider subsetting!");
-		}
-		
+	private static AxesIndices getAxesIndices(UniformFeature uniFeature, SubsetConstraint subset) {
 		if (uniFeature.rectgrid == null) {
 			// use uniFeature.projgrid somehow
-			// FIXME unknown order
-			List<Number> vals = new ArrayList<>((int)valsArr.size());
-			valsArr.forEach(vals::add);
-			return vals;
+			throw new RuntimeException("only rectilinear grids are supported");
 		}
 		
 		int[] xIndices = CoverageDomainResource.getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset).toArray();
@@ -99,6 +117,25 @@ public class CoverageRangeResource extends ServerResource {
 		int[] zIndices = CoverageDomainResource.getVerticalAxisIndices(uniFeature.z, subset).toArray();
 		int[] tIndices = CoverageDomainResource.getTimeAxisIndices(uniFeature.t, subset).toArray();
 		
+		AxesIndices ind = new AxesIndices();
+		ind.t = tIndices;
+		ind.x = xIndices;
+		ind.y = yIndices;
+		ind.z = zIndices;
+		return ind;
+	}
+	
+	public static List<Number> getValues(Array<Number> valsArr, UniformFeature uniFeature, 
+			AxesIndices ind, boolean isCategorical) {
+		if (valsArr.size() > Integer.MAX_VALUE) {
+			throw new RuntimeException("Array too big, consider subsetting!");
+		}
+		
+		int[] xIndices = ind.x;
+		int[] yIndices = ind.y;
+		int[] zIndices = ind.z;
+		int[] tIndices = ind.t;		
+
 		long size = xIndices.length * yIndices.length * zIndices.length * tIndices.length;
 		if (size > 3600*7200) {
 			// TODO implement streaming solution
