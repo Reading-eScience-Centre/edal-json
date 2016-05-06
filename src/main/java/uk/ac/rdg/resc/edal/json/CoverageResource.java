@@ -93,7 +93,6 @@ public class CoverageResource extends ServerResource {
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", "Coverage")
-				.put("profile", meta.domainMeta.getType() + "Coverage")
 				.put("id", coverageUrl + queryString)
 				.put("title", ImmutableMap.of("en", meta.name));
 				
@@ -106,7 +105,7 @@ public class CoverageResource extends ServerResource {
 				j.put("domain", domainJson);
 			} else {
 				j.put("domain", coverageUrl + "/domain" + queryString);
-				j.put("domainProfile", meta.domainMeta.getType());
+				j.put("domainType", meta.domainMeta.getType());
 			}
 			if (!skipParameters) {
 				j.put("parameters", getParametersJson(meta, rootUri));

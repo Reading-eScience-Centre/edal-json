@@ -82,7 +82,7 @@ public class CoverageDomainResource extends ServerResource {
 		Builder domainJson = ImmutableMap.builder()
 				.put("id", coverageUrl + "/domain" + queryString)
 				.put("type", "Domain")
-				.put("profile", uniFeature.type)
+				.put("domainType", uniFeature.type)
 				.put("axes", axes.build())
 				.put("referencing", referencing);
 				

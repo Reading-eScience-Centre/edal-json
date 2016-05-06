@@ -301,7 +301,7 @@ public class CoverageCollectionResource extends ServerResource {
 			if (datasetMeta.getFeatureTypes().size() == 1) {
 				String firstFeatureId = datasetMeta.getFeatureIds().iterator().next();
 				String domainType = datasetMeta.getFeatureMetadata(firstFeatureId).domainMeta.getType();
-				j.put("profile", domainType + "CoverageCollection");
+				j.put("domainType", domainType);
 				// TODO implement
 				/*
 				j.put("domainTemplate", ImmutableMap.of(
