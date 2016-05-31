@@ -230,7 +230,7 @@ public class CoverageDomainResource extends ServerResource {
 		return ImmutableMap.of(
 				"type", "VerticalCRS",
 				"cs", ImmutableMap.of(
-						"axes", ImmutableList.of(ImmutableMap.of(
+						"csAxes", ImmutableList.of(ImmutableMap.of(
 								"name", ImmutableMap.of("en", axisName),
 								"direction", crs.isPositiveUpwards() ? "up" : "down",
 								"unit", ImmutableMap.of(
