@@ -70,7 +70,7 @@ public class CoverageOutlinesResource extends ServerResource {
 		List<String> paramTitles = meta.rangeMeta.getParameters().stream().map(p -> p.getTitle()).collect(Collectors.toList());
 
 		Builder props = ImmutableMap.builder()
-				.put("domainProfile", type)
+				.put("domainType", type)
 				.put("title", meta.name)
 				.put("parameters", paramTitles)
 				.put("coverage", coverageUrl + queryString);

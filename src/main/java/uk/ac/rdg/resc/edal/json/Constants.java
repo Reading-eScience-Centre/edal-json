@@ -2,16 +2,16 @@ package uk.ac.rdg.resc.edal.json;
 
 public class Constants {
 	
-	public static final String CoverageHTMLUrlPrefix = "http://reading-escience-centre.github.io/covjson-playground/#";
+	public static final String CoverageHTMLUrlPrefix = "http://covjson.org/playground/#";
 	public static final String CoverageCollectionHTMLUrlPrefix = CoverageHTMLUrlPrefix;
 	public static final String CoverageOutlinesHTMLUrlPrefix = "http://geojson.io/#data=data:text/x-url,";
 	public static final String CoverageCollectionOutlinesHTMLUrlPrefix = CoverageOutlinesHTMLUrlPrefix;
-	public static final String DatasetCatalogHTMLUrlPrefix = "http://ec-melodies.github.io/demo-portal/#";
+	public static final String DatasetCatalogHTMLUrlPrefix = "http://ec-melodies.github.io/demo-portal/#url=";
 	
 	public static final String DctNS = "http://purl.org/dc/terms/";
 
 	public static final String GeoJSONLDContext = "https://rawgit.com/geojson/geojson-ld/master/contexts/geojson-time.jsonld";
-	public static final String CoverageJSONContext = "https://rawgit.com/reading-escience-centre/coveragejson/master/contexts/coveragejson-base.jsonld";
+	public static final String CoverageJSONContext = "http://covjson.org/context.jsonld";
 	
 	// we don't use the Hydra context anymore since it was unavailable for ~1week and the w3c took too long to fix it
 	//public static final String HydraContext = "http://www.w3.org/ns/hydra/core";
@@ -29,7 +29,7 @@ public class Constants {
 	public static final String OpenSearchTimePrefix = "opensearchtime";
 	public static final String OpenSearchTimeNamespace = "http://a9.com/-/opensearch/extensions/time/1.0/";
 	
-	public static final String CovJSONProfileStandalone = "http://coveragejson.org/profiles/standalone";
+	public static final String CovJSONProfileStandalone = "http://covjson.org/def/core#standalone";
 	
 	public static final String CovAPINamespace = "http://coverageapi.org/ns#";
 	public static final String CovAPIPrefix = "covapi";
