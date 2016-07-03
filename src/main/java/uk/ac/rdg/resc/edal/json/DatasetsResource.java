@@ -98,7 +98,6 @@ public class DatasetsResource extends ServerResource {
 						"name", "University of Reading"
 						))
 				.put("license", "http://creativecommons.org/licenses/by/4.0/")
-				.put("homepage", "http://rdg.ac.uk/demo/datasets")
 				.put("datasets", datasetsJson)
 				.build();
 		

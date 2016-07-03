@@ -75,11 +75,11 @@ public class DatasetResource extends ServerResource {
 					"accessURL", datasetUrl + "/coverages.covjson",
 					"mediaType", "application/prs.coverage+json"
 					),
-			ImmutableMap.of(
+			/*ImmutableMap.of(
 					"title", "Coverage data",
 					"accessURL", datasetUrl + "/coverages.covcbor",
 					"mediaType", "application/prs.coverage+cbor"
-					),
+					),*/
 			ImmutableMap.of(
 					"title", "Coverage outlines",
 					"accessURL", datasetUrl + "/outlines.geojson",
