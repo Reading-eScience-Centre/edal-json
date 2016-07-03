@@ -8,8 +8,8 @@
 	<name>JSON output of EDAL coverages</name>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<edal-version>1.1.1</edal-version>
-		<restlet-version>2.3.5</restlet-version>
+		<edal-version>1.1.2</edal-version>
+		<restlet-version>2.3.7</restlet-version>
 	</properties>
 	<build>
 		<plugins>
@@ -80,17 +80,17 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>18.0</version>
+			<version>19.0</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>2.4</version>
+			<version>2.5</version>
 		</dependency>
 		<dependency>
 			<groupId>joda-time</groupId>
 			<artifactId>joda-time</artifactId>
-			<version>2.2</version>
+			<version>2.9.4</version>
 		</dependency>
 	</dependencies>
 	<repositories>
