@@ -42,7 +42,7 @@ public class ParameterResource extends ServerResource {
 			
 		String observedPropertyUri = null;
 		if (param.getStandardName() != null) {
-			observedPropertyUri = "http://vocab.nerc.ac.uk/standard_name/" + param.getStandardName();
+			observedPropertyUri = "http://vocab.nerc.ac.uk/standard_name/" + param.getStandardName() + "/";
 		}	
 		Builder obsProp = ImmutableMap.builder()
 				.put("label", ImmutableMap.of("en", param.getTitle()));
