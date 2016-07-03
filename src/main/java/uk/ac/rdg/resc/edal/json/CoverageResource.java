@@ -93,8 +93,7 @@ public class CoverageResource extends ServerResource {
 		
 		Builder j = ImmutableMap.builder()
 				.put("type", "Coverage")
-				.put("id", coverageUrl + queryString)
-				.put("title", ImmutableMap.of("en", meta.name));
+				.put("id", coverageUrl + queryString);
 				
 		Supplier<UniformFeature> feature =
 				Suppliers.memoize(() -> new UniformFeature((DiscreteFeature)dataset.get().readFeature(meta.featureId)));
