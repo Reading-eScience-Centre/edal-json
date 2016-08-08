@@ -40,7 +40,7 @@ import uk.ac.rdg.resc.edal.position.VerticalCrs;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CoverageDomainResource extends ServerResource {
 	
-	public static final String COMPONENTS = "components";
+	public static final String COORDINATES = "coordinates";
 	public static final String SYSTEM = "system";
 
 	@Get("covjson|covcbor|covmsgpack")
@@ -155,7 +155,7 @@ public class CoverageDomainResource extends ServerResource {
 		}
 			
 		referencing.add(ImmutableMap.of(
-				COMPONENTS, ImmutableList.of("x", "y"),
+				COORDINATES, ImmutableList.of("x", "y"),
 				SYSTEM, getCRSJson(grid.getCoordinateReferenceSystem())
 				));
 
@@ -182,7 +182,7 @@ public class CoverageDomainResource extends ServerResource {
 				));
 	
 		referencing.add(ImmutableMap.of(
-				COMPONENTS, ImmutableList.of("x", "y"),
+				COORDINATES, ImmutableList.of("x", "y"),
 				SYSTEM, ImmutableMap.of(
 						"type", "ProjectedCRS",
 						"baseCRS", getCRSJson(grid.getCoordinateReferenceSystem())
@@ -255,7 +255,7 @@ public class CoverageDomainResource extends ServerResource {
 		//domainJson.put("verticalBounds", z.getDomainObjects().iterator());
 		
 		referencing.add(ImmutableMap.of(
-				COMPONENTS, ImmutableList.of("z"),
+				COORDINATES, ImmutableList.of("z"),
 				SYSTEM, getCRSJson(z.getVerticalCrs())
 				));
 		
@@ -275,7 +275,7 @@ public class CoverageDomainResource extends ServerResource {
 		// TODO does EDAL support only Gregorian dates?
 		
 		referencing.add(ImmutableMap.of(
-				COMPONENTS, ImmutableList.of("t"),
+				COORDINATES, ImmutableList.of("t"),
 				SYSTEM, ImmutableMap.of(
 						"type", "TemporalRS",
 						"calendar", "Gregorian"
