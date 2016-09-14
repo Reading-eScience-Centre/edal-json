@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.crs.DerivedCRS;
 import org.opengis.referencing.crs.GeodeticCRS;
+import org.opengis.referencing.crs.GeographicCRS;
 import org.opengis.referencing.crs.ProjectedCRS;
 import org.restlet.data.Header;
 import org.restlet.data.Reference;
@@ -194,7 +195,9 @@ public class CoverageDomainResource extends ServerResource {
 		Builder crsMap = ImmutableMap.builder();
 				
 		String crsType;
-		if (crs instanceof GeodeticCRS) {
+		if (crs instanceof GeographicCRS) {
+			crsType = "GeographicCRS";
+		} else if (crs instanceof GeodeticCRS) {
 			crsType = "GeodeticCRS";
 		} else if (crs instanceof ProjectedCRS) {
 			crsType = "ProjectedCRS";
