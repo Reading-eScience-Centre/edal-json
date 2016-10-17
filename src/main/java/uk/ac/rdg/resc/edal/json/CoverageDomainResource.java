@@ -169,6 +169,7 @@ public class CoverageDomainResource extends ServerResource {
 				subset.longitudeExtent.getLow() != null || subset.longitudeExtent.getHigh() != null) {
 			throw new IllegalStateException("Horizontal subsetting not supported for projected grids");
 		}
+		// FIXME the start and stop coordinates are wrong, but there's no way to access those via EDAL
 		axes.putAll(ImmutableMap.of(
 			    "x", ImmutableMap.of(
 			    		"start", 0,

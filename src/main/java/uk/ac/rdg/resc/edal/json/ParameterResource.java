@@ -15,9 +15,9 @@ import org.restlet.resource.ServerResource;
 
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
+import uk.ac.rdg.resc.edal.graphics.utils.GraphicsUtils;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.metadata.Parameter.Category;
-import uk.ac.rdg.resc.edal.util.GraphicsUtils;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
@@ -59,7 +59,7 @@ public class ParameterResource extends ServerResource {
 						.put("id", cat.getId())
 						.put("label", ImmutableMap.of("en", cat.getLabel()));
 				if (cat.getColour() != null) {
-					catMap.put("preferredColor", GraphicsUtils.colourToHtmlString(cat.getColour()));
+					catMap.put("preferredColor", GraphicsUtils.colourToHtmlString(GraphicsUtils.parseColour(cat.getColour())));
 				}
 				cats.add(catMap.build());
 				catEnc.put(cat.getId(), value);

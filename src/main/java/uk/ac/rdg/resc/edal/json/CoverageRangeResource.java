@@ -24,6 +24,8 @@ import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.feature.DiscreteFeature;
 import uk.ac.rdg.resc.edal.feature.ProfileFeature;
+import uk.ac.rdg.resc.edal.grid.ReferenceableAxis;
+import uk.ac.rdg.resc.edal.grid.RegularAxisImpl;
 import uk.ac.rdg.resc.edal.json.CoverageResource.FeatureMetadata;
 import uk.ac.rdg.resc.edal.json.CoverageResource.UniformFeature;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
@@ -107,13 +109,22 @@ public class CoverageRangeResource extends ServerResource {
 	}
 	
 	private static AxesIndices getAxesIndices(UniformFeature uniFeature, SubsetConstraint subset) {
-		if (uniFeature.rectgrid == null) {
-			// use uniFeature.projgrid somehow
-			throw new RuntimeException("only rectilinear grids are supported");
+		int[] xIndices;
+		int[] yIndices;
+		
+		if (uniFeature.rectgrid != null) {
+			xIndices = CoverageDomainResource.getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset).toArray();
+			yIndices = CoverageDomainResource.getYAxisIndices(uniFeature.rectgrid.getYAxis(), subset).toArray();
+		} else if (uniFeature.projgrid != null) {
+			// FIXME the start and stop coordinates are wrong, but there's no way to access those via EDAL
+			ReferenceableAxis<Double> xAxis = new RegularAxisImpl("x", 0, 1, uniFeature.projgrid.getXSize(), false);
+			ReferenceableAxis<Double> yAxis = new RegularAxisImpl("y", 0, 1, uniFeature.projgrid.getYSize(), false);
+			xIndices = CoverageDomainResource.getXAxisIndices(xAxis, subset).toArray();
+			yIndices = CoverageDomainResource.getYAxisIndices(yAxis, subset).toArray();
+		} else {
+			throw new RuntimeException("Not implemented");
 		}
 		
-		int[] xIndices = CoverageDomainResource.getXAxisIndices(uniFeature.rectgrid.getXAxis(), subset).toArray();
-		int[] yIndices = CoverageDomainResource.getYAxisIndices(uniFeature.rectgrid.getYAxis(), subset).toArray();
 		int[] zIndices = CoverageDomainResource.getVerticalAxisIndices(uniFeature.z, subset).toArray();
 		int[] tIndices = CoverageDomainResource.getTimeAxisIndices(uniFeature.t, subset).toArray();
 		
